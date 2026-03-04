@@ -71,7 +71,18 @@ const leadSchema = new Schema(
     },
 
     tags: [String], // e.g., "High Budget", "Urgent", "iOS"
+    status: {
+      type: String,
+      enum: ["active", "stopped"],
+      default: "active",
+      index: true, // important for filtering
+    },
 
+    expiresAt: {
+      type: Date,
+      default: null, // null = never expires
+      index: true,
+    },
     // Sales Tracking
     purchasedBy: [
       {

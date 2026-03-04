@@ -63,18 +63,31 @@ blogSchema.pre("save", async function () {
     this.readTime = Math.ceil(words / wpm);
   }
 
-  if (!this.isModified("title")) {
-    return;
+//   if (!this.isModified("title")) {
+//     return;
+//   }
+
+//   const baseSlug = slugify(this.title, {
+//     lower: true,
+//     strict: true,
+//     trim: true,
+//   });
+
+//   // _id always available before save
+//   this.slug = `${baseSlug}-${this._id.toString()}`;
+// });
+
+
+  // Make slug immutable
+  if (!this.slug) {
+    const baseSlug = slugify(this.title, {
+      lower: true,
+      strict: true,
+      trim: true,
+    });
+
+    this.slug = `${baseSlug}-${this._id.toString()}`;
   }
-
-  const baseSlug = slugify(this.title, {
-    lower: true,
-    strict: true,
-    trim: true,
-  });
-
-  // _id always available before save
-  this.slug = `${baseSlug}-${this._id.toString()}`;
 });
 
 const Blog = mongoose.models.Blog || model("Blog", blogSchema);

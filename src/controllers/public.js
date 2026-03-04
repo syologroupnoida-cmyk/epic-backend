@@ -380,6 +380,14 @@ export const createLead = asyncHandler(async (req, res, next) => {
       console.error("Error updating inquiry count:", err);
     }
   }
+  // 6. Determine Expiry (Based on eventDate)
+  let expiresAt = null;
+
+  if (eventDate) {
+    const event = new Date(eventDate);
+    // Expire 1 day after event date (adjust if business wants)
+    expiresAt = new Date(event.getTime() + 24 * 60 * 60 * 1000);
+  }
 
   const lead = await Lead.create({
     name,
@@ -397,6 +405,8 @@ export const createLead = asyncHandler(async (req, res, next) => {
     price,
     deviceType,
     tags,
+    status: "active",
+    expiresAt,    
   });
 
   // TODO: Notify vendors (Optional future step)

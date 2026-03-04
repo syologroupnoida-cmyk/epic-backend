@@ -194,6 +194,26 @@ venuePackageSchema.pre("save", async function () {
   this.slug = `${baseSlug}-${citySlug}-${this._id.toString()}`;
 });
 venuePackageSchema.index({geo_loc: "2dsphere"})
+// ================= PERFORMANCE INDEXES =================
+
+// Vendor dashboard package listing
+venuePackageSchema.index({ vendor: 1, createdAt: -1 });
+
+// City-based filtering (VERY IMPORTANT)
+venuePackageSchema.index({ "location.city": 1 });
+
+// Category filtering
+venuePackageSchema.index({ venueCategory: 1 });
+
+// Combined filter (city + category + vendor) - most powerful
+venuePackageSchema.index({
+  vendor: 1,
+  "location.city": 1,
+  venueCategory: 1
+});
+
+// Public listing optimization
+venuePackageSchema.index({ approved: 1, visibility: 1 });
 const VenuePackage =
   mongoose.models.VenuePackage || model("VenuePackage", venuePackageSchema);
 

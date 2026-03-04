@@ -5,7 +5,7 @@ import SystemSetting from "../models/SystemSetting.js";
 import VenuePackage from "../models/VenuePackage.js";
 import ServicePackage from "../models/ServicePackage.js";
 import Vendor from "../models/Vendor.js";
-
+import Lead from "../models/Lead.js";
 // Default Costs
 const DEFAULT_LEAD_COSTS = {
   standard: 10,
@@ -299,4 +299,22 @@ export const bulkCreateVendors = asyncHandler(async (req, res, next) => {
   }
 
   res.status(201).json(new SuccessResponse(201, "Bulk vendor processing complete.", results));
+});
+
+export const toggleLeadStatus = asyncHandler(async (req, res, next) => {
+  const { leadId ,status } = req.body; // "active" or "stopped"
+
+  if (!["active", "stopped"].includes(status)) {
+    return next(new ErrorResponse(400, "Invalid status value"));
+  }
+
+  const lead = await Lead.findById(leadId);
+  if (!lead) return next(new ErrorResponse(404, "Lead not found"));
+
+  lead.status = status;
+  await lead.save();
+
+  res.status(200).json(
+    new SuccessResponse(200, `Lead status updated to ${status}`, lead)
+  );
 });

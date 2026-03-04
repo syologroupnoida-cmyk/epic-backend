@@ -263,7 +263,8 @@ vendorSchema.pre("save", async function () {
   }
 
   // Slug generation
-  if (this.isModified("vendorName")) {
+  // if (this.isModified("vendorName")) {
+  if (!this.slug) {
     const baseSlug = slugify(this.vendorName, {
       lower: true,
       strict: true,
@@ -279,6 +280,19 @@ vendorSchema.methods.isPasswordCorrect = async function (password) {
 };
 
 vendorSchema.index({location: "2dsphere"})
+// ================= PERFORMANCE INDEXES =================
+
+// For admin panel filtering (status + sorting)
+vendorSchema.index({ status: 1, createdAt: -1 });
+
+// For homepage featured vendors
+vendorSchema.index({ featured: 1, status: 1 });
+
+// For city-based marketplace filtering
+vendorSchema.index({ city: 1, status: 1 });
+
+// Optional but recommended for fast pagination sorting
+vendorSchema.index({ createdAt: -1 });
 
 const Vendor = mongoose.models.Vendor || model("Vendor", vendorSchema);
 

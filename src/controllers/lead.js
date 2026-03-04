@@ -24,10 +24,13 @@ export const getMarketplaceLeads = asyncHandler(async (req, res) => {
   const { page = 1, limit = 20, city, businessCategory } = req.query;
 
   const filter = {
-    // Exclude leads already purchased by this vendor
-    "purchasedBy.vendor": { $ne: vendorId }
+    "purchasedBy.vendor": { $ne: vendorId },
+    status: "active",
+    $or: [
+      { expiresAt: null },
+      { expiresAt: { $gt: new Date() } }
+    ]
   };
-  
   if (city) filter["location.city"] = new RegExp(city, "i");
   if (businessCategory) filter.businessCategory = businessCategory;
 
@@ -89,7 +92,15 @@ export const buyLead = asyncHandler(async (req, res, next) => {
 
   const lead = await Lead.findById(leadId);
   if (!lead) return next(new ErrorResponse(404, "Lead not found"));
+  // ADMIN STOP CHECK
+  if (lead.status === "stopped") {
+    return next(new ErrorResponse(400, "This lead has been stopped by admin"));
+  }
 
+  //EXPIRY CHECK
+  if (lead.expiresAt && new Date() > lead.expiresAt) {
+    return next(new ErrorResponse(400, "This lead has expired and cannot be purchased"));
+  }
   // Check if already purchased
   const alreadyPurchased = lead.purchasedBy.some(
     (p) => p.vendor.toString() === vendorId.toString()

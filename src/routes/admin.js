@@ -8,6 +8,7 @@ import {
   getAdminServicePackages,
   updateVenuePackageStatus,
   updateServicePackageStatus,
+  toggleLeadStatus,
 } from "../controllers/admin.js";
 import {
   createService,
@@ -115,6 +116,12 @@ router.put(
   ]),
   updateVendorDetailsByAdmin
 ); // New route for admin to update full vendor details
+
+
+//lead stop/start by admin
+
+router.put("/leads", getAdminHeaders,toggleLeadStatus);
+
 
 // Mark vendor as featured/unfeatured
 router.put("/vendors/:id/toggle-featured", getAdminHeaders,toggleFeaturedVendor); // tested

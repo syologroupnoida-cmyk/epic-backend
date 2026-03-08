@@ -206,7 +206,27 @@ const vendorSchema = new Schema(
       type: Number,
       default: 0,
     },
+    // ----------------------
+    // SUBSCRIPTION
+    subscription: {
+      plan: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Subscription"
+      },
 
+      leadCredits: {
+        type: Number,
+        default: 0
+      },
+
+      purchasedAt: {
+        type: Date
+      },
+
+      expiresAt: {
+        type: Date
+      }
+    },
     // ----------------------
     // ADMIN CONTROLS
     // ----------------------
@@ -264,7 +284,7 @@ vendorSchema.pre("save", async function () {
 
   // Slug generation
   // if (this.isModified("vendorName")) {
-  if (!this.slug) {
+  if (!this.slug && this.vendorName) {
     const baseSlug = slugify(this.vendorName, {
       lower: true,
       strict: true,

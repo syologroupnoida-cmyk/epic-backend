@@ -66,6 +66,9 @@ import { getCategoriesForServicePackage } from "../controllers/serviceCategory.j
 import { getServiceSubCategoriesForPackage } from "../controllers/serviceSubCategory.js";
 import { refreshAccessToken } from "../controllers/authController.js";
 
+import { buySubscription,
+  getSubscriptions,
+ } from "../controllers/subscription.js";
 
 const router = express.Router();
 
@@ -387,5 +390,14 @@ router.put(
 router.delete("/service-packages/:id", getVendorHeaders, deleteServicePackage); // tested
 
 //#endregion SERVICE PACKAGE MANAGEMENT ROUTES
+
+
+//subscription routes
+
+
+router.post("/subscriptions/buy", getVendorHeaders, buySubscription); // tested
+router.get("/subscriptions/getall", getSubscriptions); // tested
+
+
 
 export default router;

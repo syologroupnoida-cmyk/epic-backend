@@ -55,7 +55,12 @@ import { updateUserProfile } from "../controllers/user.js";
 import { createLeadBundle } from "../controllers/lead.js";
 import { migrateVendorCredits } from "../controllers/migration.js";
 import { refreshAccessToken } from "../controllers/authController.js";
-
+import { createSubscription,
+  getSubscriptions,
+  updateSubscription,
+  toggleSubscriptionStatus,
+  deleteSubscription
+ } from "../controllers/subscription.js";
 // import adminAuth from "../middlewares/adminAuth.js"; // optional, if Admin-only
 
 const router = Router();
@@ -183,4 +188,17 @@ router.delete("/service-sub-categories/:id",getAdminHeaders, deleteServiceSubCat
 
 router.put("/user-status/:id", getAdminHeaders,updateUserProfile); // tested
 
+//subscription routes
+router.post("/subscriptions/create", getAdminHeaders, createSubscription); 
+
+router.get("/subscriptions/getall", getSubscriptions);
+
+router.put("/subscriptions/:id", getAdminHeaders, updateSubscription);
+
+router.put("/subscriptions/:id/toggle-status", getAdminHeaders, toggleSubscriptionStatus);
+
+router.delete("/subscriptions/:id/delete", getAdminHeaders, deleteSubscription);
+
 export default router;
+
+

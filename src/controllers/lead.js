@@ -87,24 +87,30 @@ export const getMarketplaceLeads = asyncHandler(async (req, res) => {
 ====================================================== */
 export const buyLead = asyncHandler(async (req, res, next) => {
   const { leadId } = req.params;
-  const { useCredits } = req.body; // boolean: true = use credits, false = use wallet balance
+  const { useCredits } = req.body;
   const vendorId = req.vendor._id;
 
   const lead = await Lead.findById(leadId);
+
   if (!lead) return next(new ErrorResponse(404, "Lead not found"));
+
   // ADMIN STOP CHECK
   if (lead.status === "stopped") {
     return next(new ErrorResponse(400, "This lead has been stopped by admin"));
   }
 
-  //EXPIRY CHECK
+  // EXPIRY CHECK
   if (lead.expiresAt && new Date() > lead.expiresAt) {
-    return next(new ErrorResponse(400, "This lead has expired and cannot be purchased"));
+    return next(
+      new ErrorResponse(400, "This lead has expired and cannot be purchased")
+    );
   }
+
   // Check if already purchased
   const alreadyPurchased = lead.purchasedBy.some(
     (p) => p.vendor.toString() === vendorId.toString()
   );
+
   if (alreadyPurchased) {
     return res
       .status(200)
@@ -112,61 +118,109 @@ export const buyLead = asyncHandler(async (req, res, next) => {
   }
 
   const vendor = await Vendor.findById(vendorId);
-  const leadCategory = (lead.category || "standard").toLowerCase(); // standard, premium, elite
+  if (!vendor) return next(new ErrorResponse(404, "Vendor not found"));
 
-  // LOGIC: Use Credits or Wallet
+  const leadCategory = (lead.category || "standard").toLowerCase();
+
+  // ===============================
+  // CREDIT PURCHASE LOGIC
+  // ===============================
+
   if (useCredits) {
-    // 1. Fetch Dynamic Cost
-    const settings = await SystemSetting.findOne({ key: "lead_costs" });
-    const costs = settings ? settings.value : {};
-    
-    // Extract Cost from Tier Object
-    // Structure: { standard: { credits: 10, amount: 50, ... }, ... }
+    // Fetch Dynamic Cost
+    const settings = await SystemSetting.findOne({ key: "lead_costs" }).lean();
+    const costs = settings?.value || {};
+
     const tierData = costs[leadCategory] || costs["standard"];
-    // If legacy format (direct number), handle it, otherwise extracting .credits
-    let rawCost = (typeof tierData === 'object') ? tierData.credits : tierData;
-    
+
+    let rawCost =
+      typeof tierData === "object" ? tierData.credits : tierData;
+
     let cost = Number(rawCost);
     if (isNaN(cost)) cost = 10;
 
-    // 2. Check Balance (Universal Credits - Simple Number)
-    const availableCredits = Number(vendor.leadCredits) || 0;
+    const now = new Date();
 
-    if (availableCredits < cost) {
+    let subscriptionCredits = 0;
+
+    if (
+      vendor.subscription &&
+      vendor.subscription.expiresAt &&
+      vendor.subscription.expiresAt > now
+    ) {
+      subscriptionCredits = Number(vendor.subscription.leadCredits) || 0;
+    }
+
+    const normalCredits = Number(vendor.leadCredits) || 0;
+
+    const totalCredits = subscriptionCredits + normalCredits;
+
+    if (totalCredits < cost) {
       return next(
         new ErrorResponse(
           400,
-          `Insufficient credits. This lead costs ${cost} credits. You have ${availableCredits}.`
+          `Insufficient credits. Lead costs ${cost}. Available ${totalCredits}.`
         )
       );
     }
 
-    // 3. Deduct Credits
-    // Use $inc for atomic update - most robust way
-    const updatedVendor = await Vendor.findByIdAndUpdate(
-      vendorId,
-      { $inc: { leadCredits: -cost } },
+    // Deduct credits (subscription first)
+    if (subscriptionCredits >= cost) {
+      await Vendor.findByIdAndUpdate(
+        vendorId,
+        { $inc: { "subscription.leadCredits": -cost } },
+        { new: true }
+      );
+    } else {
+      const remaining = cost - subscriptionCredits;
+
+      await Vendor.findByIdAndUpdate(
+        vendorId,
+        {
+          $inc: {
+            "subscription.leadCredits": -subscriptionCredits,
+            leadCredits: -remaining,
+          },
+        },
+        { new: true }
+      );
+    }
+
+    // Atomic purchase record
+    const updatedLead = await Lead.findOneAndUpdate(
+      {
+        _id: leadId,
+        "purchasedBy.vendor": { $ne: vendorId },
+      },
+      {
+        $push: {
+          purchasedBy: {
+            vendor: vendorId,
+            pricePaid: 0,
+            method: "credit",
+            meta: { creditCost: cost },
+          },
+        },
+      },
       { new: true }
     );
-    
-    // Update local variable for response
-    vendor.leadCredits = updatedVendor.leadCredits;
 
-    // Record Purchase on Lead
-    lead.purchasedBy.push({
-      vendor: vendorId,
-      pricePaid: 0, // 0 cash, Paid via Credit
-      method: "credit",
-      meta: { creditCost: cost }
-    });
-  } else {
-    // Pay with Wallet (Dynamic Price)
-    // 1. Check Balance locally first (optimization)
+    if (!updatedLead) {
+      return next(
+        new ErrorResponse(400, "Lead already purchased or unavailable")
+      );
+    }
+  }
+
+  // ===============================
+  // WALLET PAYMENT LOGIC
+  // ===============================
+
+  else {
     if (vendor.wallet.balance < lead.price) {
       return next(new ErrorResponse(400, "Insufficient wallet balance"));
     }
 
-    // 2. Create Transaction Record
     const transaction = await Transaction.create({
       vendor: vendorId,
       type: "debit",
@@ -179,49 +233,67 @@ export const buyLead = asyncHandler(async (req, res, next) => {
       meta: { description: `Purchased ${lead.category} Lead ${leadId}` },
     });
 
-    // 3. Atomic Update: Deduct Balance & Push Transaction
     const updatedVendor = await Vendor.findByIdAndUpdate(
-        vendorId,
-        { 
-            $inc: { "wallet.balance": -lead.price },
-            $push: { "wallet.transactions": transaction._id }
-        },
-        { new: true }
+      vendorId,
+      {
+        $inc: { "wallet.balance": -lead.price },
+        $push: { "wallet.transactions": transaction._id },
+      },
+      { new: true }
     );
 
-    // Double check if balance went negative (race condition check)
+    // Safety rollback check
     if (updatedVendor.wallet.balance < 0) {
-        // Rollback (Critical failure safety)
-        await Vendor.findByIdAndUpdate(vendorId, { 
-            $inc: { "wallet.balance": lead.price },
-            $pull: { "wallet.transactions": transaction._id }
-        });
-        await Transaction.findByIdAndDelete(transaction._id);
-        return next(new ErrorResponse(400, "Insufficient wallet balance (transaction failed)"));
+      await Vendor.findByIdAndUpdate(vendorId, {
+        $inc: { "wallet.balance": lead.price },
+        $pull: { "wallet.transactions": transaction._id },
+      });
+
+      await Transaction.findByIdAndDelete(transaction._id);
+
+      return next(
+        new ErrorResponse(400, "Insufficient wallet balance (transaction failed)")
+      );
     }
 
-    // Update local variable for response
-    vendor.wallet.balance = updatedVendor.wallet.balance;
+    const updatedLead = await Lead.findOneAndUpdate(
+      {
+        _id: leadId,
+        "purchasedBy.vendor": { $ne: vendorId },
+      },
+      {
+        $push: {
+          purchasedBy: {
+            vendor: vendorId,
+            pricePaid: lead.price,
+            method: "wallet",
+          },
+        },
+      },
+      { new: true }
+    );
 
-    // Record Purchase on Lead
-    lead.purchasedBy.push({
-      vendor: vendorId,
-      pricePaid: lead.price,
-      method: "wallet",
-    });
+    if (!updatedLead) {
+      return next(
+        new ErrorResponse(400, "Lead already purchased or unavailable")
+      );
+    }
+
+    vendor.wallet.balance = updatedVendor.wallet.balance;
   }
 
-  await lead.save();
+  const updatedVendor = await Vendor.findById(vendorId);
 
-  res
-    .status(200)
-    .json(new SuccessResponse(200, "Lead purchased successfully", {
-        lead,
-        leadCredits: vendor.leadCredits,
-        walletBalance: vendor.wallet.balance
-    }));
+  res.status(200).json(
+    new SuccessResponse(200, "Lead purchased successfully", {
+      leadId,
+      leadCredits: updatedVendor.leadCredits,
+      subscriptionCredits:
+        updatedVendor.subscription?.leadCredits || 0,
+      walletBalance: updatedVendor.wallet.balance,
+    })
+  );
 });
-
 /* ======================================================
     VENDOR: GET ALL PURCHASED LEADS
 ====================================================== */

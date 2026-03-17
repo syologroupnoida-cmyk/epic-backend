@@ -1,6 +1,32 @@
 import mongoose, { Schema, model } from "mongoose";
 import bcrypt from "bcryptjs";
 
+
+const PlannerSchema = new mongoose.Schema({
+  event_date: Date,
+  event_type: String,
+  city: String,
+  guest_count: Number,
+  budget: Number,
+  events: [String],
+  timeline: [
+    {
+      time: String,
+      tasks: [String]
+    }
+  ],
+  recommended_vendors: Array,
+  recommended_venues: Array,
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+})
+
+
+  
+
+
 const userSchema = new Schema(
   {
     fullName: {
@@ -43,6 +69,9 @@ const userSchema = new Schema(
         required: true,
       },
     },
+
+    planners: [PlannerSchema],
+
     role: {
       type: String,
       enum: ["user"],

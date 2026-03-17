@@ -447,3 +447,23 @@ export const searchNearMeVenue = asyncHandler(async (req, res, next) => {
     })
   );
 });
+
+
+export const savePlanner = asyncHandler(async (req, res) => {
+
+  const user = await User.findById(req.user.id)
+
+  if (!user)
+      throw new Error("User not found")
+
+  const planner = req.body.planner
+
+  user.planners.push(planner)
+
+  await user.save()
+
+  res.status(201).json({
+      success: true,
+      planner
+  })
+});

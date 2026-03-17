@@ -9,7 +9,8 @@ import {
   verifyForgotPasswordOtp,
   resetPassword,
   searchNearMe,
-  searchNearMeVenue
+  searchNearMeVenue,
+  savePlanner
 } from "../controllers/user.js";
 import { getUserHeaders } from "../middlewares/authMiddleware.js";
 import { upload } from "../middlewares/multer.js";
@@ -46,5 +47,7 @@ router.put(
 
 router.get("/near-me-vendor",getUserHeaders,searchNearMe);
 router.get("/near-me-venue",getUserHeaders,searchNearMeVenue);
+
+router.post("/saveplanner",getUserHeaders,savePlanner);
 
 export default router;

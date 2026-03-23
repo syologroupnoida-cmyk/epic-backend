@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "dotenvx run --env-file .env -- node src/index.js",
+    "start": "dotenvx run --env-file .env -- nodemon src/index.js",
     "dev": "dotenvx run --env-file .env.local -- nodemon src/index.js"
   },
   "keywords": [],
@@ -23,6 +23,7 @@
     "cors": "^2.8.5",
     "dns": "^0.2.2",
     "express": "^5.1.0",
+    "express-async-handler": "^1.2.0",
     "express-validator": "^7.3.1",
     "google-auth-library": "^10.5.0",
     "ioredis": "^5.8.2",

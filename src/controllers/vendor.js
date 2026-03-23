@@ -201,11 +201,14 @@ export const createVendor = asyncHandler(async (req, res, next) => {
   vendor.refreshToken = refreshToken;
   await vendor.save({ validateBeforeSave: false });
 
+  const vendorObj = vendor.toObject();
+  delete vendorObj.password;
+  
   res.status(201).json(
     new SuccessResponse(
       201,
       `Vendor ${vendor.vendorName} created successfully`,
-      { vendor, accessToken}
+      { vendor: vendorObj, accessToken}
     )
   );
 
@@ -436,10 +439,13 @@ export const vendorLogin = asyncHandler(async (req, res, next) => {
   vendor.refreshToken = refreshToken;
   await vendor.save({ validateBeforeSave: false });
 
+  const vendorObj = vendor.toObject();
+  delete vendorObj.password;
+
   if (vendor.role === "admin") {
     return res.status(200).json(
       new SuccessResponse(200, "Welcome Admin", {
-        vendor,
+        vendor: vendorObj,
         accessToken,
       })
     );
@@ -447,7 +453,7 @@ export const vendorLogin = asyncHandler(async (req, res, next) => {
 
   return res
     .status(200)
-    .json(new SuccessResponse(200, "Login successful", { vendor, accessToken }));
+    .json(new SuccessResponse(200, "Login successful", { vendor: vendorObj, accessToken }));
 });
 
 /* // Google OAuth Callback response format

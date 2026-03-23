@@ -179,6 +179,235 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "user/profile",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{vault:authorization-secret}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n\"_id\":\"699c153ee3850a02c0943599\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://127.0.0.1:5000/api/v1/user/profile",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "user",
+                "profile"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "user/refresh",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"refreshToken\":\"{{vault:json-web-token}}\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://127.0.0.1:5000/api/v1/user/refresh",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "user",
+                "refresh"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "vendor-near-me",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{vault:authorization-secret}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:5000/api/v1/user/near-me-vendor?latitude=27&longitude=77&radius=500&page=1&limit=5",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "user",
+                "near-me-vendor"
+              ],
+              "query": [
+                {
+                  "key": "latitude",
+                  "value": "27"
+                },
+                {
+                  "key": "longitude",
+                  "value": "77"
+                },
+                {
+                  "key": "radius",
+                  "value": "500"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "user/near-me-venue",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{vault:authorization-secret}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:5000/api/v1/user/near-me-venue?latitude=27&longitude=77&radius=250&page=1&limit=5",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "user",
+                "near-me-venue"
+              ],
+              "query": [
+                {
+                  "key": "latitude",
+                  "value": "27"
+                },
+                {
+                  "key": "longitude",
+                  "value": "77"
+                },
+                {
+                  "key": "radius",
+                  "value": "250"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "public/inquiry",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"name\": \"Amit Verma\",\r\n  \"email\": \"amit.verma@example.com\",\r\n  \"phone\": \"9876543210\",\r\n  \"location\": \"Connaught Place, New Delhi\",\r\n  \"eventDate\": \"2026-04-15T18:00:00.000Z\",\r\n  \"guestCount\": 250,\r\n  \"budget\": 500000,\r\n  \"message\": \"Looking for a wedding venue for 250 guests. My contact is 9876543210\",\r\n  \"interestedInPackage\": \"65f1a2b3c4d5e6f7890abc12\",\r\n  \"packageType\": \"VenuePackage\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://127.0.0.1:5000/api/v1/public/inquiry",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "public",
+                "inquiry"
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -1086,16 +1315,826 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "vendor/create",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "vendorName",
+                  "value": "mantra vendors",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "mantra",
+                  "type": "text"
+                },
+                {
+                  "key": "experience",
+                  "value": " 3",
+                  "type": "text"
+                },
+                {
+                  "key": "teamSize",
+                  "value": " 5",
+                  "type": "text"
+                },
+                {
+                  "key": "workingSince",
+                  "value": " 2020",
+                  "type": "text"
+                },
+                {
+                  "key": "state",
+                  "value": " Uttar Pradesh",
+                  "type": "text"
+                },
+                {
+                  "key": "city",
+                  "value": " Ghaziabad",
+                  "type": "text"
+                },
+                {
+                  "key": "locality",
+                  "value": " Ghaziabad",
+                  "type": "text"
+                },
+                {
+                  "key": "address",
+                  "value": "laal kua , house 12",
+                  "type": "text"
+                },
+                {
+                  "key": "pincode",
+                  "value": " 201318",
+                  "type": "text"
+                },
+                {
+                  "key": "googleMapLink",
+                  "value": " https://maps.google.com/?q=28.6692,77.4538",
+                  "type": "text"
+                },
+                {
+                  "key": "latitude",
+                  "value": " 27.6692",
+                  "type": "text"
+                },
+                {
+                  "key": "longitude",
+                  "value": " 78.4538",
+                  "type": "text"
+                },
+                {
+                  "key": "contactPerson",
+                  "value": "abc",
+                  "type": "text"
+                },
+                {
+                  "key": "phone",
+                  "value": "5638927415",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "abc@gmail.com",
+                  "type": "text"
+                },
+                {
+                  "key": "website",
+                  "value": " https://mantravendors.com",
+                  "type": "text"
+                },
+                {
+                  "key": "profile",
+                  "type": "file",
+                  "src": "postman-cloud:///1f112312-7157-4090-a977-44cc8eefdf50"
+                }
+              ]
+            },
+            "url": {
+              "raw": "http://127.0.0.1:5000/api/v1/vendor/create",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "vendor",
+                "create"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "vendor/venue-packages",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{vault:authorization-secret}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "venueCategory",
+                  "value": "696a22eeb40d55182eb0a0cd",
+                  "type": "text"
+                },
+                {
+                  "key": "title",
+                  "value": " Luxury Banquet Package",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": " Premium banquet hall with catering and decoration",
+                  "type": "text"
+                },
+                {
+                  "key": "startingPrice",
+                  "value": " 75000",
+                  "type": "text"
+                },
+                {
+                  "key": "location",
+                  "value": " {\"locality\":\"Noida\",\"fullAddress\":\"Gaur City Mall, Sector 4, Noida\",\"city\":\"noida\",\"state\":\"uttar pradesh\",\"country\":\"india\",\"pincode\":\"201303\",\"googleMapsLink\":\"https://maps.google.com/?q=28.6139,77.2090\"}",
+                  "type": "text"
+                },
+                {
+                  "key": "services",
+                  "value": " [{\"name\":\"Valet Parking\",\"value\":true,\"icon\":\"carFront\",\"type\":\"checkbox\"},{\"name\":\"Catering\",\"value\":true,\"icon\":\"fork\",\"type\":\"checkbox\"},{\"name\":\"Guest Capacity\",\"value\":500,\"icon\":\"people\",\"type\":\"number\"}]",
+                  "type": "text"
+                },
+                {
+                  "key": "latitude",
+                  "value": " 28.6692",
+                  "type": "text"
+                },
+                {
+                  "key": "longitude",
+                  "value": " 77.4538",
+                  "type": "text"
+                },
+                {
+                  "key": "featuredImage",
+                  "type": "file",
+                  "uuid": "902ecf1d-1b9d-468f-9491-3a9f93c542d6",
+                  "src": "postman-cloud:///1f112ece-827a-4490-b1f1-f6106b023516"
+                }
+              ]
+            },
+            "url": {
+              "raw": "http://127.0.0.1:5000/api/v1/vendor/venue-packages",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "vendor",
+                "venue-packages"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "vendor/refresh",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"refreshToken\":\"{{vault:json-web-token}}\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://127.0.0.1:5000/api/v1/vendor/refresh",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "vendor",
+                "refresh"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "admin/refresh",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"refreshToken\":\"{{vault:json-web-token}}\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://127.0.0.1:5000/api/v1/vendor/refresh",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "vendor",
+                "refresh"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "vendor/profile",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{vault:authorization-secret}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"vendorName\": \"mantra vendors\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://127.0.0.1:5000/api/v1/vendor/profile",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "vendor",
+                "profile"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "admin/leads",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{vault:authorization-secret}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"leadId\":\"69a58c05a19572cc4d064912\",\r\n    \"status\":\"stopped\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://127.0.0.1:5000/api/v1/admin/leads",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "leads"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "leads/buy",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{vault:authorization-secret}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"useCredits\": true\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://127.0.0.1:5000/api/v1/leads/buy/:leadId",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "leads",
+                "buy",
+                ":leadId"
+              ],
+              "variable": [
+                {
+                  "key": "leadId",
+                  "value": "69a58c05a19572cc4d064912"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "leads/my-leads",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{vault:authorization-secret}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"useCredits\": true\r\n}"
+            },
+            "url": {
+              "raw": "http://127.0.0.1:5000/api/v1/leads/my-leads",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "leads",
+                "my-leads"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "leads/marketplace",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{vault:authorization-secret}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"useCredits\": true\r\n}"
+            },
+            "url": {
+              "raw": "http://127.0.0.1:5000/api/v1/leads/marketplace",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "leads",
+                "marketplace"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "subscriptions/buy",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{vault:authorization-secret}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"subscriptionId\":\"69abceec062c9d9799cbc7d3\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://127.0.0.1:5000/api/v1/vendor/subscriptions/buy",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "vendor",
+                "subscriptions",
+                "buy"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "admin/subscriptions/create",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{vault:authorization-secret}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"name\": \"Basic\",\r\n  \"leadCredits\": 20,\r\n  \"durationDays\": 30,\r\n  \"price\": 999\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://127.0.0.1:5000/api/v1/admin/subscriptions/create",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "subscriptions",
+                "create"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "admin/subscriptions/getall",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "http://127.0.0.1:5000/api/v1/admin/subscriptions/getall",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "subscriptions",
+                "getall"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "vendor/subscriptions/getall",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "http://127.0.0.1:5000/api/v1/vendor/subscriptions/getall",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "vendor",
+                "subscriptions",
+                "getall"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "admin/subscriptions/:id",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{vault:authorization-secret}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"name\": \"Gold\",\r\n  \"leadCredits\": 80,\r\n  \"durationDays\": 30,\r\n  \"price\": 1499\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://127.0.0.1:5000/api/v1/admin/subscriptions/:id",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "subscriptions",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "69abd0686211635d7131263f"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "subscriptions/:id/toggle-status",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{vault:authorization-secret}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "http://127.0.0.1:5000/api/v1/admin/subscriptions/:id/toggle-status",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "subscriptions",
+                ":id",
+                "toggle-status"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "69abd0686211635d7131263f"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "subscriptions/:id/delete",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{vault:authorization-secret}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "http://127.0.0.1:5000/api/v1/admin/subscriptions/:id/delete",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "subscriptions",
+                ":id",
+                "delete"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "69abd0686211635d7131263f"
+                }
+              ]
+            }
+          },
+          "response": []
         }
       ]
-    },
-    {
-      "name": "New Request",
-      "request": {
-        "method": "GET",
-        "header": []
-      },
-      "response": []
     }
   ]
 }

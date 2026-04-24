@@ -24,7 +24,7 @@ const getVendorHeaders = asyncHandler(async (req, _, next) => {
       }
 
       const vendor = await Vendor.findById(decoded.id).select(
-        "_id vendorName role featured status verifiedBadge lastActive autoApprovePackages"
+        "_id vendorName role featured status verifiedBadge lastActive autoApprovePackages subscription"
       );
 
       if (!vendor) {

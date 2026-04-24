@@ -11,7 +11,8 @@ import { generateOtp } from "../utils/helper.js";
 import { sendOtpSms } from "../utils/smsService.js";
 import Vendor from "../models/Vendor.js";
 import VenuePackage from "../models/VenuePackage.js";
-
+import ServicePackage from "../models/ServicePackage.js";
+import Contact from "../models/contact.js";
 // @desc    Register a new user
 // @route   POST /api/v1/user/register
 // @access  Public
@@ -175,85 +176,160 @@ export const updateUserProfile = asyncHandler(async (req, res, next) => {
 export const googleAuth = asyncHandler(async (req, res, next) => {
   const { code, redirect_uri } = req.body;
 
-  if (!code) {
-    return next(new ErrorResponse(400, "Google authorization code missing"));
+  // Validation
+  if (!code || typeof code !== 'string' || code.trim() === '') {
+    return next(new ErrorResponse(400, "Valid Google authorization code is required"));
   }
 
+  // Validate environment variables
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+    console.error("CRITICAL: Google OAuth credentials missing in environment");
+    return next(new ErrorResponse(500, "Authentication service unavailable"));
+  }
+
+  let tokens, payload, user;
+
   try {
-    // Exchange code for tokens (support dynamic redirect_uri if provided)
-    const { tokens } = await client.getToken({
-      code,
-      redirect_uri: redirect_uri || "postmessage",
-    });
+    // Step 1: Exchange code for tokens
+    try {
+      const tokenResponse = await client.getToken({
+        code: code.trim(),
+        redirect_uri: redirect_uri && typeof redirect_uri === 'string' 
+          ? redirect_uri.trim() 
+          : "postmessage",
+      });
+      tokens = tokenResponse.tokens;
 
-    // Verify Google token
-    const ticket = await client.verifyIdToken({
-      idToken: tokens.id_token,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
+      if (!tokens || !tokens.id_token) {
+        throw new Error("Invalid token response from Google");
+      }
+    } catch (tokenError) {
+      console.error("Token Exchange Error:", tokenError?.response?.data || tokenError.message);
+      return next(new ErrorResponse(400, "Invalid or expired authorization code"));
+    }
 
-    const payload = ticket.getPayload();
+    // Step 2: Verify ID token
+    try {
+      const ticket = await client.verifyIdToken({
+        idToken: tokens.id_token,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+      payload = ticket.getPayload();
 
+      if (!payload || !payload.sub || !payload.email) {
+        throw new Error("Invalid token payload");
+      }
+    } catch (verifyError) {
+      console.error("Token Verification Error:", verifyError.message);
+      return next(new ErrorResponse(401, "Invalid Google token"));
+    }
+
+    // Step 3: Prepare Google data
     const googleData = {
       googleId: payload.sub,
-      fullName: payload.name,
-      email: payload.email,
-      profilePic: payload.picture,
+      fullName: payload.name || payload.email.split('@')[0], // Fallback if name missing
+      email: payload.email.toLowerCase().trim(),
+      profilePic: payload.picture || null,
     };
 
-    // Check if user exists by email
-    let user = await User.findOne({ email: googleData.email });
+    // Step 4: Find or create user
+    try {
+      user = await User.findOne({ email: googleData.email }).select('+refreshToken');
 
-    if (user) {
-      // If user exists but doesn't have googleId (was registered via email/password), link it
-      if (!user.googleId) {
-        user.googleId = googleData.googleId;
-        // Skip validation to avoid password required error on existing docs if any schema issue
+      if (user) {
+        // Update existing user
+        if (!user.googleId) {
+          user.googleId = googleData.googleId;
+        }
+        
+        // Update profile pic if missing or from Google
+        if (googleData.profilePic && (!user.profile?.url || user.profile?.public_id === "google_profile")) {
+          user.profile = {
+            public_id: "google_profile",
+            url: googleData.profilePic,
+          };
+        }
+
         await user.save({ validateBeforeSave: false });
+      } else {
+        // Create new user
+        user = await User.create({
+          fullName: googleData.fullName,
+          email: googleData.email,
+          googleId: googleData.googleId,
+          profile: {
+            public_id: "google_profile",
+            url: googleData.profilePic,
+          },
+          isActive: true, // Explicitly set active for Google users
+        });
       }
-    } else {
-      // New user -> Create account
-      user = await User.create({
-        fullName: googleData.fullName,
-        email: googleData.email,
-        googleId: googleData.googleId,
-        profile: {
-          public_id: "google_profile",
-          url: googleData.profilePic,
-        },
-      });
+    } catch (dbError) {
+      console.error("Database Error:", dbError.message);
+      
+      // Handle duplicate email error
+      if (dbError.code === 11000) {
+        return next(new ErrorResponse(409, "An account with this email already exists"));
+      }
+      
+      return next(new ErrorResponse(500, "Failed to process user account"));
     }
 
-    if (!user.isActive) {
-      return next(new ErrorResponse(403, "Your account is inactive"));
+    // Step 5: Check account status
+    if (!user || user.isActive === false) {
+      return next(new ErrorResponse(403, "Your account is inactive. Please contact support."));
     }
 
-    const accessToken = generateAccessToken(user._id);
-    const refreshToken = generateRefreshToken(user._id);
-    user.refreshToken = refreshToken;
-    await user.save({ validateBeforeSave: false });
+    // Step 6: Generate tokens
+    let accessToken, refreshToken;
+    try {
+      accessToken = generateAccessToken(user._id);
+      refreshToken = generateRefreshToken(user._id);
 
-    res.status(200).json(
+      if (!accessToken || !refreshToken) {
+        throw new Error("Token generation returned null/undefined");
+      }
+    } catch (tokenGenError) {
+      console.error("Token Generation Error:", tokenGenError.message);
+      return next(new ErrorResponse(500, "Failed to generate authentication tokens"));
+    }
+
+    // Step 7: Save refresh token
+    try {
+      user.refreshToken = refreshToken;
+      await user.save({ validateBeforeSave: false });
+    } catch (saveError) {
+      console.error("Refresh Token Save Error:", saveError.message);
+      // Non-critical - continue with login
+    }
+
+    // Step 8: Send response
+    return res.status(200).json(
       new SuccessResponse(200, "Login successful", {
         user: {
           _id: user._id,
-          fullName: user.fullName,
+          fullName: user.fullName || "User",
           email: user.email,
-          profile: user.profile,
-          role: user.role,
+          profile: user.profile || { public_id: "", url: "" },
+          role: user.role || "user",
         },
         accessToken,
         refreshToken,
       })
     );
+
   } catch (error) {
-    console.error("Google Auth Error:", error?.response?.data || error.message);
+    // Catch-all for unexpected errors
+    console.error("Unexpected Google Auth Error:", {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    });
+
     return next(
       new ErrorResponse(
-        400,
-        error?.response?.data?.error_description ||
-          error.message ||
-          "Google authentication failed"
+        500,
+        "An unexpected error occurred during authentication. Please try again."
       )
     );
   }
@@ -467,3 +543,181 @@ export const savePlanner = asyncHandler(async (req, res) => {
       planner
   })
 });
+
+export const searchVenues = async (req, res) => {
+  try {
+    let {
+      city,
+      minPrice,
+      maxPrice,
+      search,
+      page = 1,
+      limit = 10,
+    } = req.query;
+
+    page = Math.max(1, Number(page) || 1);
+    limit = Math.max(1, Math.min(50, Number(limit) || 10));
+
+    if (city) city = city.toLowerCase().trim();
+    if (search) search = search.trim();
+
+    const filter = {
+      approved: true,
+      visibility: "public",
+    };
+
+    if (city) {
+      filter["location.city"] = {
+        $regex: `^${city}$`,
+        $options: "i",
+      };
+    }
+
+    if (minPrice || maxPrice) {
+      filter.startingPrice = {};
+      if (minPrice) filter.startingPrice.$gte = Number(minPrice);
+      if (maxPrice) filter.startingPrice.$lte = Number(maxPrice);
+    }
+
+    if (search && search.length > 2) {
+      filter.title = {
+        $regex: search,
+        $options: "i",
+      };
+    }
+    const [venues, total] = await Promise.all([
+      VenuePackage.find(filter)
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .sort({
+          isPremium: -1,
+          inquiryCount: -1,
+          createdAt: -1,
+        })
+        .select(
+          "title slug startingPrice location.city featuredImage inquiryCount isPremium"
+        ),
+
+      VenuePackage.countDocuments(filter),
+    ]);
+
+    res.status(200).json({
+      success: true,
+      total,
+      page,
+      count: venues.length,
+      data: venues,
+    });
+  } catch (err) {
+    console.error("Search Error:", err);
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+
+export const createContact = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const email = req.body.email;
+
+     if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required",
+      });
+    }
+
+    const contact = await Contact.findOneAndUpdate(
+      { user: userId },
+      { user: userId, email },
+      { new: true, upsert: true }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "User registered in contact list",
+      data: contact,
+    });
+  } catch (err) {
+    console.error("Contact Error:", err);
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+export const getPremiumVenuePackages = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, city } = req.query;
+
+    const filter = {
+      isPremium: true,
+      isActive: true,
+    };
+
+    if (city) {
+      filter["location.city"] = city.toLowerCase();
+    }
+
+    const data = await VenuePackage.find(filter)
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(Number(limit));
+
+    const total = await VenuePackage.countDocuments(filter);
+
+    res.status(200).json({
+      success: true,
+      total,
+      page: Number(page),
+      data,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const getPremiumServicePackages = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, category, city } = req.query;
+
+    const filter = {
+      isPremium: true,
+      isActive: true,
+    };
+
+    if (category) {
+      filter.category = category;
+    }
+
+    if (city) {
+      filter["location.city"] = city.toLowerCase();
+    }
+
+    const data = await ServicePackage.find(filter)
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(Number(limit));
+
+    const total = await ServicePackage.countDocuments(filter);
+
+    res.status(200).json({
+      success: true,
+      total,
+      page: Number(page),
+      data,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};

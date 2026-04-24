@@ -113,7 +113,10 @@ const vendorSchema = new Schema(
       type: Number,
       required: true,
     },
-
+    category: {
+      type: String,
+      // required: true,
+    },
     // ----------------------
     // LOCATION
     // ----------------------
@@ -155,7 +158,14 @@ const vendorSchema = new Schema(
         required: true,
       },
     },
-
+    ratingCount: {
+      type: Number,
+      default: 0,
+    },
+    reviewCount: {
+      type: Number,
+      default: 0,
+    },
     // ----------------------
     // MEDIA
     // ----------------------
@@ -188,7 +198,20 @@ const vendorSchema = new Schema(
       unique: true,
       trim: true,
     },
-
+    // emails: {
+    //   type: [
+    //     {
+    //       type: String,
+    //       trim: true,
+    //       lowercase: true,
+    //       match: [/^\S+@\S+\.\S+$/, "Invalid email"]
+    //     }
+    //   ],
+    //   validate: [
+    //     arr => arr.length > 0,
+    //     "At least one email required"
+    //   ]
+    // },
     website: String,
 
     // ----------------------

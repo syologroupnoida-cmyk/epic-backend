@@ -25,67 +25,54 @@ export const createServicePackage = asyncHandler(async (req, res, next) => {
     startingPrice,
     location,
     services,
+    isPremium = false, 
   } = req.body;
-
+  
   if (!serviceSubCategory || !title || !description || !startingPrice) {
     return next(new ErrorResponse(400, "Missing required fields"));
   }
 
-  // Validate SubCategory
   if (!(await ServiceSubCategory.exists({ _id: serviceSubCategory }))) {
     return next(new ErrorResponse(404, "Sub category not found"));
   }
 
-  // Parse Location
+  const vendor = req.vendor;
+
+  const isSubscriptionActive =
+    vendor?.subscription?.expiresAt &&
+    new Date(vendor.subscription.expiresAt) > new Date();
+
+  if (isPremium && !isSubscriptionActive) {
+    return next(
+      new ErrorResponse(
+        403,
+        "Active subscription required to create premium package"
+      )
+    );
+  }
+
   const parsedLocation =
     typeof location === "string" ? JSON.parse(location) : location;
 
   const invalidLocation =
-    !parsedLocation?.locality ||
-    !parsedLocation?.fullAddress ||
-    !parsedLocation?.city ||
-    !parsedLocation?.state ||
-    !parsedLocation?.country ||
-    !parsedLocation?.pincode;
+    !parsedLocation?.locality?.trim() ||
+    !parsedLocation?.fullAddress?.trim() ||
+    !parsedLocation?.city?.trim() ||
+    !parsedLocation?.state?.trim() ||
+    !parsedLocation?.country?.trim() ||
+    !parsedLocation?.pincode?.trim();
 
   if (invalidLocation) {
     return next(new ErrorResponse(400, "Location fields missing"));
   }
 
-  // Create / Fetch Country
-  const countryDoc =
-    (await Country.findOne({
-      name: new RegExp(parsedLocation.country, "i"),
-    })) || (await Country.create({ name: parsedLocation.country }));
+  parsedLocation.locality = String(parsedLocation.locality).trim().toLowerCase();
+  parsedLocation.fullAddress = String(parsedLocation.fullAddress).trim();
+  parsedLocation.city = String(parsedLocation.city).trim().toLowerCase();
+  parsedLocation.state = String(parsedLocation.state).trim().toLowerCase();
+  parsedLocation.country = String(parsedLocation.country).trim().toLowerCase();
+  parsedLocation.pincode = String(parsedLocation.pincode).trim();
 
-  // State
-  const stateDoc =
-    (await State.findOne({
-      name: new RegExp(parsedLocation.state, "i"),
-      country: countryDoc._id,
-    })) ||
-    (await State.create({
-      name: parsedLocation.state,
-      country: countryDoc._id,
-    }));
-
-  // City
-  const cityDoc =
-    (await City.findOne({
-      name: new RegExp(parsedLocation.city, "i"),
-      state: stateDoc._id,
-    })) ||
-    (await City.create({
-      name: parsedLocation.city,
-      state: stateDoc._id,
-      country: countryDoc._id,
-    }));
-
-  parsedLocation.country = countryDoc._id;
-  parsedLocation.state = stateDoc._id;
-  parsedLocation.city = cityDoc._id;
-
-  // Parse Services (Standardized Array)
   let servicesArray = [];
   if (services) {
     try {
@@ -115,7 +102,6 @@ export const createServicePackage = asyncHandler(async (req, res, next) => {
     }
   }
 
-  // Featured Image
   if (!req.file) {
     return next(new ErrorResponse(400, "Featured image is required"));
   }
@@ -123,9 +109,8 @@ export const createServicePackage = asyncHandler(async (req, res, next) => {
   const uploaded = await uploadToCloudinary([req.file], "service-packages");
   const featuredImage = uploaded[0];
 
-  // Create Package
   const pkg = await ServicePackage.create({
-    vendor: req.vendor._id,
+    vendor: vendor._id,
     serviceSubCategory,
     title,
     description,
@@ -133,10 +118,13 @@ export const createServicePackage = asyncHandler(async (req, res, next) => {
     startingPrice,
     location: parsedLocation,
     services: servicesArray,
-    approved: req.vendor?.autoApprovePackages,
+    isPremium: isPremium && isSubscriptionActive, 
+    approved: vendor?.autoApprovePackages,
   });
 
-  res.status(201).json(new SuccessResponse(201, "Package created", pkg));
+  res.status(201).json(
+    new SuccessResponse(201, "Package created successfully", pkg)
+  );
 });
 
 /* ======================================================

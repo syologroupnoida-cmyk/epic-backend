@@ -14,6 +14,7 @@ import publicRoutes from "./routes/public.js";
 import otpRoutes from "./routes/otp.js";
 import blogRoutes from "./routes/blog.js";
 import userRoutes from "./routes/user.js";
+import produtRoutes from "./routes/product.js";
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -57,6 +58,7 @@ const allowedOrigins = [
   "https://www.wedplanners.in",
   "https://epic-site-1.vercel.app",
   "http://localhost:5173",
+  "https://admin.wedplanners.in"
 ].filter(Boolean);
 
 app.use(
@@ -80,6 +82,7 @@ app.use("/api/v1/public", publicRoutes); // Website Public APIs
 app.use("/api/v1/otp", otpRoutes);
 app.use("/api/v1/blogs", blogRoutes);
 app.use("/api/v1/user", userRoutes);
+app.use("/api/v1/products", produtRoutes);
 
 // Error Middleware
 app.use(errorMiddleware);

@@ -6,6 +6,7 @@ import VenuePackage from "../models/VenuePackage.js";
 import ServicePackage from "../models/ServicePackage.js";
 import Vendor from "../models/Vendor.js";
 import Lead from "../models/Lead.js";
+import Contact from "../models/contact.js";
 // Default Costs
 const DEFAULT_LEAD_COSTS = {
   standard: 10,
@@ -318,3 +319,43 @@ export const toggleLeadStatus = asyncHandler(async (req, res, next) => {
     new SuccessResponse(200, `Lead status updated to ${status}`, lead)
   );
 });
+
+
+export const getAllContacts = async (req, res) => {
+  try {
+    let { page = 1, limit = 10, search } = req.query;
+
+    page = Math.max(1, Number(page) || 1);
+    limit = Math.max(1, Math.min(100, Number(limit) || 10));
+
+    const filter = {};
+
+    if (search) {
+      filter.email = { $regex: search, $options: "i" };
+    }
+
+    const [contacts, total] = await Promise.all([
+      Contact.find(filter)
+        .populate("user", "name email") // optional
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit),
+
+      Contact.countDocuments(filter),
+    ]);
+
+    res.status(200).json({
+      success: true,
+      total,
+      page,
+      count: contacts.length,
+      data: contacts,
+    });
+  } catch (err) {
+    console.error("Admin Contact Fetch Error:", err);
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};

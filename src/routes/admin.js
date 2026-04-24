@@ -9,6 +9,7 @@ import {
   updateVenuePackageStatus,
   updateServicePackageStatus,
   toggleLeadStatus,
+  getAllContacts,
 } from "../controllers/admin.js";
 import {
   createService,
@@ -198,6 +199,8 @@ router.put("/subscriptions/:id", getAdminHeaders, updateSubscription);
 router.put("/subscriptions/:id/toggle-status", getAdminHeaders, toggleSubscriptionStatus);
 
 router.delete("/subscriptions/:id/delete", getAdminHeaders, deleteSubscription);
+
+router.get("/contacts", getAdminHeaders, getAllContacts); // New route to get all contact form submissions
 
 export default router;
 

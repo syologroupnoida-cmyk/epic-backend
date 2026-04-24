@@ -97,18 +97,15 @@ const servicePackageSchema = new Schema(
         required: [true, "Full address is required"],
       },
       city: {
-        type: Types.ObjectId,
-        ref: "City",
+        type: String,
         required: [true, "City is required"],
       },
       state: {
-        type: Types.ObjectId,
-        ref: "State",
+        type: String,
         required: [true, "State is required"],
       },
       country: {
-        type: Types.ObjectId,
-        ref: "Country",
+        type: String,
         required: [true, "Country is required"],
       },
       googleMapsLink: {
@@ -158,6 +155,12 @@ const servicePackageSchema = new Schema(
     isPremium: {
       type: Boolean,
       default: false,
+      index: true,
+    },
+     // ⭐ Soft delete  
+    isActive: {
+      type: Boolean,
+      default: true,
     },
   },
   {
@@ -170,17 +173,18 @@ servicePackageSchema.pre("save", async function () {
     return;
   }
 
-  const cityDoc = await model("City").findById(this.location.city);
-  const cityName = cityDoc ? cityDoc.name : "";
-
   const baseSlug = slugify(this.title, {
     lower: true,
     strict: true,
     trim: true,
   });
-  const citySlug = slugify(cityName, { lower: true, strict: true, trim: true });
 
-  // _id always available before save
+  const citySlug = slugify(this.location.city || "", {
+    lower: true,
+    strict: true,
+    trim: true,
+  });
+
   this.slug = `${baseSlug}-${citySlug}-${this._id.toString()}`;
 });
 

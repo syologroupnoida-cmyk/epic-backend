@@ -16,52 +16,100 @@ import SuccessResponse from "../utils/SuccessResponse.js";
 /* ======================================================
    CREATE PACKAGE
 ====================================================== */
+import mongoose from "mongoose";
+
 export const createVenuePackage = asyncHandler(async (req, res, next) => {
   let {
     venueCategory,
     title,
     description,
-    featuredImage,
     startingPrice,
     location,
     services,
     latitude,
-    longitude
+    longitude,
+    isPremium = false, 
   } = req.body;
 
   // ---------------------------
   // VALIDATE REQUIRED FIELDS
-  //----------------------------
+  // ---------------------------
   if (!venueCategory || !title || !description || !startingPrice) {
     return next(new ErrorResponse(400, "Missing required fields"));
   }
 
-  // Validate Category
-  if (!(await VenueCategory.exists({ _id: venueCategory }))) {
-    return next(new ErrorResponse(404, "Venue category not found"));
+  // ---------------------------
+  // VALIDATE ObjectId (IMPORTANT FIX)
+  // ---------------------------
+  
+  if (!mongoose.Types.ObjectId.isValid(venueCategory)) {
+    return next(new ErrorResponse(400, "Invalid venueCategory ID"));
   }
 
-  const locationObj =
-    typeof location === "string" ? JSON.parse(location) : location;
+  const categoryExists = await VenueCategory.exists({ _id: venueCategory });
+  if (!categoryExists) {
+    return next(new ErrorResponse(404, "Venue category not found"));
+  }
+  const vendor = req.vendor;
+
+  const isSubscriptionActive =
+    vendor?.subscription?.expiresAt &&
+    new Date(vendor.subscription.expiresAt) > new Date();
+
+  if (isPremium && !isSubscriptionActive) {
+    return next(
+      new ErrorResponse(
+        403,
+        "Active subscription required to create premium package"
+      )
+    );
+  }
+  // ---------------------------
+  // SAFE LOCATION PARSE
+  // ---------------------------
+  let locationObj;
+  try {
+    locationObj =
+      typeof location === "string" ? JSON.parse(location) : location;
+  } catch (err) {
+    return next(new ErrorResponse(400, "Invalid location JSON"));
+  }
+
   location = locationObj;
 
-  // Validate Location
+  // ---------------------------
+  // VALIDATE LOCATION
+  // ---------------------------
   const invalidLocation =
-    !location?.locality ||
-    !location?.fullAddress ||
-    !location?.city ||
-    !location?.state ||
-    !location?.country ||
-    !location?.pincode;
+    !location?.locality?.trim() ||
+    !location?.fullAddress?.trim() ||
+    !location?.city?.trim() ||
+    !location?.state?.trim() ||
+    !location?.country?.trim() ||
+    !location?.pincode?.trim();
 
-  if (invalidLocation)
+  if (invalidLocation) {
     return next(new ErrorResponse(400, "Location fields missing"));
-/* ================= GEO LOCATION LOGIC ================= */
+  }
 
+  // ---------------------------
+  // NORMALIZATION (SEARCH SAFE)
+  // ---------------------------
+  location.locality = String(location.locality).trim().toLowerCase();
+  location.fullAddress = String(location.fullAddress).trim();
+
+  location.city = String(location.city).trim().toLowerCase();
+  location.state = String(location.state).trim().toLowerCase();
+  location.country = String(location.country).trim().toLowerCase();
+
+  location.pincode = String(location.pincode).trim();
+
+  // ---------------------------
+  // GEO LOCATION
+  // ---------------------------
   let lat = latitude ? parseFloat(latitude) : null;
   let lng = longitude ? parseFloat(longitude) : null;
 
-  // Auto extract from Google Maps link if lat/lng not provided
   if ((!lat || !lng) && location.googleMapsLink) {
     const match = location.googleMapsLink.match(/q=([-.\d]+),([-.\d]+)/);
     if (match) {
@@ -79,48 +127,16 @@ export const createVenuePackage = asyncHandler(async (req, res, next) => {
     );
   }
 
-  // IMPORTANT: MongoDB format = [longitude, latitude]
   const geo_loc = {
     type: "Point",
     coordinates: [lng, lat],
   };
 
-  const countryExists = await Country.exists({
-    name: new RegExp(`^${location.country}$`, "i"),
-  });
-  const stateExists = await State.exists({
-    name: new RegExp(`^${location.state}$`, "i"),
-    country: countryExists?._id,
-  });
-  const cityExists = await City.exists({
-    name: new RegExp(`^${location.city}$`, "i"),
-    state: stateExists?._id,
-  });
-
-  if (!countryExists) {
-    const country = await Country.create({ name: location.country });
-    location.country = country._id;
-  } else location.country = countryExists._id;
-
-  if (!stateExists) {
-    const state = await State.create({
-      name: location.state,
-      country: location.country,
-    });
-    location.state = state._id;
-  } else location.state = stateExists._id;
-
-  if (!cityExists) {
-    const city = await City.create({
-      name: location.city,
-      state: location.state,
-      country: location.country,
-    });
-    location.city = city._id;
-  } else location.city = cityExists._id;
-
-  // --- SERVICES (Standardized Array) ---
+  // ---------------------------
+  // SERVICES PARSE
+  // ---------------------------
   let servicesArray = [];
+
   if (services) {
     try {
       const parsed =
@@ -134,42 +150,40 @@ export const createVenuePackage = asyncHandler(async (req, res, next) => {
             icon: s.icon,
             type: s.type,
           }))
-          .filter((s) => {
-            const isValid =
+          .filter(
+            (s) =>
               s.name &&
               String(s.name).trim() !== "" &&
               s.value !== "" &&
               s.value !== null &&
-              s.value !== undefined;
-            if (!isValid) console.log("DEBUG: Dropping invalid service:", s);
-            return isValid;
-          });
+              s.value !== undefined
+          );
       }
     } catch (err) {
       console.error("Services parsing error:", err);
       servicesArray = [];
     }
-  } else {
-    console.log("DEBUG: createVenuePackage - No services field in body");
   }
 
+  // ---------------------------
+  // FILE VALIDATION
+  // ---------------------------
   if (!req.file) {
     return next(new ErrorResponse(400, "Featured image is required"));
   }
 
-  // Upload featured image
   const uploadedImage = await uploadToCloudinary([req.file], "venue-packages");
-  featuredImage = {
+
+  const featuredImage = {
     public_id: uploadedImage[0].public_id,
     url: uploadedImage[0].url,
   };
 
-  /* ======================================================
-       CREATE PACKAGE
-  ======================================================= */
-
+  // ---------------------------
+  // FINAL CREATE
+  // ---------------------------
   const pkg = await VenuePackage.create({
-    vendor: req.vendor._id,
+    vendor: req.vendor._id,  // ✅ already valid
     venueCategory,
     title,
     description,
@@ -178,6 +192,7 @@ export const createVenuePackage = asyncHandler(async (req, res, next) => {
     location,
     geo_loc,
     services: servicesArray,
+    isPremium: isPremium && isSubscriptionActive,
     approved: req.vendor?.autoApprovePackages,
   });
 
@@ -185,7 +200,6 @@ export const createVenuePackage = asyncHandler(async (req, res, next) => {
     .status(201)
     .json(new SuccessResponse(201, "Package created successfully", pkg));
 });
-
 /* ======================================================
    GET ALL PACKAGES (WITH FILTERS)
 ====================================================== */

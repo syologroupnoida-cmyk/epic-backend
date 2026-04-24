@@ -70,6 +70,10 @@ import { buySubscription,
   getSubscriptions,
  } from "../controllers/subscription.js";
 
+import { importVendors } from "../controllers/import.js";
+
+
+
 const router = express.Router();
 
 router.post("/refresh", refreshAccessToken);
@@ -397,6 +401,9 @@ router.delete("/service-packages/:id", getVendorHeaders, deleteServicePackage); 
 
 router.post("/subscriptions/buy", getVendorHeaders, buySubscription); // tested
 router.get("/subscriptions/getall", getSubscriptions); // tested
+
+//importing of vendors from csv route
+router.post("/import", upload.single("file"), importVendors);
 
 
 

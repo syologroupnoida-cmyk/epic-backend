@@ -13,6 +13,9 @@ import Vendor from "../models/Vendor.js";
 import VenuePackage from "../models/VenuePackage.js";
 import ServicePackage from "../models/ServicePackage.js";
 import Contact from "../models/contact.js";
+import RealStory from "../models/realStory.js";
+import SearchLog from "../models/searchlog.js";
+
 // @desc    Register a new user
 // @route   POST /api/v1/user/register
 // @access  Public
@@ -176,160 +179,85 @@ export const updateUserProfile = asyncHandler(async (req, res, next) => {
 export const googleAuth = asyncHandler(async (req, res, next) => {
   const { code, redirect_uri } = req.body;
 
-  // Validation
-  if (!code || typeof code !== 'string' || code.trim() === '') {
-    return next(new ErrorResponse(400, "Valid Google authorization code is required"));
+  if (!code) {
+    return next(new ErrorResponse(400, "Google authorization code missing"));
   }
-
-  // Validate environment variables
-  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-    console.error("CRITICAL: Google OAuth credentials missing in environment");
-    return next(new ErrorResponse(500, "Authentication service unavailable"));
-  }
-
-  let tokens, payload, user;
 
   try {
-    // Step 1: Exchange code for tokens
-    try {
-      const tokenResponse = await client.getToken({
-        code: code.trim(),
-        redirect_uri: redirect_uri && typeof redirect_uri === 'string' 
-          ? redirect_uri.trim() 
-          : "postmessage",
-      });
-      tokens = tokenResponse.tokens;
+    // Exchange code for tokens (support dynamic redirect_uri if provided)
+    const { tokens } = await client.getToken({
+      code,
+      redirect_uri: redirect_uri || "postmessage",
+    });
 
-      if (!tokens || !tokens.id_token) {
-        throw new Error("Invalid token response from Google");
-      }
-    } catch (tokenError) {
-      console.error("Token Exchange Error:", tokenError?.response?.data || tokenError.message);
-      return next(new ErrorResponse(400, "Invalid or expired authorization code"));
-    }
+    // Verify Google token
+    const ticket = await client.verifyIdToken({
+      idToken: tokens.id_token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
 
-    // Step 2: Verify ID token
-    try {
-      const ticket = await client.verifyIdToken({
-        idToken: tokens.id_token,
-        audience: process.env.GOOGLE_CLIENT_ID,
-      });
-      payload = ticket.getPayload();
+    const payload = ticket.getPayload();
 
-      if (!payload || !payload.sub || !payload.email) {
-        throw new Error("Invalid token payload");
-      }
-    } catch (verifyError) {
-      console.error("Token Verification Error:", verifyError.message);
-      return next(new ErrorResponse(401, "Invalid Google token"));
-    }
-
-    // Step 3: Prepare Google data
     const googleData = {
       googleId: payload.sub,
-      fullName: payload.name || payload.email.split('@')[0], // Fallback if name missing
-      email: payload.email.toLowerCase().trim(),
-      profilePic: payload.picture || null,
+      fullName: payload.name,
+      email: payload.email,
+      profilePic: payload.picture,
     };
 
-    // Step 4: Find or create user
-    try {
-      user = await User.findOne({ email: googleData.email }).select('+refreshToken');
+    // Check if user exists by email
+    let user = await User.findOne({ email: googleData.email });
 
-      if (user) {
-        // Update existing user
-        if (!user.googleId) {
-          user.googleId = googleData.googleId;
-        }
-        
-        // Update profile pic if missing or from Google
-        if (googleData.profilePic && (!user.profile?.url || user.profile?.public_id === "google_profile")) {
-          user.profile = {
-            public_id: "google_profile",
-            url: googleData.profilePic,
-          };
-        }
-
+    if (user) {
+      // If user exists but doesn't have googleId (was registered via email/password), link it
+      if (!user.googleId) {
+        user.googleId = googleData.googleId;
+        // Skip validation to avoid password required error on existing docs if any schema issue
         await user.save({ validateBeforeSave: false });
-      } else {
-        // Create new user
-        user = await User.create({
-          fullName: googleData.fullName,
-          email: googleData.email,
-          googleId: googleData.googleId,
-          profile: {
-            public_id: "google_profile",
-            url: googleData.profilePic,
-          },
-          isActive: true, // Explicitly set active for Google users
-        });
       }
-    } catch (dbError) {
-      console.error("Database Error:", dbError.message);
-      
-      // Handle duplicate email error
-      if (dbError.code === 11000) {
-        return next(new ErrorResponse(409, "An account with this email already exists"));
-      }
-      
-      return next(new ErrorResponse(500, "Failed to process user account"));
+    } else {
+      // New user -> Create account
+      user = await User.create({
+        fullName: googleData.fullName,
+        email: googleData.email,
+        googleId: googleData.googleId,
+        profile: {
+          public_id: "google_profile",
+          url: googleData.profilePic,
+        },
+      });
     }
 
-    // Step 5: Check account status
-    if (!user || user.isActive === false) {
-      return next(new ErrorResponse(403, "Your account is inactive. Please contact support."));
+    if (!user.isActive) {
+      return next(new ErrorResponse(403, "Your account is inactive"));
     }
 
-    // Step 6: Generate tokens
-    let accessToken, refreshToken;
-    try {
-      accessToken = generateAccessToken(user._id);
-      refreshToken = generateRefreshToken(user._id);
+    const accessToken = generateAccessToken(user._id);
+    const refreshToken = generateRefreshToken(user._id);
+    user.refreshToken = refreshToken;
+    await user.save({ validateBeforeSave: false });
 
-      if (!accessToken || !refreshToken) {
-        throw new Error("Token generation returned null/undefined");
-      }
-    } catch (tokenGenError) {
-      console.error("Token Generation Error:", tokenGenError.message);
-      return next(new ErrorResponse(500, "Failed to generate authentication tokens"));
-    }
-
-    // Step 7: Save refresh token
-    try {
-      user.refreshToken = refreshToken;
-      await user.save({ validateBeforeSave: false });
-    } catch (saveError) {
-      console.error("Refresh Token Save Error:", saveError.message);
-      // Non-critical - continue with login
-    }
-
-    // Step 8: Send response
-    return res.status(200).json(
+    res.status(200).json(
       new SuccessResponse(200, "Login successful", {
         user: {
           _id: user._id,
-          fullName: user.fullName || "User",
+          fullName: user.fullName,
           email: user.email,
-          profile: user.profile || { public_id: "", url: "" },
-          role: user.role || "user",
+          profile: user.profile,
+          role: user.role,
         },
         accessToken,
         refreshToken,
       })
     );
-
   } catch (error) {
-    // Catch-all for unexpected errors
-    console.error("Unexpected Google Auth Error:", {
-      message: error.message,
-      stack: error.stack,
-      name: error.name,
-    });
-
+    console.error("Google Auth Error:", error?.response?.data || error.message);
     return next(
       new ErrorResponse(
-        500,
-        "An unexpected error occurred during authentication. Please try again."
+        400,
+        error?.response?.data?.error_description ||
+          error.message ||
+          "Google authentication failed"
       )
     );
   }
@@ -718,6 +646,189 @@ export const getPremiumServicePackages = async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message,
+    });
+  }
+};
+
+
+export const createRealStory = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  const {
+    serviceType,
+    vendor,
+    title,
+    story,
+    experience,
+    rating,
+    location,
+    coupleName,
+  } = req.body;
+
+  if (!serviceType || !title || !story || !experience || !rating) {
+    return res.status(400).json({
+      success: false,
+      message: "Required fields missing",
+    });
+  }
+
+  const newStory = await RealStory.create({
+    user: userId,
+    serviceType,
+    vendor,
+    title,
+    story,
+    experience,
+    rating,
+    location,
+    coupleName,
+    images: req.files || [], // if using multer/cloudinary
+  });
+
+  res.status(201).json({
+    success: true,
+    message: "Story submitted successfully",
+    data: newStory,
+  });
+});
+export const getRealStories = asyncHandler(async (req, res) => {
+  const {
+    page = 1,
+    limit = 10,
+    serviceType,
+    featured,
+  } = req.query;
+
+  const filter = {};
+
+  // Normalize
+  const normalizedServiceType = serviceType?.trim();
+
+  if (normalizedServiceType) {
+    filter.serviceType = {
+      $regex: `^${normalizedServiceType}$`,
+      $options: "i",
+    };
+  }
+
+  if (featured === "true") {
+    filter.isFeatured = true;
+  }
+  console.log("Real Stories Filter:", filter);
+  const stories = await RealStory.find(filter)
+    .populate("vendor", "businessName")
+    .populate("user", "name")
+    .sort({ isFeatured: -1, createdAt: -1 })
+    .skip((page - 1) * limit)
+    .limit(Number(limit));
+
+  const total = await RealStory.countDocuments(filter);
+
+  res.status(200).json({
+    success: true,
+    total,
+    page: Number(page),
+    data: stories,
+  });
+});
+
+export const getSingleStory = asyncHandler(async (req, res) => {
+  const story = await RealStory.findById(req.params.id)
+    .populate("vendor", "businessName")
+    .populate("user", "name");
+
+  if (!story) {
+    return res.status(404).json({
+      success: false,
+      message: "Story not found",
+    });
+  }
+
+  res.status(200).json({
+    success: true,
+    data: story,
+  });
+});
+
+export const getPopularSearches = async (req, res) => {
+  try {
+    const { limit = 10, city, type } = req.query;
+
+    const match = {};
+
+    // 🌍 Filter by city
+    if (city) {
+      match.city = city.toLowerCase().trim();
+    }
+
+    // 📂 Filter by category type (venue/service/product)
+    if (type) {
+      match.categoryType = type;
+    }
+
+    // ⏱️ Last 7 days data
+    match.createdAt = {
+      $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+    };
+
+    const data = await SearchLog.aggregate([
+      { $match: match },
+
+      // 🧠 Group by normalized query
+      {
+        $group: {
+          _id: "$normalizedQuery",
+          count: { $sum: 1 },
+          lastSearched: { $max: "$createdAt" },
+        },
+      },
+
+      // ⚡ Trending score (recent + frequent)
+      {
+        $addFields: {
+          score: {
+            $divide: [
+              "$count",
+              {
+                $add: [
+                  {
+                    $divide: [
+                      { $subtract: [new Date(), "$lastSearched"] },
+                      1000 * 60 * 60, // hours
+                    ],
+                  },
+                  1,
+                ],
+              },
+            ],
+          },
+        },
+      },
+
+      { $sort: { score: -1 } },
+      { $limit: Number(limit) },
+
+      // 🎯 Clean response
+      {
+        $project: {
+          _id: 0,
+          title: "$_id",
+          count: 1,
+          score: 1,
+        },
+      },
+    ]);
+
+    res.status(200).json({
+      success: true,
+      count: data.length,
+      data,
+    });
+  } catch (err) {
+    console.error("Popular Search Error:", err);
+    res.status(500).json({
+      success: false,
+      message: err.message,
     });
   }
 };

@@ -319,6 +319,63 @@
           "response": []
         },
         {
+          "name": "search-venues",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{vault:authorization-secret}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:5000/api/v1/user/near-me-vendor?latitude=27&longitude=77&radius=500&page=1&limit=5",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "user",
+                "near-me-vendor"
+              ],
+              "query": [
+                {
+                  "key": "latitude",
+                  "value": "27"
+                },
+                {
+                  "key": "longitude",
+                  "value": "77"
+                },
+                {
+                  "key": "radius",
+                  "value": "500"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "user/near-me-venue",
           "request": {
             "auth": {
@@ -408,20 +465,25 @@
             }
           },
           "response": []
-        }
-      ]
-    },
-    {
-      "name": "Vendor/Admin",
-      "item": [
+        },
         {
-          "name": "reset-password-admin",
+          "name": "user/saveplanner",
           "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{vault:authorization-secret}}",
+                  "type": "string"
+                }
+              ]
+            },
             "method": "POST",
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n    \"phone\":\"9927231085\",\r\n    \"newPassword\":\"password\"\r\n}",
+              "raw": "{\r\n    \"planner\": {\r\n        \"event_date\": \"2026-09-20\",\r\n        \"event_type\": \"wedding\",\r\n        \"months_until_event\": 6.3,\r\n        \"city\": \"Delhi\",\r\n        \"guest_count\": 400,\r\n        \"budget\": 1500000,\r\n        \"events\": [\r\n            \"mehendi\",\r\n            \"haldi\"\r\n        ],\r\n        \"timeline\": [\r\n            {\r\n                \"time\": \"6 months before\",\r\n                \"tasks\": [\r\n                    \"Finalize budget and guest list\",\r\n                    \"Book wedding venue (urgent)\",\r\n                    \"Hire wedding planner/coordinator (urgent)\"\r\n                ]\r\n            },\r\n            {\r\n                \"time\": \"3 months before\",\r\n                \"tasks\": [\r\n                    \"Book photographer\",\r\n                    \"Book videographer\",\r\n                    \"Book caterer\",\r\n                    \"Book decorator/florist\",\r\n                    \"Book DJ/live band\",\r\n                    \"Book makeup artist\",\r\n                    \"Book pandit/officiant\",\r\n                    \"Design wedding invitations\",\r\n                    \"Finalize wedding outfits\"\r\n                ]\r\n            },\r\n            {\r\n                \"time\": \"1 month before\",\r\n                \"tasks\": [\r\n                    \"Send out wedding invitations\",\r\n                    \"Confirm guest list with caterer\",\r\n                    \"Finalize menu with caterer\",\r\n                    \"Book mehendi artist\",\r\n                    \"Select mehendi designs\",\r\n                    \"Arrange seating area for mehendi\",\r\n                    \"Arrange ingredients and supplies for haldi\",\r\n                    \"Set up haldi area\"\r\n                ]\r\n            },\r\n            {\r\n                \"time\": \"2 weeks before\",\r\n                \"tasks\": [\r\n                    \"Confirm outstation guest accommodation\",\r\n                    \"Plan honeymoon travel\",\r\n                    \"Arrange wedding transport\",\r\n                    \"Book choreographer for sangeet\",\r\n                    \"Finalize performance lineup for sangeet\",\r\n                    \"Arrange stage lighting and sound system for sangeet\",\r\n                    \"Book dhol players / brass band for baraat\",\r\n                    \"Arrange baraat horse or decorated car\",\r\n                    \"Plan baraat route\",\r\n                    \"Plan reception programme\",\r\n                    \"Arrange stage decoration for reception\",\r\n                    \"Brief reception MC\"\r\n                ]\r\n            },\r\n            {\r\n                \"time\": \"1 week before\",\r\n                \"tasks\": [\r\n                    \"Prepare seating chart (urgent)\",\r\n                    \"Arrange extra waitstaff (urgent)\",\r\n                    \"Arrange valet parking (urgent)\",\r\n                    \"Confirm vendor arrival times\",\r\n                    \"Prepare payment envelopes\",\r\n                    \"Charge camera batteries\"\r\n                ]\r\n            },\r\n            {\r\n                \"time\": \"3 days before\",\r\n                \"tasks\": [\r\n                    \"Confirm vendor arrival times\",\r\n                    \"Prepare payment envelopes\",\r\n                    \"Charge camera batteries\"\r\n                ]\r\n            },\r\n            {\r\n                \"time\": \"1 day before\",\r\n                \"tasks\": [\r\n                    \"Rest and self-care\",\r\n                    \"Confirm next-day schedule\",\r\n                    \"Pack day-of emergency kit\"\r\n                ]\r\n            }\r\n        ],\r\n        \"recommended_vendors\": [\r\n            {\r\n                \"_id\": \"698737d098f9d8a0afe208ae\",\r\n                \"vendorName\": \"Chatpata Stories By Nathu's\",\r\n                \"experience\": 1,\r\n                \"teamSize\": null,\r\n                \"workingSince\": 2000,\r\n                \"state\": \"Sunder Nagar Market\",\r\n                \"city\": \"delhi\",\r\n                \"locality\": \"First Floor\",\r\n                \"pincode\": \"110003\",\r\n                \"lastActive\": \"2026-02-07T13:02:08.369000\",\r\n                \"createdAt\": \"2026-02-07T13:02:08.369000\",\r\n                \"_score\": 50\r\n            },\r\n            {\r\n                \"_id\": \"698737d098f9d8a0afe208aa\",\r\n                \"vendorName\": \"Dancers For Wedding\",\r\n                \"experience\": 1,\r\n                \"teamSize\": null,\r\n                \"workingSince\": 2000,\r\n                \"state\": \"Chankya Place\",\r\n                \"city\": \"delhi\",\r\n                \"locality\": \"C\",\r\n                \"pincode\": \"110059\",\r\n                \"lastActive\": \"2026-02-07T13:02:08.272000\",\r\n                \"createdAt\": \"2026-02-07T13:02:08.273000\",\r\n                \"_score\": 50\r\n            },\r\n            {\r\n                \"_id\": \"698737d098f9d8a0afe208a6\",\r\n                \"vendorName\": \"Food Tales Catering\",\r\n                \"experience\": 1,\r\n                \"teamSize\": null,\r\n                \"workingSince\": 2000,\r\n                \"state\": \"Delhi\",\r\n                \"city\": \"delhi\",\r\n                \"locality\": \"Khasra No. 369\",\r\n                \"pincode\": \"110074\",\r\n                \"lastActive\": \"2026-02-07T13:02:08.176000\",\r\n                \"createdAt\": \"2026-02-07T13:02:08.176000\",\r\n                \"_score\": 50\r\n            },\r\n            {\r\n                \"_id\": \"698737d098f9d8a0afe208a1\",\r\n                \"vendorName\": \"CRANBERRY BLUE\",\r\n                \"experience\": 1,\r\n                \"teamSize\": null,\r\n                \"workingSince\": 2000,\r\n                \"state\": \"Haryana\",\r\n                \"city\": \"delhi\",\r\n                \"locality\": \"5th Floor\",\r\n                \"pincode\": \"122001\",\r\n                \"lastActive\": \"2026-02-07T13:02:08.079000\",\r\n                \"createdAt\": \"2026-02-07T13:02:08.079000\",\r\n                \"_score\": 50\r\n            },\r\n            {\r\n                \"_id\": \"698737cf98f9d8a0afe2089d\",\r\n                \"vendorName\": \"Shaandaar Events - Best Wedding Planners In Gurugram\",\r\n                \"experience\": 1,\r\n                \"teamSize\": null,\r\n                \"workingSince\": 2000,\r\n                \"state\": \"Haryana\",\r\n                \"city\": \"delhi\",\r\n                \"locality\": \"Plot no 8\",\r\n                \"pincode\": \"122002\",\r\n                \"lastActive\": \"2026-02-07T13:02:07.986000\",\r\n                \"createdAt\": \"2026-02-07T13:02:07.986000\",\r\n                \"_score\": 50\r\n            }\r\n        ],\r\n        \"recommended_venues\": [\r\n            {\r\n                \"_id\": \"698d70ca5538566296c7cfff\",\r\n                \"venueName\": \"title\",\r\n                \"startingPrice\": 50000,\r\n                \"approved\": false,\r\n                \"isPremium\": false,\r\n                \"inquiryCount\": 0,\r\n                \"locality\": \"Noida\",\r\n                \"city\": \"698d70c55538566296c7cffd\",\r\n                \"state\": \"69707806daa384d0255b98d2\",\r\n                \"pincode\": \"201303\",\r\n                \"location\": {\r\n                    \"locality\": \"Noida\",\r\n                    \"city\": \"698d70c55538566296c7cffd\",\r\n                    \"state\": \"69707806daa384d0255b98d2\",\r\n                    \"pincode\": \"201303\"\r\n                },\r\n                \"createdAt\": \"2026-02-12T06:18:50.034000\",\r\n                \"updatedAt\": \"2026-02-12T06:18:50.034000\",\r\n                \"_score\": 10\r\n            },\r\n            {\r\n                \"_id\": \"69a01822f1c4dfd96df8416f\",\r\n                \"venueName\": \" Luxury Banquet Package\",\r\n                \"startingPrice\": 75000,\r\n                \"approved\": false,\r\n                \"isPremium\": false,\r\n                \"inquiryCount\": 0,\r\n                \"locality\": \"Noida\",\r\n                \"city\": \"698d70c55538566296c7cffd\",\r\n                \"state\": \"69707806daa384d0255b98d2\",\r\n                \"pincode\": \"201303\",\r\n                \"location\": {\r\n                    \"locality\": \"Noida\",\r\n                    \"city\": \"698d70c55538566296c7cffd\",\r\n                    \"state\": \"69707806daa384d0255b98d2\",\r\n                    \"pincode\": \"201303\"\r\n                },\r\n                \"createdAt\": \"2026-02-26T09:53:38.569000\",\r\n                \"updatedAt\": \"2026-02-26T09:53:38.569000\",\r\n                \"_score\": 10\r\n            }\r\n        ]\r\n    },\r\n    \"execution_time_ms\": 10096.6\r\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -429,7 +491,7 @@
               }
             },
             "url": {
-              "raw": "http://127.0.0.1:5000/api/v1/user/reset-password",
+              "raw": "http://127.0.0.1:5000/api/v1/user/saveplanner",
               "protocol": "http",
               "host": [
                 "127",
@@ -442,12 +504,430 @@
                 "api",
                 "v1",
                 "user",
-                "reset-password"
+                "saveplanner"
               ]
             }
           },
           "response": []
         },
+        {
+          "name": "post/contact",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{vault:authorization-secret}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"email\":\"bdhjsan@gmail.com\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://127.0.0.1:5000/api/v1/user/contact",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "user",
+                "contact"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "peemium/venues",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{vault:authorization-secret}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "serviceSubCategory",
+                  "value": "69731ee9daa384d0255b9952",
+                  "type": "text"
+                },
+                {
+                  "key": "title",
+                  "value": " Wedding Photography Package",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": " Full wedding coverage with cinematic video",
+                  "type": "text"
+                },
+                {
+                  "key": "startingPrice",
+                  "value": " 50000",
+                  "type": "text"
+                },
+                {
+                  "key": "isPremium",
+                  "value": " true",
+                  "type": "text"
+                },
+                {
+                  "key": "location",
+                  "value": " {\"locality\":\"Indirapuram\",\"fullAddress\":\"123 Wedding Street\",\"city\":\"Ghaziabad\",\"state\":\"Uttar Pradesh\",\"country\":\"India\",\"pincode\":\"201014\"}",
+                  "type": "text"
+                },
+                {
+                  "key": "services",
+                  "value": " [{\"name\":\"Photography\",\"value\":\"Full Day Coverage\",\"icon\":\"camera\",\"type\":\"included\"},{\"name\":\"Videography\",\"value\":\"Cinematic Video\",\"icon\":\"video\",\"type\":\"included\"}]",
+                  "type": "text"
+                },
+                {
+                  "key": "featuredImage",
+                  "type": "file",
+                  "uuid": "902ecf1d-1b9d-468f-9491-3a9f93c542d6",
+                  "src": "postman-cloud:///1f112ece-827a-4490-b1f1-f6106b023516"
+                }
+              ]
+            },
+            "url": {
+              "raw": "http://127.0.0.1:5000/api/v1/user/premium/venues?city=noida",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "user",
+                "premium",
+                "venues"
+              ],
+              "query": [
+                {
+                  "key": "city",
+                  "value": "noida"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "peemium/services",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{vault:authorization-secret}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "serviceSubCategory",
+                  "value": "69731ee9daa384d0255b9952",
+                  "type": "text"
+                },
+                {
+                  "key": "title",
+                  "value": " Wedding Photography Package",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": " Full wedding coverage with cinematic video",
+                  "type": "text"
+                },
+                {
+                  "key": "startingPrice",
+                  "value": " 50000",
+                  "type": "text"
+                },
+                {
+                  "key": "isPremium",
+                  "value": " true",
+                  "type": "text"
+                },
+                {
+                  "key": "location",
+                  "value": " {\"locality\":\"Indirapuram\",\"fullAddress\":\"123 Wedding Street\",\"city\":\"Ghaziabad\",\"state\":\"Uttar Pradesh\",\"country\":\"India\",\"pincode\":\"201014\"}",
+                  "type": "text"
+                },
+                {
+                  "key": "services",
+                  "value": " [{\"name\":\"Photography\",\"value\":\"Full Day Coverage\",\"icon\":\"camera\",\"type\":\"included\"},{\"name\":\"Videography\",\"value\":\"Cinematic Video\",\"icon\":\"video\",\"type\":\"included\"}]",
+                  "type": "text"
+                },
+                {
+                  "key": "featuredImage",
+                  "type": "file",
+                  "uuid": "902ecf1d-1b9d-468f-9491-3a9f93c542d6",
+                  "src": "postman-cloud:///1f112ece-827a-4490-b1f1-f6106b023516"
+                }
+              ]
+            },
+            "url": {
+              "raw": "http://127.0.0.1:5000/api/v1/user/premium/services?city=ghaziabaD",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "user",
+                "premium",
+                "services"
+              ],
+              "query": [
+                {
+                  "key": "city",
+                  "value": "ghaziabaD"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Products (List)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:5000/api/v1/products/products?page=1&limit=10&search=iphone&minPrice=10000&maxPrice=100000",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "search",
+                  "value": "iphone"
+                },
+                {
+                  "key": "minPrice",
+                  "value": "10000"
+                },
+                {
+                  "key": "maxPrice",
+                  "value": "100000"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Product By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:5000/api/v1/products/products/{{productId}}",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "products",
+                "{{productId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Real Story",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceType\": \"Photography\",\n  \"title\": \"Dream Wedding Captured Perfectly\",\n  \"story\": \"Epic made our wedding journey smooth. The photographer they connected us with was amazing and captured every moment beautifully.\",\n  \"experience\": \"Excellent\",\n  \"rating\": 5,\n  \"location\": \"Goa Beach\",\n  \"coupleName\": \"Shefali & Nitish\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/real-stories",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "real-stories"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Real Stories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/real-stories?page=1&limit=10&serviceType=Photography",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "real-stories"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "serviceType",
+                  "value": "Photography"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Single Story",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/real-stories/{{story_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "real-stories",
+                "{{story_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "popularsearch",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:5000/api/v1/user/popular-searches",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "user",
+                "popular-searches"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Vendor/Admin",
+      "item": [
         {
           "name": "verify-forgot-otp-admin",
           "request": {
@@ -1523,6 +2003,87 @@
           "response": []
         },
         {
+          "name": "vendor/service-packages",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{vault:authorization-secret}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "serviceSubCategory",
+                  "value": "69731ee9daa384d0255b9952",
+                  "type": "text"
+                },
+                {
+                  "key": "title",
+                  "value": " Wedding Photography Package",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": " Full wedding coverage with cinematic video",
+                  "type": "text"
+                },
+                {
+                  "key": "startingPrice",
+                  "value": " 50000",
+                  "type": "text"
+                },
+                {
+                  "key": "isPremium",
+                  "value": " true",
+                  "type": "text"
+                },
+                {
+                  "key": "location",
+                  "value": " {\"locality\":\"Indirapuram\",\"fullAddress\":\"123 Wedding Street\",\"city\":\"Ghaziabad\",\"state\":\"Uttar Pradesh\",\"country\":\"India\",\"pincode\":\"201014\"}",
+                  "type": "text"
+                },
+                {
+                  "key": "services",
+                  "value": " [{\"name\":\"Photography\",\"value\":\"Full Day Coverage\",\"icon\":\"camera\",\"type\":\"included\"},{\"name\":\"Videography\",\"value\":\"Cinematic Video\",\"icon\":\"video\",\"type\":\"included\"}]",
+                  "type": "text"
+                },
+                {
+                  "key": "featuredImage",
+                  "type": "file",
+                  "uuid": "902ecf1d-1b9d-468f-9491-3a9f93c542d6",
+                  "src": "postman-cloud:///1f112ece-827a-4490-b1f1-f6106b023516"
+                }
+              ]
+            },
+            "url": {
+              "raw": "http://127.0.0.1:5000/api/v1/vendor/service-packages",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "vendor",
+                "service-packages"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "vendor/refresh",
           "request": {
             "method": "POST",
@@ -1629,6 +2190,52 @@
                 "v1",
                 "vendor",
                 "profile"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "vendor/import",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{vault:authorization-secret}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "uuid": "b28f7b51-af98-4f77-845c-add0011ed107",
+                  "src": "postman-cloud:///1f127a6f-5162-4680-aded-ba802cee4655"
+                }
+              ]
+            },
+            "url": {
+              "raw": "http://127.0.0.1:5000/api/v1/vendor/import",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "vendor",
+                "import"
               ]
             }
           },
@@ -2088,6 +2695,59 @@
           "response": []
         },
         {
+          "name": "getcontacts",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{vault:authorization-secret}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://127.0.0.1:5000/api/v1/admin/contacts?search=bdhjsan@gmail.com",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "contacts"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "bdhjsan@gmail.com"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "subscriptions/:id/delete",
           "request": {
             "auth": {
@@ -2133,8 +2793,150 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "Create Product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"iPhone 15\",\n  \"description\": \"Latest Apple smartphone\",\n  \"price\": 80000,\n  \"category\": \"electronics\",\n  \"stock\": 20\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/products",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "products"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Product",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"iPhone 15 Pro\",\n  \"price\": 90000,\n  \"stock\": 15\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/products/{{productId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "products",
+                "{{productId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Product (Soft Delete)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/products/{{productId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "products",
+                "{{productId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "storyFeature",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/real-stories/{{story_id}}/approve",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "real-stories",
+                "{{story_id}}",
+                "approve"
+              ]
+            }
+          },
+          "response": []
         }
       ]
+    },
+    {
+      "name": "reset-password-admin",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"phone\":\"9927231085\",\r\n    \"newPassword\":\"password\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://127.0.0.1:5000/api/v1/user/reset-password",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "v1",
+            "user",
+            "reset-password"
+          ]
+        }
+      },
+      "response": []
     }
   ]
 }

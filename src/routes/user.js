@@ -15,10 +15,15 @@ import {
   createContact,
   getPremiumVenuePackages,
   getPremiumServicePackages,
+  createRealStory,
+  getRealStories,
+  getSingleStory,
+  getPopularSearches,
 } from "../controllers/user.js";
 import { getUserHeaders } from "../middlewares/authMiddleware.js";
 import { upload } from "../middlewares/multer.js";
 import { refreshAccessTokenUser} from "../controllers/authController.js";
+import { trackSearch } from "../middlewares/trackMiddleware.js";
 
 const router = Router();
 
@@ -51,14 +56,19 @@ router.put(
 
 router.get("/near-me-vendor",getUserHeaders,searchNearMe);
 router.get("/near-me-venue",getUserHeaders,searchNearMeVenue);
-router.get("/search-venues",getUserHeaders,searchVenues);
+router.get("/search-venues",getUserHeaders,trackSearch("venue"),searchVenues);
 
 router.post("/saveplanner",getUserHeaders,savePlanner);
 
 router.post("/contact", getUserHeaders, createContact);
 
-router.get("/premium/venues", getPremiumVenuePackages);
-router.get("/premium/services", getPremiumServicePackages);
+router.get("/premium/venues",trackSearch("venue"), getPremiumVenuePackages);
+router.get("/premium/services", trackSearch("service"),getPremiumServicePackages);
 
+router.post("/real-stories", getUserHeaders, upload.array("images", 5), createRealStory);
+router.get("/real-stories", getRealStories);
+router.get("/real-stories/:id", getSingleStory);
+
+router.get("/popular-searches",getPopularSearches);
 
 export default router;

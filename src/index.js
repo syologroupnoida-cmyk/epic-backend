@@ -58,7 +58,6 @@ const allowedOrigins = [
   "https://www.wedplanners.in",
   "https://epic-site-1.vercel.app",
   "http://localhost:5173",
-  "https://admin.wedplanners.in"
 ].filter(Boolean);
 
 app.use(

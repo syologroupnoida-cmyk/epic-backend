@@ -10,6 +10,7 @@ import {
   updateServicePackageStatus,
   toggleLeadStatus,
   getAllContacts,
+  toggleFeaturedStory,
 } from "../controllers/admin.js";
 import {
   createService,
@@ -201,6 +202,8 @@ router.put("/subscriptions/:id/toggle-status", getAdminHeaders, toggleSubscripti
 router.delete("/subscriptions/:id/delete", getAdminHeaders, deleteSubscription);
 
 router.get("/contacts", getAdminHeaders, getAllContacts); // New route to get all contact form submissions
+
+router.put("/real-stories/:id/feature",getAdminHeaders, toggleFeaturedStory);
 
 export default router;
 

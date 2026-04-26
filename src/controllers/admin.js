@@ -7,6 +7,7 @@ import ServicePackage from "../models/ServicePackage.js";
 import Vendor from "../models/Vendor.js";
 import Lead from "../models/Lead.js";
 import Contact from "../models/contact.js";
+import RealStory from "../models/realStory.js";
 // Default Costs
 const DEFAULT_LEAD_COSTS = {
   standard: 10,
@@ -359,3 +360,23 @@ export const getAllContacts = async (req, res) => {
     });
   }
 };
+export const toggleFeaturedStory = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const story = await RealStory.findById(id);
+
+  if (!story) {
+    return res.status(404).json({
+      success: false,
+      message: "Story not found",
+    });
+  }
+
+  story.isFeatured = !story.isFeatured;
+  await story.save();
+
+  res.status(200).json({
+    success: true,
+    message: `Story is now ${story.isFeatured ? "FEATURED" : "NOT FEATURED"}`,
+  });
+});

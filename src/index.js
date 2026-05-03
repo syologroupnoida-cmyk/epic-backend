@@ -16,6 +16,9 @@ import blogRoutes from "./routes/blog.js";
 import userRoutes from "./routes/user.js";
 import produtRoutes from "./routes/product.js";
 
+import swaggerJSDoc from "swagger-jsdoc";
+import swaggerUi from "swagger-ui-express";
+
 const app = express();
 const port = process.env.PORT || 3000;
 const node_env = process.env.NODE_ENV || "development";
@@ -71,6 +74,41 @@ app.use(
 app.get("/", (req, res) => {
   res.send("API is running...");
 });
+
+// Swagger Setup
+const swaggerOptions = {
+  swaggerDefinition: {
+    openapi: "3.0.0",
+    info: {
+      title: "Epic Backend API",
+      version: "1.0.0",
+      description: "API Documentation",
+    },
+    servers: [
+      {
+        url: "/api/v1",
+      },
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+        },
+      },
+    },
+    security: [
+      {
+        bearerAuth: [],
+      },
+    ],
+  },
+  apis: ["./src/routes/*.js"],
+};
+
+const swaggerDocs = swaggerJSDoc(swaggerOptions);
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 app.use("/api/v1/vendor", vendorRoutes);
 app.use("/api/v1/location", locationRoutes);

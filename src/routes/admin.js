@@ -42,7 +42,7 @@ import {
   toggleVerifyBadge,
   updateAdminNotesForVendor,
   updateVendorStatus,
-  updateVendorDetailsByAdmin, // Import new controller
+  updateVendorDetailsByAdmin,
 } from "../controllers/vendor.js";
 import {
   createCategory,
@@ -57,60 +57,439 @@ import { updateUserProfile } from "../controllers/user.js";
 import { createLeadBundle } from "../controllers/lead.js";
 import { migrateVendorCredits } from "../controllers/migration.js";
 import { refreshAccessToken } from "../controllers/authController.js";
-import { createSubscription,
+import {
+  createSubscription,
   getSubscriptions,
   updateSubscription,
   toggleSubscriptionStatus,
   deleteSubscription
- } from "../controllers/subscription.js";
-// import adminAuth from "../middlewares/adminAuth.js"; // optional, if Admin-only
+} from "../controllers/subscription.js";
 
 const router = Router();
 
-router.get("/check", getAdminHeaders, checkAdmin); // tested
+/**
+ * @swagger
+ * tags:
+ *   - name: Admin Auth
+ *     description: Admin authentication and status
+ *   - name: Admin System
+ *     description: Admin system settings
+ *   - name: Admin Packages
+ *     description: Admin package approvals and listings
+ *   - name: Admin Services
+ *     description: Core service and category management
+ *   - name: Admin Vendors
+ *     description: Vendor and lead management
+ *   - name: Admin Subscriptions
+ *     description: Subscription management
+ */
 
-//access token refresh route
+/**
+ * @swagger
+ * /admin/check:
+ *   get:
+ *     summary: Check if user is admin
+ *     tags: [Admin Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User is admin
+ */
+router.get("/check", getAdminHeaders, checkAdmin);
+
+/**
+ * @swagger
+ * /admin/refresh:
+ *   post:
+ *     summary: Refresh admin access token
+ *     tags: [Admin Auth]
+ *     responses:
+ *       200:
+ *         description: Token refreshed
+ */
 router.post("/refresh", refreshAccessToken);
 
-
 // System Settings
+/**
+ * @swagger
+ * /admin/settings/{key}:
+ *   get:
+ *     summary: Get system setting
+ *     tags: [Admin System]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: key
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Setting value
+ *   put:
+ *     summary: Update system setting
+ *     tags: [Admin System]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: key
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Setting updated
+ */
 router.get("/settings/:key",getAdminHeaders, getSystemSettings);
 router.put("/settings/:key", getAdminHeaders,updateSystemSettings);
+
+/**
+ * @swagger
+ * /admin/migrate-credits:
+ *   post:
+ *     summary: Migrate vendor credits
+ *     tags: [Admin System]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Migration successful
+ */
 router.post("/migrate-credits",getAdminHeaders, migrateVendorCredits);
 
-// Admin Lead Bundle Management
+/**
+ * @swagger
+ * /admin/lead-bundles:
+ *   post:
+ *     summary: Create a lead bundle
+ *     tags: [Admin Vendors]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       201:
+ *         description: Lead bundle created
+ */
 router.post("/lead-bundles",getAdminHeaders, createLeadBundle);
 
 // --- ADMIN PACKAGE MANAGEMENT ---
-router.get("/venue-packages", getAdminHeaders,getAdminVenuePackages); //-----------------------------------------------
+
+/**
+ * @swagger
+ * /admin/venue-packages:
+ *   get:
+ *     summary: Get all venue packages (Admin view)
+ *     tags: [Admin Packages]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of venue packages
+ */
+router.get("/venue-packages", getAdminHeaders,getAdminVenuePackages);
+
+/**
+ * @swagger
+ * /admin/venue-packages/{id}/status:
+ *   put:
+ *     summary: Update venue package status
+ *     tags: [Admin Packages]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Status updated
+ */
 router.put("/venue-packages/:id/status", getAdminHeaders,updateVenuePackageStatus);
 
-router.get("/service-packages", getAdminHeaders,getAdminServicePackages); //------------------------------------------------
+/**
+ * @swagger
+ * /admin/service-packages:
+ *   get:
+ *     summary: Get all service packages (Admin view)
+ *     tags: [Admin Packages]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of service packages
+ */
+router.get("/service-packages", getAdminHeaders,getAdminServicePackages);
+
+/**
+ * @swagger
+ * /admin/service-packages/{id}/status:
+ *   put:
+ *     summary: Update service package status
+ *     tags: [Admin Packages]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Status updated
+ */
 router.put("/service-packages/:id/status",getAdminHeaders, updateServicePackageStatus);
 
 //#region service routes
-router.get("/services",getAdminHeaders, getAllServices); // tested ------------------------------------------------
-router.post("/services", getAdminHeaders,createService); // tested
-router.get("/services/:id",getAdminHeaders, getServiceById); // tested---------------------------------------------
-router.put("/services/:id", getAdminHeaders, updateService); // tested-----------------------------------------------
-router.delete("/services/:id", getAdminHeaders, deleteService); // tested
+/**
+ * @swagger
+ * /admin/services:
+ *   get:
+ *     summary: Get all services
+ *     tags: [Admin Services]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of services
+ *   post:
+ *     summary: Create a service
+ *     tags: [Admin Services]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       201:
+ *         description: Service created
+ */
+router.get("/services",getAdminHeaders, getAllServices);
+router.post("/services", getAdminHeaders,createService);
+
+/**
+ * @swagger
+ * /admin/services/{id}:
+ *   get:
+ *     summary: Get a service by ID
+ *     tags: [Admin Services]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Service details
+ *   put:
+ *     summary: Update a service
+ *     tags: [Admin Services]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Service updated
+ *   delete:
+ *     summary: Delete a service
+ *     tags: [Admin Services]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Service deleted
+ */
+router.get("/services/:id",getAdminHeaders, getServiceById);
+router.put("/services/:id", getAdminHeaders, updateService);
+router.delete("/services/:id", getAdminHeaders, deleteService);
 //#endregion service routes
 
 //#region venue category routes
-router.post("/venue-categories", getAdminHeaders,upload.single("image"), createCategory); // tested
-router.get("/venue-categories", getAdminHeaders,getCategories); // tested------------------------------------------------
-router.get("/venue-categories/:id", getAdminHeaders,getCategory); // tested----------------------------------------------
-router.put("/venue-categories/:id",getAdminHeaders, upload.single("image"), updateCategory); // tested
-router.delete("/venue-categories/:id", getAdminHeaders,deleteCategory); // tested
+/**
+ * @swagger
+ * /admin/venue-categories:
+ *   post:
+ *     summary: Create venue category
+ *     tags: [Admin Services]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       201:
+ *         description: Created
+ *   get:
+ *     summary: Get venue categories
+ *     tags: [Admin Services]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List
+ */
+router.post("/venue-categories", getAdminHeaders,upload.single("image"), createCategory);
+router.get("/venue-categories", getAdminHeaders,getCategories);
+
+/**
+ * @swagger
+ * /admin/venue-categories/{id}:
+ *   get:
+ *     summary: Get venue category
+ *     tags: [Admin Services]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Detail
+ *   put:
+ *     summary: Update venue category
+ *     tags: [Admin Services]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Updated
+ *   delete:
+ *     summary: Delete venue category
+ *     tags: [Admin Services]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Deleted
+ */
+router.get("/venue-categories/:id", getAdminHeaders,getCategory);
+router.put("/venue-categories/:id",getAdminHeaders, upload.single("image"), updateCategory);
+router.delete("/venue-categories/:id", getAdminHeaders,deleteCategory);
 //#endregion venue category routes
 
 //#region vendor management routes
-router.get("/vendors", getAdminHeaders,getAllVendors); // tested ------------------------------------------------
-router.post("/vendors/bulk-create", getAdminHeaders,bulkCreateVendors); // new route
-router.get("/vendors/:id", getAdminHeaders,getVendorById); // tested ------------------------------------------------
-router.put("/vendors/:id/status", getAdminHeaders,updateVendorStatus); // tested
-router.delete("/vendors/:id", getAdminHeaders, deleteVendor); // tested   ########
+/**
+ * @swagger
+ * /admin/vendors:
+ *   get:
+ *     summary: Get all vendors
+ *     tags: [Admin Vendors]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of vendors
+ */
+router.get("/vendors", getAdminHeaders,getAllVendors);
 
+/**
+ * @swagger
+ * /admin/vendors/bulk-create:
+ *   post:
+ *     summary: Bulk create vendors
+ *     tags: [Admin Vendors]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       201:
+ *         description: Vendors created
+ */
+router.post("/vendors/bulk-create", getAdminHeaders,bulkCreateVendors);
+
+/**
+ * @swagger
+ * /admin/vendors/{id}:
+ *   get:
+ *     summary: Get vendor by ID
+ *     tags: [Admin Vendors]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Vendor details
+ *   put:
+ *     summary: Update vendor details
+ *     tags: [Admin Vendors]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Vendor updated
+ *   delete:
+ *     summary: Delete vendor
+ *     tags: [Admin Vendors]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Vendor deleted
+ */
+router.get("/vendors/:id", getAdminHeaders,getVendorById);
+router.delete("/vendors/:id", getAdminHeaders, deleteVendor);
 router.put(
   "/vendors/:id",getAdminHeaders,
   upload.fields([
@@ -122,89 +501,457 @@ router.put(
     { name: 'documents[registrationProof]', maxCount: 1 },
   ]),
   updateVendorDetailsByAdmin
-); // New route for admin to update full vendor details
+);
 
+/**
+ * @swagger
+ * /admin/vendors/{id}/status:
+ *   put:
+ *     summary: Update vendor status
+ *     tags: [Admin Vendors]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Status updated
+ */
+router.put("/vendors/:id/status", getAdminHeaders,updateVendorStatus);
 
-//lead stop/start by admin
-
+/**
+ * @swagger
+ * /admin/leads:
+ *   put:
+ *     summary: Toggle lead status
+ *     tags: [Admin Vendors]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Toggled
+ */
 router.put("/leads", getAdminHeaders,toggleLeadStatus);
 
+/**
+ * @swagger
+ * /admin/vendors/{id}/toggle-featured:
+ *   put:
+ *     summary: Toggle featured vendor status
+ *     tags: [Admin Vendors]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Toggled
+ */
+router.put("/vendors/:id/toggle-featured", getAdminHeaders,toggleFeaturedVendor);
 
-// Mark vendor as featured/unfeatured
-router.put("/vendors/:id/toggle-featured", getAdminHeaders,toggleFeaturedVendor); // tested
+/**
+ * @swagger
+ * /admin/vendors/{id}/toggle-verify:
+ *   put:
+ *     summary: Toggle verify badge
+ *     tags: [Admin Vendors]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Toggled
+ */
+router.put("/vendors/:id/toggle-verify",getAdminHeaders, toggleVerifyBadge);
 
-// Toggle verify badge
-router.put("/vendors/:id/toggle-verify",getAdminHeaders, toggleVerifyBadge); // tested
+/**
+ * @swagger
+ * /admin/vendors/{id}/admin-notes:
+ *   put:
+ *     summary: Update admin notes for vendor
+ *     tags: [Admin Vendors]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Notes updated
+ */
+router.put("/vendors/:id/admin-notes", getAdminHeaders, updateAdminNotesForVendor);
 
-// Update admin notes
-router.put("/vendors/:id/admin-notes", getAdminHeaders, updateAdminNotesForVendor); // tested
-
-// Update auto-approve packages setting
-router.put("/vendors/:id/toggle-auto-approve", getAdminHeaders,toggleAutoApprovePackages); // tested
-
+/**
+ * @swagger
+ * /admin/vendors/{id}/toggle-auto-approve:
+ *   put:
+ *     summary: Toggle auto-approve packages
+ *     tags: [Admin Vendors]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Toggled
+ */
+router.put("/vendors/:id/toggle-auto-approve", getAdminHeaders,toggleAutoApprovePackages);
 //#endregion VENDOR MANAGEMENT ROUTES
 
 //#region service category routes
+/**
+ * @swagger
+ * /admin/service-categories:
+ *   post:
+ *     summary: Create service category
+ *     tags: [Admin Services]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       201:
+ *         description: Created
+ *   get:
+ *     summary: Get all service categories
+ *     tags: [Admin Services]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List
+ */
 router.post(
   "/service-categories",getAdminHeaders,
   upload.single("image"),
   createServiceCategory
-); // tested
+);
+router.get("/service-categories",getAdminHeaders, getAllServiceCategories);
 
-router.get("/service-categories",getAdminHeaders, getAllServiceCategories); // tested -------------------------------------
-
-router.get("/service-categories/:id", getAdminHeaders,getServiceCategory);// tested -------------------------------------
-
+/**
+ * @swagger
+ * /admin/service-categories/{id}:
+ *   get:
+ *     summary: Get service category
+ *     tags: [Admin Services]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Detail
+ *   put:
+ *     summary: Update service category
+ *     tags: [Admin Services]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Updated
+ *   delete:
+ *     summary: Delete service category
+ *     tags: [Admin Services]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Deleted
+ */
+router.get("/service-categories/:id", getAdminHeaders,getServiceCategory);
 router.put(
   "/service-categories/:id",
   getAdminHeaders,
   upload.single("image"),
   updateServiceCategory
-); // tested
-
+);
 router.delete("/service-categories/:id",getAdminHeaders, deleteServiceCategory);
-
 //#endregion service category routes
 
 //#region service sub-category routes
+/**
+ * @swagger
+ * /admin/service-sub-categories:
+ *   post:
+ *     summary: Create service sub-category
+ *     tags: [Admin Services]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       201:
+ *         description: Created
+ *   get:
+ *     summary: Get all service sub-categories
+ *     tags: [Admin Services]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List
+ */
 router.post(
   "/service-sub-categories",getAdminHeaders,
   upload.single("image"),
   createServiceSubCategory
-); // tested
+);
+router.get("/service-sub-categories",getAdminHeaders, getAllServiceSubCategories);
 
-router.get("/service-sub-categories",getAdminHeaders, getAllServiceSubCategories); // tested---------------------------------
-
-router.get("/service-sub-categories/:id", getAdminHeaders,getServiceSubCategory); // tested----------------------------------
-
+/**
+ * @swagger
+ * /admin/service-sub-categories/{id}:
+ *   get:
+ *     summary: Get service sub-category
+ *     tags: [Admin Services]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Detail
+ *   put:
+ *     summary: Update service sub-category
+ *     tags: [Admin Services]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Updated
+ *   delete:
+ *     summary: Delete service sub-category
+ *     tags: [Admin Services]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Deleted
+ */
+router.get("/service-sub-categories/:id", getAdminHeaders,getServiceSubCategory);
 router.put(
   "/service-sub-categories/:id",getAdminHeaders,
   upload.single("image"),
   updateServiceSubCategory
-); // tested
-
-router.delete("/service-sub-categories/:id",getAdminHeaders, deleteServiceSubCategory); // tested
-
+);
+router.delete("/service-sub-categories/:id",getAdminHeaders, deleteServiceSubCategory);
 //#endregion service sub-category routes
 
-
-router.put("/user-status/:id", getAdminHeaders,updateUserProfile); // tested
+/**
+ * @swagger
+ * /admin/user-status/{id}:
+ *   put:
+ *     summary: Update user status
+ *     tags: [Admin Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Updated
+ */
+router.put("/user-status/:id", getAdminHeaders,updateUserProfile);
 
 //subscription routes
-router.post("/subscriptions/create", getAdminHeaders, createSubscription); 
+/**
+ * @swagger
+ * /admin/subscriptions/create:
+ *   post:
+ *     summary: Create a subscription
+ *     tags: [Admin Subscriptions]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       201:
+ *         description: Created
+ */
+router.post("/subscriptions/create", getAdminHeaders, createSubscription);
 
+/**
+ * @swagger
+ * /admin/subscriptions/getall:
+ *   get:
+ *     summary: Get all subscriptions
+ *     tags: [Admin Subscriptions]
+ *     responses:
+ *       200:
+ *         description: List
+ */
 router.get("/subscriptions/getall", getSubscriptions);
 
+/**
+ * @swagger
+ * /admin/subscriptions/{id}:
+ *   put:
+ *     summary: Update subscription
+ *     tags: [Admin Subscriptions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Updated
+ */
 router.put("/subscriptions/:id", getAdminHeaders, updateSubscription);
 
+/**
+ * @swagger
+ * /admin/subscriptions/{id}/toggle-status:
+ *   put:
+ *     summary: Toggle subscription status
+ *     tags: [Admin Subscriptions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Toggled
+ */
 router.put("/subscriptions/:id/toggle-status", getAdminHeaders, toggleSubscriptionStatus);
 
+/**
+ * @swagger
+ * /admin/subscriptions/{id}/delete:
+ *   delete:
+ *     summary: Delete subscription
+ *     tags: [Admin Subscriptions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Deleted
+ */
 router.delete("/subscriptions/:id/delete", getAdminHeaders, deleteSubscription);
 
-router.get("/contacts", getAdminHeaders, getAllContacts); // New route to get all contact form submissions
+/**
+ * @swagger
+ * /admin/contacts:
+ *   get:
+ *     summary: Get all contact form submissions
+ *     tags: [Admin System]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of contacts
+ */
+router.get("/contacts", getAdminHeaders, getAllContacts);
 
+/**
+ * @swagger
+ * /admin/real-stories/{id}/feature:
+ *   put:
+ *     summary: Toggle featured real story
+ *     tags: [Admin System]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Toggled
+ */
 router.put("/real-stories/:id/feature",getAdminHeaders, toggleFeaturedStory);
 
 export default router;
-
-

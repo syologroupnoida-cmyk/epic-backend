@@ -11,20 +11,103 @@ import {
 
 const router = Router();
 
+/**
+ * @swagger
+ * tags:
+ *   name: Vendor Leads
+ *   description: Lead purchasing and management for vendors
+ */
+
 router.use(getVendorHeaders);
 
-// Filters
+/**
+ * @swagger
+ * /leads/filters:
+ *   get:
+ *     summary: Get lead filter options
+ *     tags: [Vendor Leads]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Filter options retrieved
+ */
 router.get("/filters", getLeadFilterOptions);
 
-// Marketplace
-router.get("/marketplace", getMarketplaceLeads); // Show masked leads
-router.post("/buy/:leadId", buyLead); // Buy single lead
+/**
+ * @swagger
+ * /leads/marketplace:
+ *   get:
+ *     summary: Get marketplace leads (masked)
+ *     tags: [Vendor Leads]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Marketplace leads retrieved
+ */
+router.get("/marketplace", getMarketplaceLeads);
 
-// My Data
-router.get("/my-leads", getMyLeads); // Show purchased leads
+/**
+ * @swagger
+ * /leads/buy/{leadId}:
+ *   post:
+ *     summary: Buy a single lead
+ *     tags: [Vendor Leads]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: leadId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Lead purchased successfully
+ */
+router.post("/buy/:leadId", buyLead);
 
-// Bundles
-router.get("/bundles", getLeadBundles); // List bundles
-router.post("/buy-bundle", buyLeadBundle); // Buy bundle
+/**
+ * @swagger
+ * /leads/my-leads:
+ *   get:
+ *     summary: Get my purchased leads
+ *     tags: [Vendor Leads]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Purchased leads retrieved
+ */
+router.get("/my-leads", getMyLeads);
+
+/**
+ * @swagger
+ * /leads/bundles:
+ *   get:
+ *     summary: Get lead bundles
+ *     tags: [Vendor Leads]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lead bundles retrieved
+ */
+router.get("/bundles", getLeadBundles);
+
+/**
+ * @swagger
+ * /leads/buy-bundle:
+ *   post:
+ *     summary: Buy a lead bundle
+ *     tags: [Vendor Leads]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Bundle purchased successfully
+ */
+router.post("/buy-bundle", buyLeadBundle);
 
 export default router;

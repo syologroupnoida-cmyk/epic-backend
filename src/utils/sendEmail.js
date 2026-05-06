@@ -11,18 +11,19 @@ async function sendEmail(to, subject, message) {
   try {
     // 1. Create transporter (SMTP connection)
     const transporter = nodemailer.createTransport({
-      host: process.env.NODEMAILER_HOST, // For Gmail. Change for your SMTP.
-      port: 587,
-      secure: false, // true for 465, false for other ports
-      family: 4, // Use IPv4, skip IPv6
-      envelope: {
-        from: process.env.NODEMAILER_USER,
+      host: process.env.NODEMAILER_HOST,
+      port: process.env.NODEMAILER_PORT || 587,
+      secure: process.env.NODEMAILER_SECURE === "true", // true for 465, false for other ports
+      auth: {
+        user: process.env.NODEMAILER_USER,
+        pass: process.env.NODEMAILER_PASS,
       },
+      family: 4, // Use IPv4, skip IPv6
     });
 
     // 2. Email content
     const mailOptions = {
-      from: `"Cabnex" <${process.env.NODEMAILER_USER}>`,
+      from: `"WedPlanners" <${process.env.NODEMAILER_USER}>`,
       to,
       subject,
       html: `

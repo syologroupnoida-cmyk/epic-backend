@@ -8,6 +8,7 @@ import {
   sendForgotPasswordOtp,
   verifyForgotPasswordOtp,
   resetPassword,
+  sendRegisterOTP,
   searchNearMe,
   searchNearMeVenue,
   savePlanner,
@@ -48,9 +49,29 @@ router.post("/refresh", refreshAccessTokenUser);
 
 /**
  * @swagger
+ * /user/send-register-otp:
+ *   post:
+ *     summary: Send registration OTP to email
+ *     tags: [User]
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: OTP sent successfully
+ */
+router.post("/send-register-otp", sendRegisterOTP);
+
+/**
+ * @swagger
  * /user/register:
  *   post:
- *     summary: Register a new user
+ *     summary: Register a new user (Verify OTP and Create Profile)
  *     tags: [User]
  *     requestBody:
  *       content:
@@ -61,11 +82,13 @@ router.post("/refresh", refreshAccessTokenUser);
  *               profile:
  *                 type: string
  *                 format: binary
- *               name:
+ *               fullName:
  *                 type: string
  *               email:
  *                 type: string
  *               password:
+ *                 type: string
+ *               otp:
  *                 type: string
  *     responses:
  *       201:

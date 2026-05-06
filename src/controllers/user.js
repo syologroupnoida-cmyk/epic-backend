@@ -9,6 +9,7 @@ import { client } from "../config/googleClient.js";
 import redis from "../config/redisClient.js";
 import { generateOtp } from "../utils/helper.js";
 import { sendOtpSms } from "../utils/smsService.js";
+import sendEmail from "../utils/sendEmail.js";
 import Vendor from "../models/Vendor.js";
 import VenuePackage from "../models/VenuePackage.js";
 import ServicePackage from "../models/ServicePackage.js";
@@ -16,14 +17,66 @@ import Contact from "../models/contact.js";
 import RealStory from "../models/realStory.js";
 import SearchLog from "../models/searchlog.js";
 
-// @desc    Register a new user
+// @desc    Send Registration OTP to Email
+// @route   POST /api/v1/user/send-register-otp
+// @access  Public
+export const sendRegisterOTP = asyncHandler(async (req, res, next) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return next(new ErrorResponse(400, "Please provide an email address"));
+  }
+
+  // Check if user already exists
+  const userExists = await User.findOne({ email });
+  if (userExists) {
+    return next(new ErrorResponse(400, "User already exists with this email"));
+  }
+
+  // Check if OTP was already sent recently (optional but good practice)
+  const existingOtp = await redis.get(`register_otp:${email}`);
+  if (existingOtp) {
+    // You might want to allow resending, but let's stick to a simple flow for now
+    // Or just let it overwrite
+  }
+
+  const otp = generateOtp();
+  
+  // Store OTP in Redis for 10 minutes
+  await redis.setex(`register_otp:${email}`, 600, otp);
+
+  // Send Email
+  const emailSent = await sendEmail(
+    email,
+    "Registration OTP",
+    `Your OTP for registration is <b>${otp}</b>. It is valid for 10 minutes.`
+  );
+
+  if (!emailSent) {
+    return next(new ErrorResponse(500, "Failed to send OTP email"));
+  }
+
+  res.status(200).json(new SuccessResponse(200, "OTP sent to your email"));
+});
+
+// @desc    Register a new user (Verify OTP and Create Profile)
 // @route   POST /api/v1/user/register
 // @access  Public
 export const registerUser = asyncHandler(async (req, res, next) => {
-  const { fullName, email, password, phone } = req.body;
+  const { fullName, email, password, phone, otp } = req.body;
 
-  if (!fullName || !email || !password) {
-    return next(new ErrorResponse(400, "Please provide all required fields"));
+  if (!fullName || !email || !password || !otp) {
+    return next(new ErrorResponse(400, "Please provide all required fields including OTP"));
+  }
+
+  // Verify OTP
+  const storedOtp = await redis.get(`register_otp:${email}`);
+  if (!storedOtp) {
+    return next(new ErrorResponse(400, "OTP expired or invalid. Please request a new one."));
+  }
+
+  if (storedOtp !== otp) {
+    return next(new ErrorResponse(400, "Invalid OTP"));
   }
 
   const userExists = await User.findOne({ email });
@@ -54,11 +107,13 @@ export const registerUser = asyncHandler(async (req, res, next) => {
     profile,
   });
 
+  // Delete OTP from Redis after successful registration
+  await redis.del(`register_otp:${email}`);
+
   const accessToken = generateAccessToken(user._id);
   const refreshToken = generateRefreshToken(user._id);
   user.refreshToken = refreshToken;
   await user.save({ validateBeforeSave: false });
-
 
   res.status(201).json(
     new SuccessResponse(201, "User registered successfully", {

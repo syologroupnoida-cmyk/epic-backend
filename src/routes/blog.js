@@ -27,22 +27,72 @@ const router = express.Router();
  *     security:
  *       - bearerAuth: []
  *     requestBody:
+ *       required: true
  *       content:
  *         multipart/form-data:
  *           schema:
  *             type: object
+ *             required:
+ *               - title
+ *               - category
+ *               - content
+ *               - excerpt
+ *               - image
  *             properties:
+ *               title:
+ *                 type: string
+ *                 description: Blog title
+ *               category:
+ *                 type: string
+ *                 description: Blog category
+ *               content:
+ *                 type: string
+ *                 description: Full blog content
+ *               excerpt:
+ *                 type: string
+ *                 description: Short summary of the blog
  *               image:
  *                 type: string
  *                 format: binary
+ *                 description: Cover image (required)
  *     responses:
  *       201:
  *         description: Blog created successfully
+ *       400:
+ *         description: Required fields missing or image not provided
  *   get:
  *     summary: Get all blogs
  *     tags: [Vendor Blog]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Results per page
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *         description: Filter by category
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search by blog title
+ *       - in: query
+ *         name: vendorId
+ *         schema:
+ *           type: string
+ *         description: Filter by vendor ID (admin only)
  *     responses:
  *       200:
  *         description: List of all blogs
@@ -66,9 +116,14 @@ router
  *         required: true
  *         schema:
  *           type: string
+ *         description: Blog slug (contains the blog ID)
  *     responses:
  *       200:
  *         description: Blog details
+ *       403:
+ *         description: Not authorized to view this blog
+ *       404:
+ *         description: Blog not found
  */
 router.route("/:slug").get(getVendorHeaders, getBlog);
 
@@ -86,18 +141,36 @@ router.route("/:slug").get(getVendorHeaders, getBlog);
  *         required: true
  *         schema:
  *           type: string
+ *         description: Blog ID
  *     requestBody:
  *       content:
  *         multipart/form-data:
  *           schema:
  *             type: object
  *             properties:
+ *               title:
+ *                 type: string
+ *                 description: Blog title
+ *               category:
+ *                 type: string
+ *                 description: Blog category
+ *               content:
+ *                 type: string
+ *                 description: Full blog content
+ *               excerpt:
+ *                 type: string
+ *                 description: Short summary of the blog
  *               image:
  *                 type: string
  *                 format: binary
+ *                 description: Replacement cover image (optional)
  *     responses:
  *       200:
  *         description: Blog updated
+ *       403:
+ *         description: Not authorized to update this blog
+ *       404:
+ *         description: Blog not found
  *   delete:
  *     summary: Delete a blog
  *     tags: [Vendor Blog]
@@ -109,9 +182,14 @@ router.route("/:slug").get(getVendorHeaders, getBlog);
  *         required: true
  *         schema:
  *           type: string
+ *         description: Blog ID
  *     responses:
  *       200:
  *         description: Blog deleted
+ *       403:
+ *         description: Not authorized to delete this blog
+ *       404:
+ *         description: Blog not found
  */
 router
   .route("/:id")

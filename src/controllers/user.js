@@ -475,7 +475,7 @@ export const searchNearMeVenue = asyncHandler(async (req, res, next) => {
     },
   })
     // .select("-password")
-    .select("title featureImage description startingPrice location")
+    .select("title featuredImage description startingPrice location")
     .skip(skip)
     .limit(limitNumber);
 

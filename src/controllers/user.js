@@ -16,6 +16,7 @@ import ServicePackage from "../models/ServicePackage.js";
 import Contact from "../models/contact.js";
 import RealStory from "../models/realStory.js";
 import SearchLog from "../models/searchlog.js";
+import UserInterest from "../models/UserInterest.js";
 
 // @desc    Send Registration OTP to Email
 // @route   POST /api/v1/user/send-register-otp
@@ -231,26 +232,55 @@ export const updateUserProfile = asyncHandler(async (req, res, next) => {
   res.status(200).json(new SuccessResponse(200, "Profile updated", user));
 });
 
+// @desc    Get Google Auth URL
+// @route   GET /api/v1/user/google-auth-url
+// @access  Public
+export const getGoogleAuthUrl = asyncHandler(async (req, res, next) => {
+  const { redirect_uri } = req.query;
+
+  const authUrl = client.generateAuthUrl({
+    access_type: "offline",
+    scope: [
+      "https://www.googleapis.com/auth/userinfo.profile",
+      "https://www.googleapis.com/auth/userinfo.email",
+    ],
+    redirect_uri: redirect_uri || "postmessage",
+  });
+
+  return res.status(200).json(
+    new SuccessResponse(200, "Google Auth URL generated successfully", { authUrl })
+  );
+});
+
 // @desc    Google Login/Signup
 // @route   POST /api/v1/user/google-auth
 // @access  Public
 export const googleAuth = asyncHandler(async (req, res, next) => {
-  const { code, redirect_uri } = req.body;
+  const { code, idToken, credential, redirect_uri } = req.body;
 
-  if (!code) {
-    return next(new ErrorResponse(400, "Google authorization code missing"));
+  if (!code && !idToken && !credential) {
+    return next(new ErrorResponse(400, "Google authorization code or token missing"));
   }
 
   try {
-    // Exchange code for tokens (support dynamic redirect_uri if provided)
-    const { tokens } = await client.getToken({
-      code,
-      redirect_uri: redirect_uri || "postmessage",
-    });
+    let finalIdToken = idToken || credential;
+
+    if (code) {
+      // Exchange code for tokens (support dynamic redirect_uri if provided)
+      const { tokens } = await client.getToken({
+        code,
+        redirect_uri: redirect_uri || "postmessage",
+      });
+      finalIdToken = tokens.id_token;
+    }
+
+    if (!finalIdToken) {
+      return next(new ErrorResponse(400, "Could not retrieve ID token from Google"));
+    }
 
     // Verify Google token
     const ticket = await client.verifyIdToken({
-      idToken: tokens.id_token,
+      idToken: finalIdToken,
       audience: process.env.GOOGLE_CLIENT_ID,
     });
 
@@ -890,3 +920,117 @@ export const getPopularSearches = async (req, res) => {
     });
   }
 };
+
+// ======================================================
+//    STORE USER INTEREST (Wishlist, Purchase, Inquiry, View)
+// ======================================================
+export const storeUserInterest = asyncHandler(async (req, res, next) => {
+  const { vendorId, venueId, typeOfInterest } = req.body;
+
+  if (!vendorId && !venueId) {
+    return next(new ErrorResponse(400, "Please provide a vendorId or venueId"));
+  }
+
+  if (!typeOfInterest || !["purchase", "wishlist", "inquiry", "view"].includes(typeOfInterest)) {
+    return next(
+      new ErrorResponse(
+        400,
+        "Please provide a valid typeOfInterest: purchase, wishlist, inquiry, or view"
+      )
+    );
+  }
+
+  // Verify that the vendor/venue actually exists
+  if (vendorId) {
+    const vendorExists = await Vendor.findById(vendorId);
+    if (!vendorExists) {
+      return next(new ErrorResponse(444, "Vendor not found"));
+    }
+  }
+
+  if (venueId) {
+    const venueExists = await VenuePackage.findById(venueId);
+    if (!venueExists) {
+      return next(new ErrorResponse(444, "Venue package not found"));
+    }
+  }
+
+  // Create or update (upsert) the interest to prevent duplicate wishlist/purchase entries
+  const interest = await UserInterest.findOneAndUpdate(
+    {
+      user: req.user._id,
+      vendor: vendorId || null,
+      venue: venueId || null,
+      typeOfInterest,
+    },
+    {
+      user: req.user._id,
+      vendor: vendorId || undefined,
+      venue: venueId || undefined,
+      typeOfInterest,
+    },
+    { new: true, upsert: true }
+  );
+
+  return res.status(200).json(
+    new SuccessResponse(200, "User interest saved successfully", {
+      interest,
+    })
+  );
+});
+
+// ======================================================
+//    GET USER INTERESTS
+// ======================================================
+export const getUserInterests = asyncHandler(async (req, res, next) => {
+  const { type } = req.query;
+
+  const query = { user: req.user._id };
+  if (type) {
+    if (!["purchase", "wishlist", "inquiry", "view"].includes(type)) {
+      return next(new ErrorResponse(400, "Invalid typeOfInterest filter"));
+    }
+    query.typeOfInterest = type;
+  }
+
+  const interests = await UserInterest.find(query)
+    .populate("vendor", "_id vendorName email phone featured status verifiedBadge logo")
+    .populate("venue", "_id title slug startingPrice location featuredImage");
+
+  return res.status(200).json(
+    new SuccessResponse(200, "User interests retrieved successfully", {
+      count: interests.length,
+      interests,
+    })
+  );
+});
+
+// ======================================================
+//    REMOVE USER INTEREST
+// ======================================================
+export const removeUserInterest = asyncHandler(async (req, res, next) => {
+  const { vendorId, venueId, typeOfInterest } = req.body;
+
+  if (!vendorId && !venueId) {
+    return next(new ErrorResponse(400, "Please provide a vendorId or venueId"));
+  }
+
+  const query = { user: req.user._id };
+  if (vendorId) query.vendor = vendorId;
+  if (venueId) query.venue = venueId;
+  if (typeOfInterest) {
+    query.typeOfInterest = typeOfInterest;
+  }
+
+  const result = await UserInterest.deleteMany(query);
+
+  if (result.deletedCount === 0) {
+    return next(new ErrorResponse(404, "No matching interest found to delete"));
+  }
+
+  return res.status(200).json(
+    new SuccessResponse(200, "User interest(s) removed successfully", {
+      deletedCount: result.deletedCount,
+    })
+  );
+});

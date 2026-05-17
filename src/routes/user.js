@@ -4,6 +4,7 @@ import {
   loginUser,
   getUserProfile,
   updateUserProfile,
+  getGoogleAuthUrl,
   googleAuth,
   sendForgotPasswordOtp,
   verifyForgotPasswordOtp,
@@ -20,6 +21,9 @@ import {
   getRealStories,
   getSingleStory,
   getPopularSearches,
+  storeUserInterest,
+  getUserInterests,
+  removeUserInterest,
 } from "../controllers/user.js";
 import { getUserHeaders } from "../middlewares/authMiddleware.js";
 import { upload } from "../middlewares/multer.js";
@@ -169,6 +173,44 @@ router.post("/login", loginUser);
 
 /**
  * @swagger
+ * /user/google-auth-url:
+ *   get:
+ *     summary: Generate Google OAuth URL for frontend redirection
+ *     tags: [User]
+ *     parameters:
+ *       - in: query
+ *         name: redirect_uri
+ *         schema:
+ *           type: string
+ *         description: Redirect URI to return to after user authenticates (defaults to "postmessage")
+ *     responses:
+ *       200:
+ *         description: Google Auth URL generated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Google Auth URL generated successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     authUrl:
+ *                       type: string
+ *                       example: https://accounts.google.com/o/oauth2/v2/auth?...
+ */
+router.get("/google-auth-url", getGoogleAuthUrl);
+
+/**
+ * @swagger
  * /user/google-auth:
  *   post:
  *     summary: Google OAuth login / signup
@@ -179,12 +221,16 @@ router.post("/login", loginUser);
  *         application/json:
  *           schema:
  *             type: object
- *             required:
- *               - code
  *             properties:
  *               code:
  *                 type: string
- *                 description: Google OAuth authorization code
+ *                 description: Google OAuth authorization code (optional if idToken or credential is provided)
+ *               idToken:
+ *                 type: string
+ *                 description: Google raw ID Token / JWT (optional if code or credential is provided)
+ *               credential:
+ *                 type: string
+ *                 description: Google One-Tap/GIS JWT credential (optional if code or idToken is provided)
  *               redirect_uri:
  *                 type: string
  *                 description: Redirect URI used during OAuth flow (defaults to "postmessage")
@@ -192,7 +238,7 @@ router.post("/login", loginUser);
  *       200:
  *         description: Authenticated successfully
  *       400:
- *         description: Authorization code missing or Google authentication failed
+ *         description: Credentials/Tokens missing or Google authentication failed
  *       403:
  *         description: Account is inactive
  */
@@ -761,5 +807,99 @@ router.get("/real-stories/:id", getSingleStory);
  *         description: Popular searches returned
  */
 router.get("/popular-searches",getPopularSearches);
+
+/**
+ * @swagger
+ * /user/interest:
+ *   post:
+ *     summary: Store user interest (Wishlist, Purchase, Inquiry, View)
+ *     tags: [User Interest]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - typeOfInterest
+ *             properties:
+ *               vendorId:
+ *                 type: string
+ *                 description: ID of the vendor
+ *                 example: 69e669800a280e67217f1e29
+ *               venueId:
+ *                 type: string
+ *                 description: ID of the venue package
+ *                 example: 69e669800a280e67217f1e31
+ *               typeOfInterest:
+ *                 type: string
+ *                 enum: [purchase, wishlist, inquiry, view]
+ *                 description: The type of user interest
+ *                 example: wishlist
+ *     responses:
+ *       200:
+ *         description: Interest stored/upserted successfully
+ *       400:
+ *         description: Missing required fields or invalid parameters
+ *       401:
+ *         description: Unauthorized
+ *       444:
+ *         description: Vendor or Venue package not found
+ *
+ *   get:
+ *     summary: Get user interests
+ *     tags: [User Interest]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [purchase, wishlist, inquiry, view]
+ *         description: Filter interests by type
+ *     responses:
+ *       200:
+ *         description: List of user interests returned successfully
+ *       401:
+ *         description: Unauthorized
+ *
+ *   delete:
+ *     summary: Remove a user interest
+ *     tags: [User Interest]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               vendorId:
+ *                 type: string
+ *                 description: ID of the vendor
+ *               venueId:
+ *                 type: string
+ *                 description: ID of the venue package
+ *               typeOfInterest:
+ *                 type: string
+ *                 enum: [purchase, wishlist, inquiry, view]
+ *                 description: Optional type of interest to remove
+ *     responses:
+ *       200:
+ *         description: User interest removed successfully
+ *       400:
+ *         description: Missing vendorId or venueId
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: No matching interest found
+ */
+router.post("/interest", getUserHeaders, storeUserInterest);
+router.get("/interest", getUserHeaders, getUserInterests);
+router.delete("/interest", getUserHeaders, removeUserInterest);
 
 export default router;

@@ -118,30 +118,30 @@ router.post("/refresh", refreshAccessToken);
     GOOGLE OAUTH ROUTES
 ============================================================================= */
 
-/**
- * @swagger
- * /vendor/auth/google:
- *   post:
- *     summary: Google OAuth for Vendor
- *     tags: [Vendor Auth]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [code]
- *             properties:
- *               code:
- *                 type: string
- *                 description: Google authorization code
- *     responses:
- *       200:
- *         description: Logged in via Google or vendor not registered
- *       400:
- *         description: Google authorization code missing
- */
-router.post("/auth/google", googleAuth);
+// /**
+//  * @swagger
+//  * /vendor/auth/google:
+//  *   post:
+//  *     summary: Google OAuth for Vendor
+//  *     tags: [Vendor Auth]
+//  *     requestBody:
+//  *       required: true
+//  *       content:
+//  *         application/json:
+//  *           schema:
+//  *             type: object
+//  *             required: [code]
+//  *             properties:
+//  *               code:
+//  *                 type: string
+//  *                 description: Google authorization code
+//  *     responses:
+//  *       200:
+//  *         description: Logged in via Google or vendor not registered
+//  *       400:
+//  *         description: Google authorization code missing
+//  */
+// router.post("/auth/google", googleAuth);
 
 /* ============================================================================
     NORMAL LOGIN ROUTE

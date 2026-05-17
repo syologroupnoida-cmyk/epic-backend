@@ -394,8 +394,12 @@ export const verifyPhoneUpdateOtp = asyncHandler(async (req, res, next) => {
     GET VENDOR WALLET BALANCE
 ====================================================== */
 export const getVendorWalletBalance = asyncHandler(async (req, res, next) => {
+
   const vendor = await Vendor.findById(req.vendor?._id).select("wallet");
-  if (!vendor) return next(new ErrorResponse(404, "Vendor not found"));
+  if (!vendor) {
+    return next(new ErrorResponse(404, "Vendor not found"));
+  }
+
   return res.status(200).json(
     new SuccessResponse(200, "Vendor wallet balance", {
       balance: vendor?.wallet?.balance,
@@ -414,7 +418,9 @@ export const getVendorWalletTransactions = asyncHandler(
         path: "wallet.transactions",
         options: { sort: { createdAt: -1 } },
       });
-    if (!vendor) return next(new ErrorResponse(404, "Vendor not found"));
+    if (!vendor) {
+      return next(new ErrorResponse(404, "Vendor not found"));
+    }
 
     return res.status(200).json(
       new SuccessResponse(200, "Vendor wallet transactions", {
@@ -430,9 +436,19 @@ export const getVendorWalletTransactions = asyncHandler(
 export const vendorLogin = asyncHandler(async (req, res, next) => {
   const { email, phone, password } = req.body;
 
-  const vendor = await Vendor.findOne({
-    $or: [{ email }, { phone }],
-  }).select("+password");
+  // Build query dynamically to avoid $or matching documents with undefined/null keys
+  const query = {};
+  if (email && phone) {
+    query.$or = [{ email }, { phone }];
+  } else if (email) {
+    query.email = email;
+  } else if (phone) {
+    query.phone = phone;
+  } else {
+    return next(new ErrorResponse(400, "Please provide email or phone number"));
+  }
+
+  const vendor = await Vendor.findOne(query).select("+password");
 
   if (!vendor || !(await vendor.isPasswordCorrect(password))) {
     return next(new ErrorResponse(401, "Invalid login details"));

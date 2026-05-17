@@ -1385,7 +1385,6 @@ router.delete("/service-sub-categories/:id",getAdminHeaders, deleteServiceSubCat
  *         description: The unique MongoDB ID of the user to update
  *         schema:
  *           type: string
- *         description: User ID
  *     requestBody:
  *       required: true
  *       content:

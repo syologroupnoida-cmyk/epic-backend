@@ -3,6 +3,7 @@ import asyncHandler from "../utils/asyncHandler.js";
 import Vendor from "../models/Vendor.js";
 import ErrorResponse from "../utils/ErrorResponse.js";
 import User from "../models/User.js";
+import Admin from "../models/Admin.js";
 
 // Authentication using Headers
 const getVendorHeaders = asyncHandler(async (req, _, next) => {
@@ -29,6 +30,15 @@ const getVendorHeaders = asyncHandler(async (req, _, next) => {
 
       if (!vendor) {
         return next(new ErrorResponse(401, "Not authorized"));
+      }
+
+      if (vendor.role !== "admin" && vendor.status !== "active") {
+        return next(
+          new ErrorResponse(
+            403,
+            `Access denied. Your account status is: ${vendor.status}`
+          )
+        );
       }
 
       const now = Date.now();
@@ -70,28 +80,29 @@ const getAdminHeaders = asyncHandler(async (req, _, next) => {
         return next(new ErrorResponse(401, "Invalid token type"));
       }
 
-      const vendor = await Vendor.findById(decoded.id).select(
-        "_id role status verifiedBadge lastActive"
+      const admin = await Admin.findById(decoded.id).select(
+        "_id role type isActive lastActive"
       );
-      if (vendor.role !== "admin") {
-        return next(new ErrorResponse(403, "Access denied. Admins only."));
-      }
-      if (!vendor) {
+      if (!admin) {
         return next(new ErrorResponse(401, "Not authorized"));
+      }
+      if (!admin.isActive) {
+        return next(new ErrorResponse(403, "Access denied. Admin account is inactive."));
       }
 
       const now = Date.now();
 
       // update only if 2 minutes old
-      if (!vendor.lastActive || now - vendor.lastActive > 120000) {
-        vendor.lastActive = Date.now();
+      if (!admin.lastActive || now - admin.lastActive > 120000) {
+        admin.lastActive = Date.now();
         try {
-          await vendor.save({ validateBeforeSave: false });
+          await admin.save({ validateBeforeSave: false });
         } catch (err) {
-          console.error("Error updating vendor lastActive:", err.message);
+          console.error("Error updating admin lastActive:", err.message);
         }
       }
-      req.vendor = vendor;
+      req.vendor = admin;
+      req.admin = admin;
 
       next();
     } catch (error) {
@@ -149,14 +160,15 @@ const getAdminCookies = asyncHandler(async (req, _, next) => {
 
   const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-  const vendor = await Vendor.findById(decoded.id).select(
-    "_id vendorName role featured status verifiedBadge lastActive autoApprovePackages"
+  const admin = await Admin.findById(decoded.id).select(
+    "_id fullName role type isActive lastActive"
   );
-  if (!vendor || vendor.role !== "admin") {
+  if (!admin || !admin.isActive) {
     return next(new ErrorResponse(401, "Not authorized"));
   }
 
-  req.vendor = vendor;
+  req.vendor = admin;
+  req.admin = admin;
 
   next();
 });

@@ -11,6 +11,8 @@ import {
   toggleLeadStatus,
   getAllContacts,
   toggleFeaturedStory,
+  adminLogin,
+  createAdmin,
 } from "../controllers/admin.js";
 import {
   createService,
@@ -109,6 +111,75 @@ router.get("/check", getAdminHeaders, checkAdmin);
  *         description: Token refreshed
  */
 router.post("/refresh", refreshAccessToken);
+
+/**
+ * @swagger
+ * /admin/login:
+ *   post:
+ *     summary: Login as Admin
+ *     tags: [Admin Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: admin@epic.com
+ *               password:
+ *                 type: string
+ *                 example: Test@123
+ *     responses:
+ *       200:
+ *         description: Login successful
+ */
+router.post("/login", adminLogin);
+
+/**
+ * @swagger
+ * /admin/create:
+ *   post:
+ *     summary: Create a new Admin account (Superadmin Only)
+ *     tags: [Admin Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - fullName
+ *               - email
+ *               - password
+ *             properties:
+ *               fullName:
+ *                 type: string
+ *                 example: Admin User
+ *               email:
+ *                 type: string
+ *                 example: finance@epic.com
+ *               password:
+ *                 type: string
+ *                 example: Test@123
+ *               phone:
+ *                 type: string
+ *                 example: 9876543211
+ *               type:
+ *                 type: string
+ *                 enum: [superadmin, finance, support, editor]
+ *                 example: finance
+ *     responses:
+ *       201:
+ *         description: Admin created successfully
+ */
+router.post("/create", getAdminHeaders, createAdmin);
 
 // System Settings
 /**
@@ -1311,6 +1382,7 @@ router.delete("/service-sub-categories/:id",getAdminHeaders, deleteServiceSubCat
  *       - in: path
  *         name: id
  *         required: true
+ *         description: The unique MongoDB ID of the user to update
  *         schema:
  *           type: string
  *         description: User ID
@@ -1332,7 +1404,7 @@ router.delete("/service-sub-categories/:id",getAdminHeaders, deleteServiceSubCat
  *       404:
  *         description: User not found
  */
-router.put("/user-status/:id", getAdminHeaders,updateUserProfile);
+router.put("/user-status/:id", getAdminHeaders, upload.single("profilePic"), updateUserProfile);
 
 //subscription routes
 /**

@@ -196,37 +196,41 @@ export const createVendor = asyncHandler(async (req, res, next) => {
     ]);
   }
 
-  const accessToken = generateAccessToken(vendor._id);
-  const refreshToken = generateRefreshToken(vendor._id);
-  vendor.refreshToken = refreshToken;
+  // Set initial status to pending (though it defaults to pending)
+  vendor.status = "pending";
   await vendor.save({ validateBeforeSave: false });
 
   const vendorObj = vendor.toObject();
   delete vendorObj.password;
+  delete vendorObj.refreshToken;
   
   res.status(201).json(
     new SuccessResponse(
       201,
-      `Vendor ${vendor.vendorName} created successfully`,
-      { vendor: vendorObj, accessToken}
+      `Vendor ${vendor.vendorName} registered successfully. Your account is pending admin approval.`,
+      { vendor: vendorObj }
     )
   );
 
-  await sendEmail(
-    vendor.email,
-    "Vendor Registration Successful",
+  try {
+    await sendEmail(
+      vendor.email,
+      "Vendor Registration Successful",
+      `
+      <h3>Dear ${vendor.vendorName},</h3>
+      <p>We are excited to have you on board!</p>
+      <p>Your vendor account has been successfully created and is currently pending admin approval.</p>
+      <p>Your login email: ${vendor.email}</p>
+      <p>Your login phone: ${vendor.phone}</p>
+      <p>Your password: ${password}</p>
+      <p>Once the administrator approves your account, you will receive a confirmation email and will be able to log in and start using our services.</p>
+      <br/>
+      <p>Best Regards,<br/>Epic Team</p>
     `
-    <h3>Dear ${vendor.vendorName},</h3>
-    <p>We are excited to have you on board!</p>
-    <p>Your vendor account has been successfully created.</p>
-    <p>Your login email: ${vendor.email}</p>
-    <p>Your login phone: ${vendor.phone}</p>
-    <p>Your password: ${password}</p>
-    <p>You can now log in and start using our services.</p>
-    <br/>
-    <p>Best Regards,<br/>Epic Team</p>
-  `
-  );
+    );
+  } catch (emailErr) {
+    console.error("Error sending registration email:", emailErr.message);
+  }
 });
 
 /* ======================================================
@@ -434,6 +438,40 @@ export const vendorLogin = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse(401, "Invalid login details"));
   }
 
+  // Restrict login to active vendors (admins are allowed)
+  if (vendor.role !== "admin" && vendor.status !== "active") {
+    if (vendor.status === "pending") {
+      return next(
+        new ErrorResponse(
+          403,
+          "Your account is pending admin approval. You can log in once your account is approved."
+        )
+      );
+    }
+    if (vendor.status === "rejected") {
+      return next(
+        new ErrorResponse(
+          403,
+          "Your account has been rejected. Please contact support."
+        )
+      );
+    }
+    if (vendor.status === "blocked") {
+      return next(
+        new ErrorResponse(
+          403,
+          "Your account has been blocked. Please contact support."
+        )
+      );
+    }
+    return next(
+      new ErrorResponse(
+        403,
+        `Your account status is currently ${vendor.status}. Login is not allowed.`
+      )
+    );
+  }
+
   const accessToken = generateAccessToken(vendor._id);
   const refreshToken = generateRefreshToken(vendor._id);
   vendor.refreshToken = refreshToken;
@@ -511,6 +549,40 @@ export const googleAuth = asyncHandler(async (req, res, next) => {
   const vendor = await Vendor.findOne({ email: googleData.email });
 
   if (vendor) {
+    // Restrict login to active vendors (admins are allowed)
+    if (vendor.role !== "admin" && vendor.status !== "active") {
+      if (vendor.status === "pending") {
+        return next(
+          new ErrorResponse(
+            403,
+            "Your account is pending admin approval. You can log in once your account is approved."
+          )
+        );
+      }
+      if (vendor.status === "rejected") {
+        return next(
+          new ErrorResponse(
+            403,
+            "Your account has been rejected. Please contact support."
+          )
+        );
+      }
+      if (vendor.status === "blocked") {
+        return next(
+          new ErrorResponse(
+            403,
+            "Your account has been blocked. Please contact support."
+          )
+        );
+      }
+      return next(
+        new ErrorResponse(
+          403,
+          `Your account status is currently ${vendor.status}. Login is not allowed.`
+        )
+      );
+    }
+
     const accessToken = generateAccessToken(vendor._id);
     const refreshToken = generateRefreshToken(vendor._id);
     vendor.refreshToken = refreshToken;
@@ -690,8 +762,46 @@ export const updateVendorStatus = asyncHandler(async (req, res, next) => {
 
   const vendor = await Vendor.findById(req.params.id);
   if (!vendor) return next(new ErrorResponse(404, "Vendor not found"));
-  vendor.status = req.body.status ?? vendor.status;
+  
+  const oldStatus = vendor.status;
+  vendor.status = status;
   await vendor.save();
+
+  if (oldStatus !== vendor.status) {
+    if (vendor.status === "active") {
+      try {
+        await sendEmail(
+          vendor.email,
+          "Vendor Account Approved",
+          `
+          <h3>Dear ${vendor.vendorName},</h3>
+          <p>We are pleased to inform you that your vendor account has been approved by the administrator.</p>
+          <p>You can now log in to your dashboard and start using our services.</p>
+          <br/>
+          <p>Best Regards,<br/>Epic Team</p>
+        `
+        );
+      } catch (emailErr) {
+        console.error("Failed to send approval email:", emailErr.message);
+      }
+    } else if (vendor.status === "rejected") {
+      try {
+        await sendEmail(
+          vendor.email,
+          "Vendor Account Status Update",
+          `
+          <h3>Dear ${vendor.vendorName},</h3>
+          <p>We regret to inform you that your vendor registration has been rejected by the administrator.</p>
+          <p>If you have any questions or need further clarification, please contact our support team.</p>
+          <br/>
+          <p>Best Regards,<br/>Epic Team</p>
+        `
+        );
+      } catch (emailErr) {
+        console.error("Failed to send rejection email:", emailErr.message);
+      }
+    }
+  }
 
   return res
     .status(200)

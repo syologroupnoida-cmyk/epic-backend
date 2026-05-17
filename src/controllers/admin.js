@@ -8,6 +8,8 @@ import Vendor from "../models/Vendor.js";
 import Lead from "../models/Lead.js";
 import Contact from "../models/contact.js";
 import RealStory from "../models/realStory.js";
+import Admin from "../models/Admin.js";
+import { generateAccessToken, generateRefreshToken } from "../utils/generateToken.js";
 // Default Costs
 const DEFAULT_LEAD_COSTS = {
   standard: 10,
@@ -379,4 +381,78 @@ export const toggleFeaturedStory = asyncHandler(async (req, res) => {
     success: true,
     message: `Story is now ${story.isFeatured ? "FEATURED" : "NOT FEATURED"}`,
   });
+});
+
+/* ======================================================
+    ADMIN AUTH: LOGIN
+====================================================== */
+export const adminLogin = asyncHandler(async (req, res, next) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return next(new ErrorResponse(400, "Email and password are required"));
+  }
+
+  const admin = await Admin.findOne({ email }).select("+password");
+
+  if (!admin || !(await admin.isPasswordCorrect(password))) {
+    return next(new ErrorResponse(401, "Invalid login details"));
+  }
+
+  if (!admin.isActive) {
+    return next(new ErrorResponse(403, "Access denied. Your account is inactive."));
+  }
+
+  const accessToken = generateAccessToken(admin._id);
+  const refreshToken = generateRefreshToken(admin._id);
+  
+  admin.refreshToken = refreshToken;
+  await admin.save({ validateBeforeSave: false });
+
+  const adminObj = admin.toObject();
+  delete adminObj.password;
+
+  return res.status(200).json(
+    new SuccessResponse(200, "Login successful", {
+      admin: adminObj,
+      accessToken,
+    })
+  );
+});
+
+/* ======================================================
+    ADMIN AUTH: CREATE NEW ADMIN (Superadmin Only)
+====================================================== */
+export const createAdmin = asyncHandler(async (req, res, next) => {
+  const isSuperAdmin = req.vendor && req.vendor.role === "admin" && req.vendor.type === "superadmin";
+
+  if (!isSuperAdmin) {
+    return next(new ErrorResponse(403, "Access denied. Superadmins only."));
+  }
+
+  const { fullName, email, password, phone, type } = req.body;
+
+  if (!fullName || !email || !password) {
+    return next(new ErrorResponse(400, "Full name, email, and password are required"));
+  }
+
+  const adminExists = await Admin.exists({ email });
+  if (adminExists) {
+    return next(new ErrorResponse(400, "Admin with this email already exists"));
+  }
+
+  const admin = await Admin.create({
+    fullName,
+    email,
+    password,
+    phone,
+    type: type || "superadmin",
+  });
+
+  const adminObj = admin.toObject();
+  delete adminObj.password;
+
+  return res.status(201).json(
+    new SuccessResponse(201, "Admin created successfully", { admin: adminObj })
+  );
 });

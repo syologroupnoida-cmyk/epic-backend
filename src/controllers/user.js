@@ -206,10 +206,13 @@ export const updateUserProfile = asyncHandler(async (req, res, next) => {
   if (phone !== undefined) user.phone = phone;
 
   if (isActive !== undefined) {
-    if (typeof isActive !== "boolean") {
+    let activeBool = isActive;
+    if (isActive === "true" || isActive === true) activeBool = true;
+    else if (isActive === "false" || isActive === false) activeBool = false;
+    else {
       return next(new ErrorResponse(400, "isActive must be true or false"));
     }
-    user.isActive = isActive;
+    user.isActive = activeBool;
   }
 
   // Profile image upload (existing logic)

@@ -4,6 +4,7 @@ import Vendor from "../models/Vendor.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import ErrorResponse from "../utils/ErrorResponse.js";
 import User from "../models/User.js";
+import Admin from "../models/Admin.js";
 
 export const refreshAccessToken = asyncHandler(async (req, res, next) => {
   const { refreshToken } = req.body;
@@ -23,14 +24,26 @@ export const refreshAccessToken = asyncHandler(async (req, res, next) => {
       return next(new ErrorResponse(401, "Invalid token type"));
     }
 
-    const vendor = await Vendor.findById(decoded.id);
+    let userObj = await Vendor.findById(decoded.id);
+    let isAdmin = false;
 
-    if (!vendor || vendor.refreshToken !== refreshToken) {
+    if (!userObj) {
+      userObj = await Admin.findById(decoded.id);
+      if (userObj) {
+        isAdmin = true;
+      }
+    }
+
+    if (!userObj || userObj.refreshToken !== refreshToken) {
       return next(new ErrorResponse(403, "Invalid refresh token"));
     }
 
+    if (isAdmin && !userObj.isActive) {
+      return next(new ErrorResponse(403, "Access denied. Admin account is inactive."));
+    }
+
     // Generate new access token ONLY
-    const newAccessToken = generateAccessToken(vendor._id);
+    const newAccessToken = generateAccessToken(userObj._id);
 
     res.status(200).json({
       accessToken: newAccessToken,

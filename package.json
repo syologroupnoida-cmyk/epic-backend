@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "dotenvx run --env-file .env -- nodemon src/index.js",
-    "dev": "dotenvx run --env-file .env.local -- nodemon src/index.js"
+    "dev": "dotenvx run --env-file .env -- nodemon src/index.js"
   },
   "keywords": [],
   "author": "",

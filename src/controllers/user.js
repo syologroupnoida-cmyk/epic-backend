@@ -503,7 +503,8 @@ export const searchNearMeVenue = asyncHandler(async (req, res, next) => {
   const skip = (pageNumber - 1) * limitNumber;
 
   const venue = await VenuePackage.find({
-    visibility: "public" ,
+    visibility: "public",
+    approved: true,
     geo_loc: {
       $near: {
         $geometry: {
@@ -514,8 +515,10 @@ export const searchNearMeVenue = asyncHandler(async (req, res, next) => {
       },
     },
   })
-    // .select("-password")
-    .select("title featuredImage description startingPrice location")
+    .populate("venueCategory", "name slug")
+    .select(
+      "title slug featuredImage description startingPrice location venueCategory isPremium isPopular"
+    )
     .skip(skip)
     .limit(limitNumber);
 

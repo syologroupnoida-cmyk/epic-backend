@@ -450,7 +450,7 @@ router.put(
  *       400:
  *         description: Latitude and Longitude are required
  */
-router.get("/near-me-vendor",getUserHeaders,searchNearMe);
+router.get("/near-me-vendor", getUserHeaders, searchNearMe);
 
 /**
  * @swagger
@@ -497,7 +497,7 @@ router.get("/near-me-vendor",getUserHeaders,searchNearMe);
  *       400:
  *         description: Latitude and Longitude are required
  */
-router.get("/near-me-venue",getUserHeaders,searchNearMeVenue);
+router.get("/near-me-venue", getUserHeaders, searchNearMeVenue);
 
 /**
  * @swagger

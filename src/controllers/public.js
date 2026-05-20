@@ -8,6 +8,7 @@ import ErrorResponse from "../utils/ErrorResponse.js";
 import City from "../models/City.js";
 import Lead from "../models/Lead.js"; // Added import
 import ServicePackage from "../models/ServicePackage.js"; // Added import
+import Vendor from "../models/Vendor.js";
 import extractIdFromSlug from "../utils/extractIdFromSlug.js";
 import mongoose from "mongoose"; // Added import
 import { redactPhoneNumber } from "../utils/helper.js";
@@ -77,14 +78,33 @@ export const getAllVenuePackages = asyncHandler(async (req, res) => {
 
   if (isVerified) filter.isVerified = isVerified;
 
-  // CITY FILTER
+  // CITY FILTER (slug or name — location.city is a String on VenuePackage)
   if (city) {
-    if (mongoose.Types.ObjectId.isValid(city)) {
-      filter["location.city"] = city;
-    } else {
-      const cityDoc = await City.findOne({ name: new RegExp(city, "i") });
-      if (cityDoc) filter["location.city"] = cityDoc._id;
-    }
+    const slug = String(city).trim().toLowerCase();
+    const slugToName = {
+      mumbai: "Mumbai",
+      "delhi-ncr": "Delhi NCR",
+      delhi: "Delhi",
+      bangalore: "Bangalore",
+      hyderabad: "Hyderabad",
+      jaipur: "Jaipur",
+      goa: "Goa",
+      kolkata: "Kolkata",
+      chennai: "Chennai",
+      pune: "Pune",
+      udaipur: "Udaipur",
+      indore: "Indore",
+      ahmedabad: "Ahmedabad",
+      chandigarh: "Chandigarh",
+      kerala: "Kerala",
+      lucknow: "Lucknow",
+      noida: "Noida",
+    };
+    const label = slugToName[slug] || slug.replace(/-/g, " ");
+    filter["location.city"] = new RegExp(
+      label.replace(/\s+/g, "[\\s-]*"),
+      "i"
+    );
   }
 
   // PRICE FILTER
@@ -112,24 +132,69 @@ export const getAllVenuePackages = asyncHandler(async (req, res) => {
     .json(new SuccessResponse(200, "All venue packages", packages));
 });
 
+const citySlugToRegex = (city) => {
+  const slug = String(city).trim().toLowerCase();
+  const slugToName = {
+    mumbai: "Mumbai",
+    "delhi-ncr": "Delhi NCR",
+    delhi: "Delhi",
+    bangalore: "Bangalore",
+    hyderabad: "Hyderabad",
+    jaipur: "Jaipur",
+    goa: "Goa",
+    kolkata: "Kolkata",
+    chennai: "Chennai",
+    pune: "Pune",
+    udaipur: "Udaipur",
+    indore: "Indore",
+    ahmedabad: "Ahmedabad",
+    chandigarh: "Chandigarh",
+    kerala: "Kerala",
+    lucknow: "Lucknow",
+    noida: "Noida",
+  };
+  const label = slugToName[slug] || slug.replace(/-/g, " ");
+  return new RegExp(label.replace(/\s+/g, "[\\s-]*"), "i");
+};
+
 // GET ALL SERVICE PACKAGES - public
 export const getAllServicePackages = asyncHandler(async (req, res) => {
-  const { subCategory, city, minPrice, maxPrice } = req.query;
+  const { subCategory, category, city, minPrice, maxPrice, search } = req.query;
 
   const filter = {
     approved: true,
     visibility: "public",
+    isActive: { $ne: false },
   };
 
   if (subCategory) filter.serviceSubCategory = subCategory;
+
+  if (category) {
+    const slug = String(category).trim().toLowerCase();
+    const catDoc = await ServiceCategory.findOne({
+      $or: [{ slug }, { name: new RegExp(slug.replace(/-/g, " "), "i") }],
+    });
+    if (catDoc) {
+      const subIds = await ServiceSubCategory.find({
+        serviceCategory: catDoc._id,
+      }).distinct("_id");
+      if (subIds.length) filter.serviceSubCategory = { $in: subIds };
+    }
+  }
 
   if (city) {
     if (mongoose.Types.ObjectId.isValid(city)) {
       filter["location.city"] = city;
     } else {
-      const cityDoc = await City.findOne({ name: new RegExp(city, "i") });
-      if (cityDoc) filter["location.city"] = cityDoc._id;
+      filter["location.city"] = citySlugToRegex(city);
     }
+  }
+
+  if (search) {
+    filter.$or = [
+      { title: new RegExp(search, "i") },
+      { description: new RegExp(search, "i") },
+    ];
   }
 
   if (minPrice || maxPrice) {
@@ -139,10 +204,11 @@ export const getAllServicePackages = asyncHandler(async (req, res) => {
   }
 
   const packages = await ServicePackage.find(filter)
-    .populate("serviceSubCategory")
-    .populate("location.city")
-    .populate("location.state")
-    .populate("location.country")
+    .populate({
+      path: "serviceSubCategory",
+      populate: { path: "serviceCategory", select: "name slug" },
+    })
+    .populate("vendor", "vendorName slug profile")
     .sort({ createdAt: -1 });
 
   return res
@@ -568,4 +634,146 @@ export const getPremiumServicePackages = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(new SuccessResponse(200, "Premium service packages", packages));
+});
+
+/** Public nearby venues — no auth (for listing by city / geo) */
+export const searchNearMeVenuePublic = asyncHandler(async (req, res, next) => {
+  let { latitude, longitude, radius = 50, page = 1, limit = 50, city } = req.query;
+
+  if (!latitude || !longitude) {
+    return next(new ErrorResponse(400, "Latitude and Longitude are required"));
+  }
+
+  const lat = parseFloat(latitude);
+  const lng = parseFloat(longitude);
+  const radiusInMeters = parseFloat(radius) * 1000;
+  const pageNumber = Math.max(1, parseInt(page, 10) || 1);
+  const limitNumber = Math.min(100, Math.max(1, parseInt(limit, 10) || 50));
+  const skip = (pageNumber - 1) * limitNumber;
+
+  const geoQuery = {
+    visibility: "public",
+    approved: true,
+    geo_loc: {
+      $near: {
+        $geometry: { type: "Point", coordinates: [lng, lat] },
+        $maxDistance: radiusInMeters,
+      },
+    },
+  };
+
+  if (city) {
+    const slug = String(city).trim().toLowerCase();
+    const slugToName = {
+      mumbai: "Mumbai",
+      "delhi-ncr": "Delhi NCR",
+      bangalore: "Bangalore",
+      hyderabad: "Hyderabad",
+      jaipur: "Jaipur",
+      goa: "Goa",
+      kolkata: "Kolkata",
+      chennai: "Chennai",
+      pune: "Pune",
+      udaipur: "Udaipur",
+    };
+    const label = slugToName[slug] || slug.replace(/-/g, " ");
+    geoQuery["location.city"] = new RegExp(
+      label.replace(/\s+/g, "[\\s-]*"),
+      "i"
+    );
+  }
+
+  const venue = await VenuePackage.find(geoQuery)
+    .populate("venueCategory", "name slug")
+    .select(
+      "title slug featuredImage description startingPrice location venueCategory isPremium isPopular geo_loc"
+    )
+    .skip(skip)
+    .limit(limitNumber);
+
+  const total = venue.length;
+
+  return res.status(200).json(
+    new SuccessResponse(200, "Nearby venues fetched", {
+      venue,
+      pagination: {
+        total,
+        page: pageNumber,
+        limit: limitNumber,
+        totalPages: Math.ceil(total / limitNumber) || 1,
+        radiusKm: parseFloat(radius),
+      },
+    })
+  );
+});
+
+/** Public nearby vendors — no auth (website vendor discovery) */
+export const searchNearMeVendorPublic = asyncHandler(async (req, res, next) => {
+  let { latitude, longitude, radius = 50, page = 1, limit = 50, city } = req.query;
+
+  if (!latitude || !longitude) {
+    return next(new ErrorResponse(400, "Latitude and Longitude are required"));
+  }
+
+  const lat = parseFloat(latitude);
+  const lng = parseFloat(longitude);
+  const radiusInMeters = parseFloat(radius) * 1000;
+  const pageNumber = Math.max(1, parseInt(page, 10) || 1);
+  const limitNumber = Math.min(100, Math.max(1, parseInt(limit, 10) || 50));
+  const skip = (pageNumber - 1) * limitNumber;
+
+  let vendors = [];
+
+  try {
+    const vendorQuery = {
+      status: "active",
+      location: {
+        $near: {
+          $geometry: { type: "Point", coordinates: [lng, lat] },
+          $maxDistance: radiusInMeters,
+        },
+      },
+    };
+
+    if (city) {
+      vendorQuery.city = citySlugToRegex(city);
+    }
+
+    vendors = await Vendor.find(vendorQuery)
+      .select(
+        "vendorName profile location city state featured verifiedBadge slug category vendorType"
+      )
+      .skip(skip)
+      .limit(limitNumber);
+  } catch (geoErr) {
+    console.warn("near-me-vendor geo query:", geoErr.message);
+  }
+
+  if (vendors.length === 0) {
+    const fallback = { status: "active" };
+    if (city) {
+      fallback.city = citySlugToRegex(city);
+    }
+    vendors = await Vendor.find(fallback)
+      .select(
+        "vendorName profile location city state featured verifiedBadge slug category vendorType"
+      )
+      .skip(skip)
+      .limit(limitNumber);
+  }
+
+  const total = vendors.length;
+
+  return res.status(200).json(
+    new SuccessResponse(200, "Nearby vendors fetched", {
+      vendors,
+      pagination: {
+        total,
+        page: pageNumber,
+        limit: limitNumber,
+        totalPages: Math.ceil(total / limitNumber) || 1,
+        radiusKm: parseFloat(radius),
+      },
+    })
+  );
 });

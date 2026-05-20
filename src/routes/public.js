@@ -15,6 +15,7 @@ import {
   getPremiumVenuePackages,
   getPremiumServicePackages,
 } from "../controllers/public.js";
+import { getRealStories, getSingleStory } from "../controllers/user.js";
 
 const router = Router();
 
@@ -377,5 +378,8 @@ router.get("/blogs", getPublicBlogs);
  *         description: Blog not found
  */
 router.get("/blogs/:slug", getPublicBlog);
+
+router.get("/real-stories", getRealStories);
+router.get("/real-stories/:id", getSingleStory);
 
 export default router;

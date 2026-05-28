@@ -236,8 +236,14 @@ export const sendLoginOtp = async (mobile) => {
   }
 
   const otpKey = `vendor_login_otp:${mobile}`;
-  if (await cacheGet(otpKey)) {
-    throw new ErrorResponse(400, "OTP already sent. Please wait.");
+  const existingOtp = await cacheGet(otpKey);
+  if (existingOtp) {
+    try {
+      await sendOtpSms(mobile, existingOtp, "vendor login");
+    } catch (err) {
+      console.error("Vendor login OTP resend SMS error:", err.message);
+    }
+    return buildOtpResult("OTP already sent. Please use the existing OTP.", existingOtp);
   }
 
   const otp = generateOtp();

@@ -16,6 +16,25 @@ import { v4 as uuidv4 } from "uuid";
 // Constant: Default price per lead if bought via Wallet directly
 const PRICE_PER_LEAD = 50; 
 
+const ensureVendorInteraction = (lead, vendorId) => {
+  const key = String(vendorId);
+  let interaction = lead.vendorInteractions?.find(
+    (entry) => String(entry.vendor) === key
+  );
+  if (!interaction) {
+    lead.vendorInteractions.push({
+      vendor: vendorId,
+      stage: "new",
+      priority: "medium",
+      notes: [],
+      followUps: [],
+      updatedAt: new Date(),
+    });
+    interaction = lead.vendorInteractions[lead.vendorInteractions.length - 1];
+  }
+  return interaction;
+};
+
 /* ======================================================
     VENDOR: GET MARKETPLACE LEADS (Available to buy)
 ====================================================== */
@@ -317,10 +336,19 @@ export const getMyLeads = asyncHandler(async (req, res) => {
 
   // Process leads to match frontend structure
   const processedLeads = leads.map((lead) => {
+    const interaction = lead.vendorInteractions?.find(
+      (entry) => String(entry.vendor) === String(vendorId)
+    );
     return {
       ...lead,
       isPurchased: true, // Explicitly set for UI to show "Unlocked" state
-      businessCategory: lead.businessCategory || "General Inquiry"
+      businessCategory: lead.businessCategory || "General Inquiry",
+      crm: {
+        stage: interaction?.stage || "new",
+        priority: interaction?.priority || "medium",
+        notesCount: interaction?.notes?.length || 0,
+        followUpsCount: interaction?.followUps?.length || 0,
+      },
     };
   });
 
@@ -418,4 +446,97 @@ export const createLeadBundle = asyncHandler(async(req, res) => {
 export const getLeadFilterOptions = asyncHandler(async (req, res) => {
   const categories = await Lead.distinct("businessCategory");
   res.status(200).json(new SuccessResponse(200, "Filter options", { categories }));
+});
+
+/* ======================================================
+   VENDOR CRM: UPDATE LEAD STAGE & PRIORITY
+====================================================== */
+export const updateLeadInteraction = asyncHandler(async (req, res, next) => {
+  const { leadId } = req.params;
+  const { stage, priority } = req.body;
+  const vendorId = req.vendor._id;
+
+  const lead = await Lead.findOne({
+    _id: leadId,
+    "purchasedBy.vendor": vendorId,
+  });
+  if (!lead) return next(new ErrorResponse(404, "Lead not found"));
+
+  const interaction = ensureVendorInteraction(lead, vendorId);
+  if (stage) interaction.stage = stage;
+  if (priority) interaction.priority = priority;
+  interaction.updatedAt = new Date();
+
+  await lead.save();
+  res
+    .status(200)
+    .json(new SuccessResponse(200, "Lead CRM details updated", interaction));
+});
+
+export const addLeadNote = asyncHandler(async (req, res, next) => {
+  const { leadId } = req.params;
+  const { text } = req.body;
+  const vendorId = req.vendor._id;
+  if (!text?.trim()) return next(new ErrorResponse(400, "Note text is required"));
+
+  const lead = await Lead.findOne({
+    _id: leadId,
+    "purchasedBy.vendor": vendorId,
+  });
+  if (!lead) return next(new ErrorResponse(404, "Lead not found"));
+
+  const interaction = ensureVendorInteraction(lead, vendorId);
+  interaction.notes.push({ text: text.trim() });
+  interaction.updatedAt = new Date();
+  await lead.save();
+
+  res.status(200).json(new SuccessResponse(200, "Note added", interaction));
+});
+
+export const addLeadFollowUp = asyncHandler(async (req, res, next) => {
+  const { leadId } = req.params;
+  const { title, dueAt } = req.body;
+  const vendorId = req.vendor._id;
+  if (!title?.trim() || !dueAt) {
+    return next(new ErrorResponse(400, "Title and dueAt are required"));
+  }
+
+  const lead = await Lead.findOne({
+    _id: leadId,
+    "purchasedBy.vendor": vendorId,
+  });
+  if (!lead) return next(new ErrorResponse(404, "Lead not found"));
+
+  const interaction = ensureVendorInteraction(lead, vendorId);
+  interaction.followUps.push({
+    _id: new mongoose.Types.ObjectId(),
+    title: title.trim(),
+    dueAt: new Date(dueAt),
+    done: false,
+  });
+  interaction.updatedAt = new Date();
+  await lead.save();
+
+  res.status(200).json(new SuccessResponse(200, "Follow-up added", interaction));
+});
+
+export const toggleLeadFollowUp = asyncHandler(async (req, res, next) => {
+  const { leadId, followUpId } = req.params;
+  const vendorId = req.vendor._id;
+
+  const lead = await Lead.findOne({
+    _id: leadId,
+    "purchasedBy.vendor": vendorId,
+  });
+  if (!lead) return next(new ErrorResponse(404, "Lead not found"));
+
+  const interaction = ensureVendorInteraction(lead, vendorId);
+  const followUp = interaction.followUps.id(followUpId);
+  if (!followUp) return next(new ErrorResponse(404, "Follow-up not found"));
+
+  followUp.done = !followUp.done;
+  interaction.updatedAt = new Date();
+  await lead.save();
+
+  res.status(200).json(new SuccessResponse(200, "Follow-up updated", interaction));
 });

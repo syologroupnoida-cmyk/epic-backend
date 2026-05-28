@@ -6,7 +6,11 @@ import {
   getMyLeads,
   getLeadBundles,
   buyLeadBundle,
-  getLeadFilterOptions
+  getLeadFilterOptions,
+  updateLeadInteraction,
+  addLeadNote,
+  addLeadFollowUp,
+  toggleLeadFollowUp,
 } from "../controllers/lead.js";
 
 const router = Router();
@@ -134,6 +138,10 @@ router.post("/buy/:leadId", buyLead);
  *         description: Purchased leads retrieved
  */
 router.get("/my-leads", getMyLeads);
+router.patch("/my-leads/:leadId/interaction", updateLeadInteraction);
+router.post("/my-leads/:leadId/notes", addLeadNote);
+router.post("/my-leads/:leadId/follow-ups", addLeadFollowUp);
+router.patch("/my-leads/:leadId/follow-ups/:followUpId", toggleLeadFollowUp);
 
 /**
  * @swagger

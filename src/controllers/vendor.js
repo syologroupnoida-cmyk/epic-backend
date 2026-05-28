@@ -15,6 +15,9 @@ import SuccessResponse from "../utils/SuccessResponse.js";
 import redis from "../config/redisClient.js";
 import { generateOtp } from "../utils/helper.js";
 import { sendOtpSms } from "../utils/smsService.js";
+import Lead from "../models/Lead.js";
+import VenuePackage from "../models/VenuePackage.js";
+import ServicePackage from "../models/ServicePackage.js";
 
 const cookieOptions = {
   httpOnly: true,
@@ -429,6 +432,61 @@ export const getVendorWalletTransactions = asyncHandler(
     );
   }
 );
+
+/* ======================================================
+   VENDOR DASHBOARD METRICS
+====================================================== */
+export const getVendorDashboardMetrics = asyncHandler(async (req, res) => {
+  const vendorId = req.vendor?._id;
+
+  const [venuePackages, servicePackages, marketplaceLeads, purchasedLeads] =
+    await Promise.all([
+      VenuePackage.countDocuments({ vendor: vendorId }),
+      ServicePackage.countDocuments({ vendor: vendorId }),
+      Lead.countDocuments({
+        status: "active",
+        "purchasedBy.vendor": { $ne: vendorId },
+      }),
+      Lead.find({ "purchasedBy.vendor": vendorId }).lean(),
+    ]);
+
+  const crmSummary = purchasedLeads.reduce(
+    (acc, lead) => {
+      const interaction = lead.vendorInteractions?.find(
+        (i) => String(i.vendor) === String(vendorId)
+      );
+      const stage = interaction?.stage || "new";
+      acc[stage] = (acc[stage] || 0) + 1;
+      acc.total += 1;
+      return acc;
+    },
+    { total: 0, new: 0, contacted: 0, quoted: 0, won: 0, lost: 0 }
+  );
+
+  const vendor = await Vendor.findById(vendorId).select(
+    "wallet leadCredits subscription"
+  );
+
+  return res.status(200).json(
+    new SuccessResponse(200, "Vendor dashboard metrics", {
+      packages: {
+        venue: venuePackages,
+        service: servicePackages,
+        total: venuePackages + servicePackages,
+      },
+      leads: {
+        marketplace: marketplaceLeads,
+        purchased: crmSummary.total,
+        pipeline: crmSummary,
+      },
+      wallet: {
+        balance: vendor?.wallet?.balance || 0,
+        leadCredits: vendor?.leadCredits || 0,
+        subscriptionCredits: vendor?.subscription?.leadCredits || 0,
+      },
+    })
+  );
+});
 
 /* ======================================================
    VENDOR LOGIN

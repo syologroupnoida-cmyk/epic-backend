@@ -12,6 +12,7 @@ import {
   getVendorWalletTransactions,
   sendPhoneUpdateOtp,
   verifyPhoneUpdateOtp,
+  getVendorDashboardMetrics,
 } from "../controllers/vendor.js";
 import { createArrayUpload, upload } from "../middlewares/multer.js";
 import { getVendorHeaders } from "../middlewares/authMiddleware.js";
@@ -497,6 +498,7 @@ router.get("/balance", getVendorHeaders, getVendorWalletBalance);
  *         description: Vendor not found
  */
 router.get("/transactions", getVendorHeaders, getVendorWalletTransactions);
+router.get("/dashboard-metrics", getVendorHeaders, getVendorDashboardMetrics);
 
 // Phone Update OTP Flow
 /**

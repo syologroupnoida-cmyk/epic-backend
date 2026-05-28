@@ -102,6 +102,40 @@ const leadSchema = new Schema(
         meta: Schema.Types.Mixed, // For storing credit costs, etc.
       },
     ],
+    vendorInteractions: [
+      {
+        vendor: {
+          type: Schema.Types.ObjectId,
+          ref: "Vendor",
+          required: true,
+        },
+        stage: {
+          type: String,
+          enum: ["new", "contacted", "quoted", "won", "lost"],
+          default: "new",
+        },
+        priority: {
+          type: String,
+          enum: ["low", "medium", "high"],
+          default: "medium",
+        },
+        notes: [
+          {
+            text: { type: String, required: true },
+            createdAt: { type: Date, default: Date.now },
+          },
+        ],
+        followUps: [
+          {
+            title: { type: String, required: true },
+            dueAt: { type: Date, required: true },
+            done: { type: Boolean, default: false },
+            createdAt: { type: Date, default: Date.now },
+          },
+        ],
+        updatedAt: { type: Date, default: Date.now },
+      },
+    ],
   },
   { timestamps: true }
 );

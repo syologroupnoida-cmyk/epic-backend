@@ -47,6 +47,7 @@ const formatVendorResponse = (vendor) => {
     mobile: vendorObj.phone,
     role: vendorObj.role,
     status: vendorObj.status,
+    kycStatus: vendorObj.kycStatus || "not_started",
     createdAt: vendorObj.createdAt,
     profile: vendorObj.profile,
   };

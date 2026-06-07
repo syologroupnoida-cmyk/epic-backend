@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   bulkCreateVendors,
+  bulkUploadVendors,
   checkAdmin,
   getSystemSettings,
   updateSystemSettings,
@@ -811,6 +812,35 @@ router.get("/vendors", getAdminHeaders,getAllVendors);
  *         description: No vendor data provided or invalid format
  */
 router.post("/vendors/bulk-create", getAdminHeaders,bulkCreateVendors);
+
+/**
+ * @swagger
+ * /admin/vendors/bulk-upload:
+ *   post:
+ *     summary: Bulk upload vendors via CSV or Excel file
+ *     tags: [Admin Vendors]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       201:
+ *         description: Vendor file processed
+ */
+router.post(
+  "/vendors/bulk-upload",
+  getAdminHeaders,
+  upload.single("file"),
+  bulkUploadVendors
+);
 
 /**
  * @swagger

@@ -748,7 +748,7 @@ export const resetPassword = asyncHandler(async (req, res, next) => {
    GET ALL VENDORS (Admin)
 ====================================================== */
 export const getAllVendors = asyncHandler(async (req, res, next) => {
-  const isAdmin = req.vendor && req.vendor.role === "admin";
+  const isAdmin = req.admin || (req.vendor && req.vendor.role === "admin");
 
   if (!isAdmin) {
     return next(new ErrorResponse(403, "Access denied. Admins only."));

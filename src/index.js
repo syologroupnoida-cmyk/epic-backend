@@ -9,6 +9,7 @@ import adminRoutes from "./routes/admin.js";
 import locationRoutes from "./routes/location.js";
 import vendorRoutes from "./routes/vendor.js";
 import vendorAuthRoutes from "./modules/vendor/routes/vendorAuthRoutes.js";
+import vendorKycRoutes from "./modules/vendor/routes/vendorKycRoutes.js";
 import transactionRoutes from "./routes/transaction.js";
 import leadRoutes from "./routes/lead.js";
 import publicRoutes from "./routes/public.js";
@@ -113,6 +114,7 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 app.use("/api/v1/vendor", vendorRoutes);
 app.use("/api/v1/vendor/auth", vendorAuthRoutes);
+app.use("/api/v1/vendor/kyc", vendorKycRoutes);
 app.use("/api/v1/location", locationRoutes);
 app.use("/api/v1/admin", adminRoutes);
 app.use("/api/v1/transaction", transactionRoutes);

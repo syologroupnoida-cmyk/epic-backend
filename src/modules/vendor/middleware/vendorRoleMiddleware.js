@@ -23,7 +23,7 @@ export const requireVendorRole = asyncHandler(async (req, res, next) => {
     }
 
     const vendor = await Vendor.findById(decoded.id).select(
-      "_id vendorName category city email phone role status profile createdAt"
+      "_id vendorName category city email phone role status kycStatus profile createdAt"
     );
 
     if (!vendor) {
@@ -43,6 +43,7 @@ export const requireVendorRole = asyncHandler(async (req, res, next) => {
       mobile: vendor.phone,
       role: vendor.role,
       status: vendor.status,
+      kycStatus: vendor.kycStatus || "not_started",
       profile: vendor.profile,
       createdAt: vendor.createdAt,
     };
@@ -73,7 +74,7 @@ export const requireActiveVendor = asyncHandler(async (req, res, next) => {
     }
 
     const vendor = await Vendor.findById(decoded.id).select(
-      "_id vendorName category city email phone role status profile createdAt"
+      "_id vendorName category city email phone role status kycStatus profile createdAt"
     );
 
     if (!vendor) {
@@ -98,6 +99,7 @@ export const requireActiveVendor = asyncHandler(async (req, res, next) => {
       mobile: vendor.phone,
       role: vendor.role,
       status: vendor.status,
+      kycStatus: vendor.kycStatus || "not_started",
       profile: vendor.profile,
       createdAt: vendor.createdAt,
     };

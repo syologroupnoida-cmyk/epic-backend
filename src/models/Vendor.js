@@ -294,6 +294,56 @@ const vendorSchema = new Schema(
       type: Boolean,
       default: false,
     },
+
+    // ----------------------
+    // KYC ONBOARDING
+    // ----------------------
+    kycStatus: {
+      type: String,
+      enum: ["not_started", "in_progress", "submitted", "approved", "rejected"],
+      default: "not_started",
+      lowercase: true,
+    },
+
+    kycRejectionReason: {
+      type: String,
+      default: "",
+    },
+
+    kyc: {
+      services: [{ type: String }],
+      destinations: [{ type: String }],
+      dailyLeadRequirement: Number,
+      officeAddress: String,
+      officeCity: String,
+      officeState: String,
+      gstNumber: String,
+      companySince: Number,
+      companyType: String,
+      teamSize: Number,
+      facebookUrl: String,
+      instagramUrl: String,
+      profileUrl: String,
+      companyLogo: mediaSchema,
+      panNumber: String,
+      panDocument: mediaSchema,
+      gstinNumber: String,
+      gstinDocument: mediaSchema,
+      cinNumber: String,
+      cinDocument: mediaSchema,
+      aadharNumber: String,
+      aadharDocument: mediaSchema,
+      verifiedDocs: {
+        panNumber: { type: Boolean, default: false },
+        gstinNumber: { type: Boolean, default: false },
+        cinNumber: { type: Boolean, default: false },
+        aadharNumber: { type: Boolean, default: false },
+      },
+      referralSource: String,
+      otherSource: String,
+      marketplaceWorked: String,
+      submittedAt: Date,
+    },
   },
 
   { timestamps: true }

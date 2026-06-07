@@ -10,6 +10,10 @@ import Contact from "../models/contact.js";
 import RealStory from "../models/realStory.js";
 import Admin from "../models/Admin.js";
 import { generateAccessToken, generateRefreshToken } from "../utils/generateToken.js";
+import {
+  parseVendorSpreadsheet,
+  bulkImportVendors,
+} from "../services/vendorBulkImportService.js";
 // Default Costs
 const DEFAULT_LEAD_COSTS = {
   standard: 10,
@@ -17,10 +21,11 @@ const DEFAULT_LEAD_COSTS = {
   elite: 50,
 };
 
-export const getSystemSettings = asyncHandler(async (req, res) => {
-  const isAdmin = req.vendor && req.vendor.role === "admin";
+const isAdminUser = (req) =>
+  Boolean(req.admin || (req.vendor && req.vendor.role === "admin"));
 
-  if (!isAdmin) {
+export const getSystemSettings = asyncHandler(async (req, res, next) => {
+  if (!isAdminUser(req)) {
     return next(new ErrorResponse(403, "Access denied. Admins only."));
   }
 
@@ -41,10 +46,8 @@ export const getSystemSettings = asyncHandler(async (req, res) => {
   res.status(200).json(new SuccessResponse(200, "Settings fetched", setting.value));
 });
 
-export const updateSystemSettings = asyncHandler(async (req, res) => {
-  const isAdmin = req.vendor && req.vendor.role === "admin";
-
-  if (!isAdmin) {
+export const updateSystemSettings = asyncHandler(async (req, res, next) => {
+  if (!isAdminUser(req)) {
     return next(new ErrorResponse(403, "Access denied. Admins only."));
   }
   const { key } = req.params;
@@ -60,25 +63,20 @@ export const updateSystemSettings = asyncHandler(async (req, res) => {
 });
 
 export const checkAdmin = asyncHandler(async (req, res, next) => {
-  const isAdmin = req.vendor && req.vendor.role === "admin";
-
-  if (!isAdmin) {
+  if (!isAdminUser(req)) {
     return next(new ErrorResponse(403, "Access denied. Admins only."));
   }
 
   return res
     .status(200)
-    .cookies("isAdmin", isAdmin, { httpOnly: true })
-    .json(new SuccessResponse(200, "Admin check successful", { isAdmin }));
+    .json(new SuccessResponse(200, "Admin check successful", { isAdmin: true }));
 });
 
 /* ======================================================
     ADMIN: GET ALL VENUE PACKAGES (With Filters)
 ====================================================== */
-export const getAdminVenuePackages = asyncHandler(async (req, res) => {
-  const isAdmin = req.vendor && req.vendor.role === "admin";
-
-  if (!isAdmin) {
+export const getAdminVenuePackages = asyncHandler(async (req, res, next) => {
+  if (!isAdminUser(req)) {
     return next(new ErrorResponse(403, "Access denied. Admins only."));
   }
   const { page = 1, limit = 10, status, search, vendor } = req.query;
@@ -120,10 +118,8 @@ export const getAdminVenuePackages = asyncHandler(async (req, res) => {
 /* ======================================================
     ADMIN: GET ALL SERVICE PACKAGES (With Filters)
 ====================================================== */
-export const getAdminServicePackages = asyncHandler(async (req, res) => {
-  const isAdmin = req.vendor && req.vendor.role === "admin";
-
-  if (!isAdmin) {
+export const getAdminServicePackages = asyncHandler(async (req, res, next) => {
+  if (!isAdminUser(req)) {
     return next(new ErrorResponse(403, "Access denied. Admins only."));
   }
   const { page = 1, limit = 10, status, search, vendor } = req.query;
@@ -165,7 +161,7 @@ export const getAdminServicePackages = asyncHandler(async (req, res) => {
     ADMIN: UPDATE PACKAGE STATUS (Approve/Reject)
 ====================================================== */
 export const updateVenuePackageStatus = asyncHandler(async (req, res, next) => {
-  const isAdmin = req.vendor && req.vendor.role === "admin";
+  const isAdmin = req.admin || (req.vendor && req.vendor.role === "admin");
 
   if (!isAdmin) {
     return next(new ErrorResponse(403, "Access denied. Admins only."));
@@ -185,7 +181,7 @@ export const updateVenuePackageStatus = asyncHandler(async (req, res, next) => {
 });
 
 export const updateServicePackageStatus = asyncHandler(async (req, res, next) => {
-  const isAdmin = req.vendor && req.vendor.role === "admin";
+  const isAdmin = req.admin || (req.vendor && req.vendor.role === "admin");
 
   if (!isAdmin) {
     return next(new ErrorResponse(403, "Access denied. Admins only."));
@@ -208,7 +204,7 @@ export const updateServicePackageStatus = asyncHandler(async (req, res, next) =>
     ADMIN: BULK CREATE VENDORS
 ====================================================== */
 export const bulkCreateVendors = asyncHandler(async (req, res, next) => {
-  const isAdmin = req.vendor && req.vendor.role === "admin";
+  const isAdmin = req.admin || (req.vendor && req.vendor.role === "admin");
 
   if (!isAdmin) {
     return next(new ErrorResponse(403, "Access denied. Admins only."));
@@ -220,89 +216,47 @@ export const bulkCreateVendors = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse(400, "No vendor data provided or data is not in an array"));
   }
 
-  const results = {
-    successCount: 0,
-    errors: [],
-  };
-
-  for (let i = 0; i < vendorsData.length; i++) {
-    const rowNumber = i + 2; // Assuming Excel row numbers start at 2 (1 for header)
-    const vendor = vendorsData[i];
-
-    const {
-      vendorName,
-      email,
-      phone,
-      password,
-      experience,
-      workingSince,
-      contactPerson,
-      state,
-      city,
-      locality,
-      address,
-    } = vendor;
-
-    // 1. Check for required fields
-    const requiredFields = {
-      vendorName,
-      email,
-      phone,
-      password,
-      experience,
-      workingSince,
-      contactPerson,
-      state,
-      city,
-      locality,
-      address,
-    };
-    const missingField = Object.keys(requiredFields).find(
-      (key) => !requiredFields[key]
-    );
-
-    if (missingField) {
-      results.errors.push({
-        row: rowNumber,
-        email: email || "N/A",
-        message: `Missing required field: ${missingField}`,
-      });
-      continue;
-    }
-
-    try {
-      // 2. Check for uniqueness
-      const existingVendor = await Vendor.findOne({ $or: [{ email }, { phone }] });
-      if (existingVendor) {
-        results.errors.push({
-          row: rowNumber,
-          email,
-          message: "Email or phone number already exists.",
-        });
-        continue;
-      }
-
-      // 3. Create and save vendor
-      const newVendor = new Vendor({
-        ...vendor,
-        profile: {
-          public_id: "epic-uploads/defaults/default_avatar",
-          url: "https://res.cloudinary.com/dntsyzdh3/image/upload/v1703173095/epic-uploads/defaults/default_avatar.jpg",
-        },
-      });
-
-      await newVendor.save();
-      results.successCount++;
-    } catch (error) {
-      results.errors.push({
-        row: rowNumber,
-        email,
-        message: error.message || "An unknown error occurred during save.",
-      });
-    }
-  }
+  const results = await bulkImportVendors(vendorsData);
 
   res.status(201).json(new SuccessResponse(201, "Bulk vendor processing complete.", results));
+});
+
+export const bulkUploadVendors = asyncHandler(async (req, res, next) => {
+  const isAdmin = req.admin || (req.vendor && req.vendor.role === "admin");
+
+  if (!isAdmin) {
+    return next(new ErrorResponse(403, "Access denied. Admins only."));
+  }
+
+  if (!req.file) {
+    return next(new ErrorResponse(400, "CSV or Excel file is required"));
+  }
+
+  const allowedTypes = [
+    "text/csv",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ];
+
+  const fileName = req.file.originalname?.toLowerCase() || "";
+  const isSpreadsheet =
+    allowedTypes.includes(req.file.mimetype) ||
+    fileName.endsWith(".csv") ||
+    fileName.endsWith(".xlsx") ||
+    fileName.endsWith(".xls");
+
+  if (!isSpreadsheet) {
+    return next(
+      new ErrorResponse(400, "Invalid file type. Upload .csv, .xlsx, or .xls")
+    );
+  }
+
+  const rows = parseVendorSpreadsheet(req.file.buffer);
+  const results = await bulkImportVendors(rows);
+
+  res.status(201).json(
+    new SuccessResponse(201, "Vendor file processed successfully.", results)
+  );
 });
 
 export const toggleLeadStatus = asyncHandler(async (req, res, next) => {
@@ -411,11 +365,13 @@ export const adminLogin = asyncHandler(async (req, res, next) => {
 
   const adminObj = admin.toObject();
   delete adminObj.password;
+  delete adminObj.refreshToken;
 
   return res.status(200).json(
     new SuccessResponse(200, "Login successful", {
       admin: adminObj,
       accessToken,
+      refreshToken,
     })
   );
 });

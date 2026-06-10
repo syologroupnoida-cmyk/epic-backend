@@ -10,10 +10,15 @@ import {
   updateVenuePackageStatus,
   updateServicePackageStatus,
   toggleLeadStatus,
+  getAdminLeads,
+  updateLeadPrice,
+  runLeadAssignment,
   getAllContacts,
   toggleFeaturedStory,
   adminLogin,
   createAdmin,
+  getAllAdmins,
+  updateAdminAccess,
 } from "../controllers/admin.js";
 import {
   createService,
@@ -54,7 +59,7 @@ import {
   getCategory,
   updateCategory,
 } from "../controllers/venueCategory.js";
-import { getAdminHeaders } from "../middlewares/authMiddleware.js";
+import { getAdminHeaders, requireSuperAdmin } from "../middlewares/authMiddleware.js";
 import { upload } from "../middlewares/multer.js";
 import { updateUserProfile } from "../controllers/user.js";
 import { createLeadBundle } from "../controllers/lead.js";
@@ -180,7 +185,9 @@ router.post("/login", adminLogin);
  *       201:
  *         description: Admin created successfully
  */
-router.post("/create", getAdminHeaders, createAdmin);
+router.get("/admins", getAdminHeaders, requireSuperAdmin, getAllAdmins);
+router.patch("/admins/:id", getAdminHeaders, requireSuperAdmin, updateAdminAccess);
+router.post("/create", getAdminHeaders, requireSuperAdmin, createAdmin);
 
 // System Settings
 /**
@@ -1021,6 +1028,9 @@ router.put("/vendors/:id/status", getAdminHeaders,updateVendorStatus);
  *       404:
  *         description: Lead not found
  */
+router.get("/leads", getAdminHeaders, getAdminLeads);
+router.put("/leads/:id/price", getAdminHeaders, updateLeadPrice);
+router.post("/leads/run-assignment", getAdminHeaders, runLeadAssignment);
 router.put("/leads", getAdminHeaders,toggleLeadStatus);
 
 /**

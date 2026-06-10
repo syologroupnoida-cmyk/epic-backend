@@ -45,6 +45,7 @@ export const getMarketplaceLeads = asyncHandler(async (req, res) => {
   const filter = {
     "purchasedBy.vendor": { $ne: vendorId },
     status: "active",
+    assignmentStatus: { $nin: ["pending_pricing", "priced", "assigned"] },
     $or: [
       { expiresAt: null },
       { expiresAt: { $gt: new Date() } }

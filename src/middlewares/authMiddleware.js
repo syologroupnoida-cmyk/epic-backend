@@ -173,4 +173,20 @@ const getAdminCookies = asyncHandler(async (req, _, next) => {
   next();
 });
 
-export { getVendorHeaders, getUserHeaders, getAdminCookies, getAdminHeaders };
+const requireSuperAdmin = asyncHandler(async (req, _, next) => {
+  const admin = req.admin || req.vendor;
+
+  if (!admin || admin.type !== "superadmin") {
+    return next(new ErrorResponse(403, "Access denied. Superadmins only."));
+  }
+
+  next();
+});
+
+export {
+  getVendorHeaders,
+  getUserHeaders,
+  getAdminCookies,
+  getAdminHeaders,
+  requireSuperAdmin,
+};

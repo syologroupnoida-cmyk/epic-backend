@@ -468,11 +468,13 @@ export const createLead = asyncHandler(async (req, res, next) => {
     packageType,
     businessCategory: bizCat,
     category,
-    price,
+    suggestedPrice: price,
+    price: 0,
+    assignmentStatus: "pending_pricing",
     deviceType,
     tags,
     status: "active",
-    expiresAt,    
+    expiresAt,
   });
 
   // TODO: Notify vendors (Optional future step)

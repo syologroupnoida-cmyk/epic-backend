@@ -58,11 +58,37 @@ const leadSchema = new Schema(
       default: "Standard",
     },
 
+    suggestedPrice: {
+      type: Number,
+      default: 50,
+    },
+
     price: {
       type: Number,
-      required: true,
-      default: 50, // Base price
+      default: 0,
     },
+
+    assignmentStatus: {
+      type: String,
+      enum: [
+        "pending_pricing",
+        "priced",
+        "assigned",
+        "assignment_failed",
+      ],
+      default: "pending_pricing",
+      index: true,
+    },
+
+    assignedVendor: {
+      type: Schema.Types.ObjectId,
+      ref: "Vendor",
+      default: null,
+    },
+
+    assignedAt: Date,
+    adminPricedAt: Date,
+    assignmentNote: String,
 
     deviceType: {
       type: String,
@@ -97,7 +123,7 @@ const leadSchema = new Schema(
         pricePaid: Number,
         method: {
           type: String,
-          enum: ["wallet", "credit"], // Wallet Balance or Lead Credit
+          enum: ["wallet", "credit", "auto_assign"],
         },
         meta: Schema.Types.Mixed, // For storing credit costs, etc.
       },

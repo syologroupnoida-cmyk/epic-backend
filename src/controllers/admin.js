@@ -10,10 +10,7 @@ import Contact from "../models/contact.js";
 import RealStory from "../models/realStory.js";
 import Admin from "../models/Admin.js";
 import { generateAccessToken, generateRefreshToken } from "../utils/generateToken.js";
-import {
-  parseVendorSpreadsheet,
-  bulkImportVendors,
-} from "../services/vendorBulkImportService.js";
+import { assignPricedLeads } from "../services/leadAssignmentService.js";
 // Default Costs
 const DEFAULT_LEAD_COSTS = {
   standard: 10,
@@ -277,6 +274,83 @@ export const toggleLeadStatus = asyncHandler(async (req, res, next) => {
   );
 });
 
+export const getAdminLeads = asyncHandler(async (req, res) => {
+  let { page = 1, limit = 20, assignmentStatus, search } = req.query;
+
+  page = Math.max(1, Number(page) || 1);
+  limit = Math.max(1, Math.min(100, Number(limit) || 20));
+
+  const filter = {};
+
+  if (assignmentStatus && assignmentStatus !== "all") {
+    filter.assignmentStatus = assignmentStatus;
+  }
+
+  if (search) {
+    const regex = new RegExp(search, "i");
+    filter.$or = [
+      { name: regex },
+      { phone: regex },
+      { email: regex },
+      { "location.city": regex },
+    ];
+  }
+
+  const [leads, total] = await Promise.all([
+    Lead.find(filter)
+      .populate("assignedVendor", "vendorName city state email phone")
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean(),
+    Lead.countDocuments(filter),
+  ]);
+
+  res.status(200).json(
+    new SuccessResponse(200, "Leads fetched successfully", {
+      leads,
+      total,
+      page,
+      limit,
+    })
+  );
+});
+
+export const updateLeadPrice = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+  const { price, category } = req.body;
+
+  if (!price || Number(price) <= 0) {
+    return next(new ErrorResponse(400, "Valid price is required"));
+  }
+
+  const lead = await Lead.findById(id);
+  if (!lead) return next(new ErrorResponse(404, "Lead not found"));
+
+  if (lead.assignmentStatus === "assigned") {
+    return next(new ErrorResponse(400, "Lead is already assigned to a vendor"));
+  }
+
+  lead.price = Number(price);
+  if (category) lead.category = category;
+  lead.assignmentStatus = "priced";
+  lead.adminPricedAt = new Date();
+  lead.assignmentNote = "";
+  await lead.save();
+
+  res.status(200).json(
+    new SuccessResponse(200, "Lead price set — queued for vendor assignment", lead)
+  );
+});
+
+export const runLeadAssignment = asyncHandler(async (req, res) => {
+  const results = await assignPricedLeads();
+
+  res.status(200).json(
+    new SuccessResponse(200, "Lead assignment completed", results)
+  );
+});
+
 
 export const getAllContacts = async (req, res) => {
   try {
@@ -379,13 +453,53 @@ export const adminLogin = asyncHandler(async (req, res, next) => {
 /* ======================================================
     ADMIN AUTH: CREATE NEW ADMIN (Superadmin Only)
 ====================================================== */
-export const createAdmin = asyncHandler(async (req, res, next) => {
-  const isSuperAdmin = req.vendor && req.vendor.role === "admin" && req.vendor.type === "superadmin";
+export const getAllAdmins = asyncHandler(async (req, res) => {
+  const admins = await Admin.find()
+    .select("-password -refreshToken")
+    .sort({ createdAt: -1 })
+    .lean();
 
-  if (!isSuperAdmin) {
-    return next(new ErrorResponse(403, "Access denied. Superadmins only."));
+  res.status(200).json(
+    new SuccessResponse(200, "Admins fetched successfully", { admins })
+  );
+});
+
+export const updateAdminAccess = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+  const { type, isActive } = req.body;
+
+  const admin = await Admin.findById(id).select("-password -refreshToken");
+  if (!admin) {
+    return next(new ErrorResponse(404, "Admin not found"));
   }
 
+  if (String(admin._id) === String(req.admin._id) && isActive === false) {
+    return next(new ErrorResponse(400, "You cannot deactivate your own account"));
+  }
+
+  if (type !== undefined) {
+    if (!["finance", "support", "editor", "superadmin"].includes(type)) {
+      return next(new ErrorResponse(400, "Invalid admin type"));
+    }
+    admin.type = type;
+  }
+
+  if (isActive !== undefined) {
+    admin.isActive = Boolean(isActive);
+  }
+
+  await admin.save();
+
+  const adminObj = admin.toObject();
+  delete adminObj.password;
+  delete adminObj.refreshToken;
+
+  res.status(200).json(
+    new SuccessResponse(200, "Admin access updated successfully", { admin: adminObj })
+  );
+});
+
+export const createAdmin = asyncHandler(async (req, res, next) => {
   const { fullName, email, password, phone, type } = req.body;
 
   if (!fullName || !email || !password) {
@@ -397,12 +511,16 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse(400, "Admin with this email already exists"));
   }
 
+  const allowedTypes = ["finance", "support", "editor"];
+  const adminType = allowedTypes.includes(type) ? type : "support";
+
   const admin = await Admin.create({
     fullName,
     email,
     password,
     phone,
-    type: type || "superadmin",
+    type: adminType,
+    isActive: true,
   });
 
   const adminObj = admin.toObject();

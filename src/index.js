@@ -17,6 +17,7 @@ import otpRoutes from "./routes/otp.js";
 import blogRoutes from "./routes/blog.js";
 import userRoutes from "./routes/user.js";
 import produtRoutes from "./routes/product.js";
+import { startLeadAssignmentCron } from "./jobs/leadAssignmentCron.js";
 
 import swaggerJSDoc from "swagger-jsdoc";
 import swaggerUi from "swagger-ui-express";
@@ -130,4 +131,5 @@ app.use(errorMiddleware);
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port} in ${node_env} Mode`);
+  startLeadAssignmentCron();
 });

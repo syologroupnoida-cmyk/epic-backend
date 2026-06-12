@@ -20,8 +20,8 @@ import {
 import Vendor from "../models/Vendor.js";
 import VenuePackage from "../models/VenuePackage.js";
 import ServicePackage from "../models/ServicePackage.js";
-import Contact from "../models/contact.js";
-import RealStory from "../models/realStory.js";
+import Contact from "../models/Contact.js";
+import RealStory from "../models/RealStory.js";
 import SearchLog from "../models/searchlog.js";
 import UserInterest from "../models/UserInterest.js";
 

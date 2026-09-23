@@ -1,50 +1,45 @@
-import { v2 as cloudinary } from "cloudinary";
-import { v4 as uuid } from "uuid";
+import { v2 as cloudinary } from 'cloudinary';
+import { env } from '../config/env.js';
 
-const getBase64 = (file) =>
-  `data:${file?.mimetype};base64,${file?.buffer.toString("base64")}`;
+cloudinary.config({
+  cloud_name: env.CLOUDINARY_CLOUD_NAME,
+  api_key: env.CLOUDINARY_API_KEY,
+  api_secret: env.CLOUDINARY_API_SECRET,
+  secure: true, // always return HTTPS URLs
+});
 
 /**
- * Upload files to Cloudinary
- * @param {Array} files - Array of file paths or base64 strings
- * @returns {Array} - Array of uploaded file details (url, public_id)
+ * Stream a Buffer to Cloudinary and resolve with the upload result.
+ *
+ * @param {object} args
+ * @param {Buffer} args.buffer        — file contents (from multer's memoryStorage)
+ * @param {string} args.folder        — Cloudinary folder, e.g. "epic-wedplanner/kyc-pan/<userId>"
+ * @param {string} [args.publicId]    — explicit asset name (else Cloudinary chooses)
+ * @param {'image'|'raw'|'video'|'auto'} [args.resourceType='auto']
+ * @param {boolean} [args.overwrite=false] — if true and publicId already exists, replace
+ *                                            previous file in the same slot. Default false
+ *                                            (so accidental re-uploads don't clobber data).
  */
-
-const uploadToCloudinary = async (files = []) => {
-  try {
-    const uploads = await Promise.all(
-      files.map((file) =>
-        cloudinary.uploader.upload(getBase64(file), {
-          folder: process.env.CLOUDINARY_FOLDER || "Successsign",
-          resource_type: "auto",
-          public_id: uuid(),
-        })
-      )
+export const uploadBuffer = ({ buffer, folder, publicId, resourceType = 'auto', overwrite = false }) =>
+  new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder,
+        public_id: publicId,
+        resource_type: resourceType,
+        overwrite,
+        invalidate: overwrite, // bust CDN cache when replacing a slot
+        // Cloudinary auto-compresses + serves the best format per client browser.
+        // For PDFs/raw assets these flags are ignored, so safe to always pass.
+        quality: 'auto',
+        fetch_format: 'auto',
+      },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result);
+      },
     );
+    stream.end(buffer);
+  });
 
-    return uploads.map((f) => ({ url: f.secure_url, public_id: f.public_id }));
-  } catch (error) {
-    throw new Error(`Failed to upload files to Cloudinary: ${error.message}`);
-  }
-};
-
-/*
- * Delete files from Cloudinary
- * @param {Array} files - Array of file objects with public_id
- * @returns {Array} - Array of deletion results
- */
-const deleteFromCloudinary = async (files = []) => {
-  try {
-    const deletePromises = files.map((file) =>
-      cloudinary.uploader.destroy(file.public_id)
-    );
-
-    const results = await Promise.all(deletePromises);
-
-    return results;
-  } catch (error) {
-    throw new Error("Failed to delete files from Cloudinary");
-  }
-};
-
-export { deleteFromCloudinary, uploadToCloudinary, getBase64 };
+export { cloudinary };

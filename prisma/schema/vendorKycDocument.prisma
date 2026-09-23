@@ -1,0 +1,28 @@
+// Submitted documents belong to the vendor and are reviewed manually by an admin.
+model VendorKycDocument {
+  id             String          @id @default(uuid())
+  vendorUserId   String
+  type           KycDocumentType
+  documentNumber String?
+  documentUrl    String?
+
+  // Admin verification (manual review during KYC approval).
+  isVerified        Boolean   @default(false)
+  verifiedAt        DateTime?
+  verifiedByAdminId String?
+  notes             String?
+
+  // Legacy provider columns remain for compatibility; this flow never uses them.
+  thirdPartyVerified   Boolean   @default(false)
+  thirdPartyProvider   String?
+  thirdPartyVerifiedAt DateTime?
+  thirdPartyResponse   Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  vendor VendorProfile @relation(fields: [vendorUserId], references: [userId], onDelete: Cascade)
+
+  @@unique([vendorUserId, type])
+  @@map("vendor_kyc_documents")
+}

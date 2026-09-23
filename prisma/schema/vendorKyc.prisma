@@ -1,0 +1,44 @@
+model VendorKyc {
+  vendorUserId String @id
+
+  // Contact name, mobile, email and password are captured at registration.
+  businessName         String?
+  whatsappNumber       String?
+  primaryOperatingCity String?
+  addressStreet        String?
+  addressLocality      String?
+  addressState         String?
+  addressPincode       String?
+
+  // Legacy columns retained for non-destructive migration compatibility.
+  companyName          String?
+  companyType          CompanyType?
+  companySinceYears    Int?
+  teamSize             Int?
+  companyLogoUrl       String?
+  country              String?
+  officeAddress        String?
+  officeCity           String?
+  officeState          String?
+  services             String[]        @default([])
+  destinations         String[]        @default([])
+  dailyLeadRequirement Int?
+  websiteUrl           String?
+  facebookUrl          String?
+  instagramUrl         String?
+  referralSource       ReferralSource?
+  otherSource          String?
+  marketplaceWorked    Boolean         @default(false)
+  agreedTerms          Boolean         @default(false)
+  declaredTrue         Boolean         @default(false)
+
+  // ---- Admin workflow ----
+  submittedAt       DateTime  @default(now())
+  reviewedAt        DateTime?
+  reviewedByAdminId String?
+  rejectionReason   String?
+
+  vendor VendorProfile @relation(fields: [vendorUserId], references: [userId], onDelete: Cascade)
+
+  @@map("vendor_kyc")
+}

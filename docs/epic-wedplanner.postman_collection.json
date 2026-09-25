@@ -796,6 +796,26 @@
       "name": "Vendor KYC",
       "item": [
         {
+          "name": "Vendor panel ping",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/vendor/ping",
+            "description": "Confirms that the authenticated vendor can access vendor-only routes.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{vendorAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "Get my KYC",
           "request": {
             "method": "GET",
@@ -990,6 +1010,26 @@
       "name": "Admin KYC review",
       "item": [
         {
+          "name": "Admin panel ping",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/admin/ping",
+            "description": "Confirms that the authenticated admin can access admin-only routes.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "List KYC submissions",
           "request": {
             "method": "GET",
@@ -1063,8 +1103,337 @@
       ]
     },
     {
-      "name": "Super admin",
+      "name": "Admin service catalog",
+      "description": "Admin-only CRUD for service categories and subcategories. Run create requests first so their test scripts save IDs for later requests.",
       "item": [
+    {
+        "name":  "Create service category",
+        "event":  [
+                      {
+                          "script":  {
+                                         "exec":  [
+                                                      "const json = pm.response.json();",
+                                                      "if (json.data \u0026\u0026 json.data.id) pm.collectionVariables.set(\u0027serviceCategoryId\u0027, json.data.id);"
+                                                  ]
+                                     },
+                          "listen":  "test"
+                      }
+                  ],
+        "request":  {
+                        "method":  "POST",
+                        "header":  [
+                                       {
+                                           "key":  "Content-Type",
+                                           "value":  "application/json"
+                                       }
+                                   ],
+                        "url":  "{{baseUrl}}/api/v1/admin/service-categories",
+                        "auth":  {
+                                     "bearer":  [
+                                                    {
+                                                        "key":  "token",
+                                                        "type":  "string",
+                                                        "value":  "{{adminAccessToken}}"
+                                                    }
+                                                ],
+                                     "type":  "bearer"
+                                 },
+                        "body":  {
+                                     "raw":  "{\n  \"name\": \"Wedding Photography\"\n}",
+                                     "options":  {
+                                                     "raw":  {
+                                                                 "language":  "json"
+                                                             }
+                                                 },
+                                     "mode":  "raw"
+                                 },
+                        "description":  "Creates a category. Only name is required. Optional fields: description, imageUrl, and imagePublicId. You may alternatively upload an image using multipart/form-data with a file field."
+                    },
+        "response":  [
+
+                     ]
+    },
+    {
+        "name":  "List service categories",
+        "request":  {
+                        "method":  "GET",
+                        "header":  [
+
+                                   ],
+                        "url":  "{{baseUrl}}/api/v1/admin/service-categories?page=1\u0026limit=10\u0026search=",
+                        "auth":  {
+                                     "bearer":  [
+                                                    {
+                                                        "key":  "token",
+                                                        "type":  "string",
+                                                        "value":  "{{adminAccessToken}}"
+                                                    }
+                                                ],
+                                     "type":  "bearer"
+                                 }
+                    },
+        "response":  [
+
+                     ]
+    },
+    {
+        "name":  "Get service category with subcategories",
+        "request":  {
+                        "method":  "GET",
+                        "header":  [
+
+                                   ],
+                        "url":  "{{baseUrl}}/api/v1/admin/service-categories/{{serviceCategoryId}}",
+                        "description":  "Returns one service category and its complete subcategories array.",
+                        "auth":  {
+                                     "bearer":  [
+                                                    {
+                                                        "key":  "token",
+                                                        "type":  "string",
+                                                        "value":  "{{adminAccessToken}}"
+                                                    }
+                                                ],
+                                     "type":  "bearer"
+                                 }
+                    },
+        "response":  [
+
+                     ]
+    },
+    {
+        "name":  "Update service category",
+        "request":  {
+                        "method":  "PATCH",
+                        "header":  [
+                                       {
+                                           "key":  "Content-Type",
+                                           "value":  "application/json"
+                                       }
+                                   ],
+                        "url":  "{{baseUrl}}/api/v1/admin/service-categories/{{serviceCategoryId}}",
+                        "auth":  {
+                                     "bearer":  [
+                                                    {
+                                                        "key":  "token",
+                                                        "type":  "string",
+                                                        "value":  "{{adminAccessToken}}"
+                                                    }
+                                                ],
+                                     "type":  "bearer"
+                                 },
+                        "body":  {
+                                     "raw":  "{\n  \"name\": \"Wedding Photography \u0026 Films\",\n  \"description\": \"Updated photography and cinematography services\"\n}",
+                                     "options":  {
+                                                     "raw":  {
+                                                                 "language":  "json"
+                                                             }
+                                                 },
+                                     "mode":  "raw"
+                                 }
+                    },
+        "response":  [
+
+                     ]
+    },
+    {
+        "name":  "Delete service category",
+        "request":  {
+                        "method":  "DELETE",
+                        "header":  [
+
+                                   ],
+                        "url":  "{{baseUrl}}/api/v1/admin/service-categories/{{serviceCategoryId}}",
+                        "auth":  {
+                                     "bearer":  [
+                                                    {
+                                                        "key":  "token",
+                                                        "type":  "string",
+                                                        "value":  "{{adminAccessToken}}"
+                                                    }
+                                                ],
+                                     "type":  "bearer"
+                                 },
+                        "description":  "Deletes the category and cascades to its subcategories. Run after subcategory requests."
+                    },
+        "response":  [
+
+                     ]
+    },
+    {
+        "name":  "Create service subcategory",
+        "event":  [
+                      {
+                          "script":  {
+                                         "exec":  [
+                                                      "const json = pm.response.json();",
+                                                      "if (json.data \u0026\u0026 json.data.id) pm.collectionVariables.set(\u0027serviceSubcategoryId\u0027, json.data.id);"
+                                                  ]
+                                     },
+                          "listen":  "test"
+                      }
+                  ],
+        "request":  {
+                        "method":  "POST",
+                        "header":  [
+                                       {
+                                           "key":  "Content-Type",
+                                           "value":  "application/json"
+                                       }
+                                   ],
+                        "url":  "{{baseUrl}}/api/v1/admin/service-subcategories",
+                        "auth":  {
+                                     "bearer":  [
+                                                    {
+                                                        "key":  "token",
+                                                        "type":  "string",
+                                                        "value":  "{{adminAccessToken}}"
+                                                    }
+                                                ],
+                                     "type":  "bearer"
+                                 },
+                        "body":  {
+                                     "raw":  "{\n  \"name\": \"Candid Photography\",\n  \"serviceCategoryId\": \"{{serviceCategoryId}}\"\n}",
+                                     "options":  {
+                                                     "raw":  {
+                                                                 "language":  "json"
+                                                             }
+                                                 },
+                                     "mode":  "raw"
+                                 },
+                        "description":  "Creates a subcategory. Required fields: name and serviceCategoryId. Optional fields: description, imageUrl, and imagePublicId. You may alternatively upload an image using multipart/form-data with a file field."
+                    },
+        "response":  [
+
+                     ]
+    },
+    {
+        "name":  "List service subcategories",
+        "request":  {
+                        "method":  "GET",
+                        "header":  [
+
+                                   ],
+                        "url":  "{{baseUrl}}/api/v1/admin/service-subcategories?page=1\u0026limit=10\u0026serviceCategoryId={{serviceCategoryId}}\u0026search=",
+                        "auth":  {
+                                     "bearer":  [
+                                                    {
+                                                        "key":  "token",
+                                                        "type":  "string",
+                                                        "value":  "{{adminAccessToken}}"
+                                                    }
+                                                ],
+                                     "type":  "bearer"
+                                 }
+                    },
+        "response":  [
+
+                     ]
+    },
+    {
+        "name":  "Get service subcategory",
+        "request":  {
+                        "method":  "GET",
+                        "header":  [
+
+                                   ],
+                        "url":  "{{baseUrl}}/api/v1/admin/service-subcategories/{{serviceSubcategoryId}}",
+                        "auth":  {
+                                     "bearer":  [
+                                                    {
+                                                        "key":  "token",
+                                                        "type":  "string",
+                                                        "value":  "{{adminAccessToken}}"
+                                                    }
+                                                ],
+                                     "type":  "bearer"
+                                 }
+                    },
+        "response":  [
+
+                     ]
+    },
+    {
+        "name":  "Update service subcategory",
+        "request":  {
+                        "method":  "PATCH",
+                        "header":  [
+                                       {
+                                           "key":  "Content-Type",
+                                           "value":  "application/json"
+                                       }
+                                   ],
+                        "url":  "{{baseUrl}}/api/v1/admin/service-subcategories/{{serviceSubcategoryId}}",
+                        "auth":  {
+                                     "bearer":  [
+                                                    {
+                                                        "key":  "token",
+                                                        "type":  "string",
+                                                        "value":  "{{adminAccessToken}}"
+                                                    }
+                                                ],
+                                     "type":  "bearer"
+                                 },
+                        "body":  {
+                                     "raw":  "{\n  \"name\": \"Candid Wedding Photography\",\n  \"description\": \"Updated candid photography offering\",\n  \"serviceCategoryId\": \"{{serviceCategoryId}}\"\n}",
+                                     "options":  {
+                                                     "raw":  {
+                                                                 "language":  "json"
+                                                             }
+                                                 },
+                                     "mode":  "raw"
+                                 }
+                    },
+        "response":  [
+
+                     ]
+    },
+    {
+        "name":  "Delete service subcategory",
+        "request":  {
+                        "method":  "DELETE",
+                        "header":  [
+
+                                   ],
+                        "url":  "{{baseUrl}}/api/v1/admin/service-subcategories/{{serviceSubcategoryId}}",
+                        "auth":  {
+                                     "bearer":  [
+                                                    {
+                                                        "key":  "token",
+                                                        "type":  "string",
+                                                        "value":  "{{adminAccessToken}}"
+                                                    }
+                                                ],
+                                     "type":  "bearer"
+                                 }
+                    },
+        "response":  [
+
+                     ]
+    }
+]
+    },
+    {
+      "name": "Super admin",      "item": [
+        {
+          "name": "Super admin panel ping",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/super-admin/ping",
+            "description": "Confirms that the authenticated super admin can access super-admin-only routes.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{superAdminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
         {
           "name": "Create admin",
           "request": {
@@ -1234,6 +1603,16 @@
     },
     {
       "key": "aadhaarUploadUrl",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "serviceCategoryId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "serviceSubcategoryId",
       "value": "",
       "type": "string"
     }

@@ -30,13 +30,48 @@ export const getCategory = async (id) => {
   return item;
 };
 export const createCategory = async ({ body, file }) => {
-  const image = await getImage({ body, file, folder: 'epic-wedplanner/service-categories' });
-  try { return await repo.createCategory({ name: body.name, slug: buildSlug(body.name), description: body.description ?? null, ...image }); }
-  catch (error) { if (file) await destroyImage(image.imagePublicId); throw error; }
+  const isBulk = Array.isArray(body);
+  const categories = isBulk ? body : [body];
+  if (file && isBulk) {
+    throw ApiError.badRequest('A file upload is supported only when creating one category. Use imageUrl for bulk requests.');
+  }
+
+  const uploadedImage = file
+    ? await getImage({ body: categories[0], file, folder: 'epic-wedplanner/service-categories' })
+    : {};
+  const itemData = (item) => ({
+    name: item.name,
+    slug: buildSlug(item.name),
+    description: item.description ?? null,
+    ...(item.imageUrl !== undefined && {
+      imageUrl: item.imageUrl,
+      imagePublicId: item.imageUrl ? item.imagePublicId ?? null : null,
+    }),
+  });
+  const data = categories.map((category, index) => ({
+    ...itemData(category),
+    ...(index === 0 ? uploadedImage : {}),
+    ...(category.subcategories.length > 0 && {
+      subcategories: { create: category.subcategories.map(itemData) },
+    }),
+  }));
+
+  try {
+    const created = await repo.createCategoriesWithSubcategories(data);
+    return isBulk ? { categories: created, count: created.length } : created[0];
+  } catch (error) {
+    if (file) await destroyImage(uploadedImage.imagePublicId);
+    throw error;
+  }
 };
 export const listCategories = async ({ page, limit, search }) => {
   const where = search ? { OR: [{ name: { contains: search, mode: 'insensitive' } }, { description: { contains: search, mode: 'insensitive' } }] } : {};
   const { items, total } = await repo.listCategories({ where, skip: (page - 1) * limit, take: limit });
+  return { categories: items, pagination: pageInfo(total, page, limit) };
+};
+export const listPublicCategories = async ({ page, limit, search }) => {
+  const where = search ? { OR: [{ name: { contains: search, mode: 'insensitive' } }, { description: { contains: search, mode: 'insensitive' } }] } : {};
+  const { items, total } = await repo.listPublicCategories({ where, skip: (page - 1) * limit, take: limit });
   return { categories: items, pagination: pageInfo(total, page, limit) };
 };
 export const updateCategory = async ({ id, body, file }) => {
@@ -50,6 +85,26 @@ export const updateCategory = async ({ id, body, file }) => {
     if ('imageUrl' in image && current.imagePublicId !== image.imagePublicId) await destroyImage(current.imagePublicId);
     return updated;
   } catch (error) { if (file) await destroyImage(image.imagePublicId); throw error; }
+};
+export const updateCategories = async ({ body }) => {
+  const updateData = (item) => ({
+    ...(item.name !== undefined && { name: item.name, slug: buildSlug(item.name) }),
+    ...(item.description !== undefined && { description: item.description }),
+    ...(item.imageUrl !== undefined && {
+      imageUrl: item.imageUrl,
+      imagePublicId: item.imageUrl ? item.imagePublicId ?? null : null,
+    }),
+  });
+  const updates = body.map(({ id, subcategories = [], ...category }) => ({
+    id,
+    data: updateData(category),
+    subcategories: subcategories.map(({ id: subcategoryId, ...subcategory }) => ({
+      id: subcategoryId,
+      data: updateData(subcategory),
+    })),
+  }));
+  const categories = await repo.updateCategoriesWithSubcategories(updates);
+  return { categories, count: categories.length };
 };
 export const deleteCategory = async (id) => {
   const current = await getCategory(id);

@@ -2,13 +2,21 @@ model VendorKyc {
   vendorUserId String @id
 
   // Contact name, mobile, email and password are captured at registration.
-  businessName         String?
-  whatsappNumber       String?
-  primaryOperatingCity String?
-  addressStreet        String?
-  addressLocality      String?
-  addressState         String?
-  addressPincode       String?
+  businessName          String?
+  contactPerson         String?
+  logoName              String?
+  description           String?
+  whatsappNumber        String?
+  primaryOperatingCity  String?
+  serviceCategoryIds    String[] @default([])
+  serviceSubcategoryIds String[] @default([])
+  addressStreet         String?
+  addressLocality       String?
+  addressState          String?
+  addressPincode        String?
+  source                String[] @default([])
+  sourceNote            String?
+  declaredDocumentStatus Json?
 
   // Legacy columns retained for non-destructive migration compatibility.
   companyName          String?

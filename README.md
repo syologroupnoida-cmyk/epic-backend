@@ -32,17 +32,24 @@ All routes use `/api/v1`:
 | `POST /auth/password/forgot`, `/auth/password/verify-otp`, `/auth/password/reset` | Password recovery |
 | `GET/PATCH /auth/me`, `POST /auth/change-password` | Profile and password |
 | `POST /uploads/image` | Authenticated multipart upload (`file`, `purpose`, optional `name`) to Cloudinary |
+| `GET /service-categories` | Public categories, each with all of its subcategories |
+| `GET /service-categories/:id` | Public category details with all of its subcategories |
+| `GET /service-subcategories?serviceCategoryId=:id` | Public subcategories filtered by category |
 | `GET/POST /vendor/kyc` | Vendor KYC status and final company form submission |
 | `GET /admin/vendor-kyc`, `POST /admin/vendor-kyc/:userId/approve` or `/reject` | Admin review |
 | `POST /super-admin/admins` | Create admin |
 
 Send access tokens as `Authorization: Bearer <token>`. Web refresh tokens also use an HTTP-only cookie; API clients can send the refresh token in JSON.
 
+Admins can create one or multiple service categories with their subcategories through `POST /api/v1/admin/service-categories`. Send one category object for a single result, or an array of category objects for transactional bulk creation. Each category may contain a `subcategories` array.
+Admins can transactionally update one or multiple categories through `PATCH /api/v1/admin/service-categories` using an array. Nested subcategories with an `id` are updated; nested subcategories without an `id` are created. Omitted subcategories are left unchanged and deletion remains explicit through `DELETE /api/v1/admin/service-subcategories/:id`.
+
 ## Manual KYC review
 
 PAN, Aadhaar, GSTIN, and CIN continue to use their existing document-number routes and matching `kyc-pan`, `kyc-aadhaar`, `kyc-gst`, and `kyc-cin` upload purposes. PAN and Aadhaar are required; GSTIN and CIN remain optional, but an optional document must include both its number and image.
 
-Registration already captures the contact person's name, mobile number, email address, and password. Only the final `POST /api/v1/vendor/kyc` form changed: it accepts `businessName`, `whatsappNumber`, `primaryOperatingCity`, and `businessAddress` (`street`, `locality`, `state`, and `pincode`). The document routes are unchanged.
+Registration captures the account holder's name, mobile number, email address, and password. The final `POST /api/v1/vendor/kyc` form separately captures the company and KYC contact details. The document routes are unchanged.
+The current public form accepts `servicecategoriesIds` and `servicesSubCategoryIds` arrays (the canonical `serviceCategoryIds` and `serviceSubcategoryIds` names remain supported). It also captures company/contact details, address, logo filename, description, social links, referral sources, source notes, and the vendor's document checklist. Every submitted catalog ID must exist, and every selected subcategory must belong to one of the selected categories. Document checklist values are declarations only; only an admin can set the actual document verification status.
 
 An admin lists submissions with `GET /api/v1/admin/vendor-kyc`, reviews the documents, and calls `POST /api/v1/admin/vendor-kyc/:userId/approve` or `/reject`. Approval activates the vendor account. Rejection records a reason and lets the vendor resubmit.
 

@@ -1,6 +1,7 @@
 import { ApiError } from '../../utils/ApiError.js';
 import { env } from '../../config/env.js';
 import * as kycRepo from '../../repositories/vendorKyc.repository.js';
+import * as catalogRepo from '../../repositories/serviceCatalog.repository.js';
 import {
   sendVendorApprovedNotice,
   sendVendorRejectedNotice,
@@ -76,13 +77,26 @@ const buildApprovalSummary = (kycStatus) => {
  * Persist only fields not already collected during vendor registration.
  */
 const mapPayloadToKyc = (payload) => ({
-  businessName: payload.businessName,
+  businessName: payload.companyName,
+  companyName: payload.companyName,
+  contactPerson: payload.contactPerson,
+  logoName: payload.logoName ?? null,
+  description: payload.description,
   whatsappNumber: payload.whatsappNumber,
   primaryOperatingCity: payload.primaryOperatingCity,
+  serviceCategoryIds: payload.serviceCategoryIds,
+  serviceSubcategoryIds: payload.serviceSubcategoryIds,
   addressStreet: payload.businessAddress.street,
   addressLocality: payload.businessAddress.locality,
   addressState: payload.businessAddress.state,
   addressPincode: payload.businessAddress.pincode,
+  facebookUrl: payload.socialLinks.facebook ?? null,
+  instagramUrl: payload.socialLinks.instagram ?? null,
+  source: payload.source,
+  sourceNote: payload.sourceNote,
+  // This captures what the vendor declared in the form. It never controls the
+  // admin-owned VendorKycDocument.isVerified flag.
+  declaredDocumentStatus: payload.verified,
 });
 
 export const getMyKycStatus = async (vendorUserId) => {
@@ -131,6 +145,22 @@ export const submitMyKyc = async ({ vendorUserId, payload }) => {
   if (profile.kycStatus === 'SUBMITTED') {
     throw ApiError.forbidden(
       'A KYC submission is already under review. Please wait for admin response.',
+    );
+  }
+
+  const { categories, subcategories } = await catalogRepo.findCatalogSelections(payload);
+  const foundCategoryIds = new Set(categories.map(({ id }) => id));
+  const foundSubcategoryIds = new Set(subcategories.map(({ id }) => id));
+  const invalidServiceCategoryIds = payload.serviceCategoryIds.filter((id) => !foundCategoryIds.has(id));
+  const invalidServiceSubcategoryIds = payload.serviceSubcategoryIds.filter((id) => !foundSubcategoryIds.has(id));
+  const mismatchedServiceSubcategoryIds = subcategories
+    .filter(({ serviceCategoryId }) => !foundCategoryIds.has(serviceCategoryId))
+    .map(({ id }) => id);
+
+  if (invalidServiceCategoryIds.length || invalidServiceSubcategoryIds.length || mismatchedServiceSubcategoryIds.length) {
+    throw ApiError.badRequest(
+      'Select valid service categories and subcategories. Every subcategory must belong to a selected category.',
+      { invalidServiceCategoryIds, invalidServiceSubcategoryIds, mismatchedServiceSubcategoryIds },
     );
   }
 

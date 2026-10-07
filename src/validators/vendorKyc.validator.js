@@ -5,6 +5,12 @@ const requiredText = (min, max, label) =>
     .min(min, `${label} must be at least ${min} characters long`)
     .max(max, `${label} must not exceed ${max} characters`);
 
+const uniqueIdArray = (label) => z.array(
+  z.string().trim().min(1, `${label} must contain valid IDs`),
+  { required_error: `${label} is required` },
+).min(1, `Select at least one ${label}`).max(100, `You can select at most 100 ${label}`)
+  .refine((ids) => new Set(ids).size === ids.length, `${label} must not contain duplicate IDs`);
+
 export const documentNumberSchemas = {
   PAN: z.object({ number: z.string().trim().toUpperCase().regex(/^[A-Z]{5}[0-9]{4}[A-Z]$/, 'Invalid PAN format') }).strict(),
   AADHAR: z.object({ number: z.string().trim().regex(/^[0-9]{12}$/, 'Aadhaar must be 12 digits') }).strict(),
@@ -12,12 +18,21 @@ export const documentNumberSchemas = {
   CIN: z.object({ number: z.string().trim().toUpperCase().regex(/^[A-Z][0-9]{5}[A-Z]{2}[0-9]{4}[A-Z]{3}[0-9]{6}$/, 'Invalid CIN format') }).strict(),
 };
 
-// Registration already captures contact name, mobile, email, and password.
+const optionalLink = z.string().trim().max(500).optional();
+
+// Accept the public-form field names while normalizing them to the canonical
+// serviceCategoryIds/serviceSubcategoryIds names used by the service layer.
 export const submitKycSchema = z.object({
-  businessName: requiredText(2, 100, 'Business or brand name'),
-  whatsappNumber: z.string({ required_error: 'WhatsApp number is required' }).trim()
-    .regex(/^\d{10,15}$/, 'WhatsApp number must be 10 to 15 digits'),
-  primaryOperatingCity: requiredText(2, 100, 'Primary operating city'),
+  servicecategoriesIds: uniqueIdArray('service categories').optional(),
+  servicesSubCategoryIds: uniqueIdArray('service subcategories').optional(),
+  serviceCategoryIds: uniqueIdArray('service categories').optional(),
+  serviceSubcategoryIds: uniqueIdArray('service subcategories').optional(),
+  companyName: requiredText(2, 100, 'Company name'),
+  contactPerson: requiredText(2, 100, 'Contact person'),
+  logoName: z.string().trim().min(1).max(255).nullable().optional(),
+  description: requiredText(2, 2000, 'Description'),
+  whatsappNumber: z.string().trim().regex(/^\d{10,15}$/, 'WhatsApp number must be 10 to 15 digits').optional(),
+  primaryOperatingCity: requiredText(2, 100, 'Primary operating city').optional(),
   businessAddress: z.object({
     street: requiredText(2, 200, 'Street'),
     locality: requiredText(2, 100, 'Locality'),
@@ -25,7 +40,36 @@ export const submitKycSchema = z.object({
     pincode: z.string({ required_error: 'Pincode is required' }).trim()
       .regex(/^\d{6}$/, 'Pincode must be exactly 6 digits'),
   }).strict(),
-}).strict();
+  socialLinks: z.object({
+    facebook: optionalLink,
+    instagram: optionalLink,
+  }).strict(),
+  verified: z.object({
+    aadhaar: z.boolean(),
+    pan: z.boolean(),
+    cin: z.boolean(),
+    gst: z.boolean(),
+  }).strict(),
+  source: z.array(z.string().trim().min(1).max(100)).min(1).max(20),
+  sourceNote: z.string().trim().max(500).optional().default(''),
+}).strict().superRefine((data, ctx) => {
+  if (data.servicecategoriesIds && data.serviceCategoryIds) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['servicecategoriesIds'], message: 'Send only one category ID field name' });
+  }
+  if (data.servicesSubCategoryIds && data.serviceSubcategoryIds) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['servicesSubCategoryIds'], message: 'Send only one subcategory ID field name' });
+  }
+  if (!data.servicecategoriesIds && !data.serviceCategoryIds) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['servicecategoriesIds'], message: 'servicecategoriesIds is required' });
+  }
+  if (!data.servicesSubCategoryIds && !data.serviceSubcategoryIds) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['servicesSubCategoryIds'], message: 'servicesSubCategoryIds is required' });
+  }
+}).transform(({ servicecategoriesIds, servicesSubCategoryIds, ...data }) => ({
+  ...data,
+  serviceCategoryIds: servicecategoriesIds ?? data.serviceCategoryIds,
+  serviceSubcategoryIds: servicesSubCategoryIds ?? data.serviceSubcategoryIds,
+}));
 
 export const rejectKycSchema = z.object({
   reason: requiredText(5, 500, 'Rejection reason'),

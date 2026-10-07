@@ -1,8 +1,8 @@
 {
   "info": {
-    "name": "Epic Wedplanner Auth and KYC API",
+    "name": "Epic Wedplanner API",
     "_postman_id": "b531a667-8de6-4f49-9c93-8907e44e0031",
-    "description": "Epic Wedplanner authentication, Cloudinary uploads, and manual KYC review. Import the matching Postman environment. Save each document number and upload its image in separate requests; both write to the same document row. Submit the company form last.",
+    "description": "Epic Wedplanner authentication, public and admin service catalog, Cloudinary uploads, and manual KYC review. Import the matching Postman environment. Save each document number and upload its image in separate requests; both write to the same document row. Submit the company form last.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -983,14 +983,14 @@
             "url": "{{baseUrl}}/api/v1/vendor/kyc",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"businessName\": \"Asha Events\",\n  \"whatsappNumber\": \"919876543210\",\n  \"primaryOperatingCity\": \"Mumbai\",\n  \"businessAddress\": {\n    \"street\": \"123 Main Street\",\n    \"locality\": \"Andheri West\",\n    \"state\": \"Maharashtra\",\n    \"pincode\": \"400053\"\n  }\n}",
+              "raw": "{\n  \"servicecategoriesIds\": [\n    \"{{serviceCategoryId}}\"\n  ],\n  \"servicesSubCategoryIds\": [\n    \"{{serviceSubcategoryId}}\"\n  ],\n  \"companyName\": \"Transport\",\n  \"contactPerson\": \"Person\",\n  \"businessAddress\": {\n    \"street\": \"123 Main Street\",\n    \"locality\": \"Andheri West\",\n    \"state\": \"Maharashtra\",\n    \"pincode\": \"400053\"\n  },\n  \"logoName\": \"EPIC final.jpg.jpeg\",\n  \"description\": \"test vendor\",\n  \"socialLinks\": {\n    \"facebook\": \"#\",\n    \"instagram\": \"E\"\n  },\n  \"verified\": {\n    \"aadhaar\": true,\n    \"pan\": true,\n    \"cin\": true,\n    \"gst\": true\n  },\n  \"source\": [\n    \"Epic Wedz Team\"\n  ],\n  \"sourceNote\": \"\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
             },
-            "description": "Final KYC form containing only business details not collected during registration. Save PAN and Aadhaar numbers via their existing endpoints and upload both card images first. GSTIN and CIN remain optional, but each optional document needs both its number and image.",
+            "description": "Final vendor KYC form with multiple service categories/subcategories, company profile, social links, sources, and a submitted document checklist. The verified object is only the vendor's declaration; admin-controlled document verification is not changed by it. Save PAN and Aadhaar numbers and upload both card images first. GSTIN and CIN remain optional, but each optional document needs both its number and image.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -1103,55 +1103,114 @@
       ]
     },
     {
+      "name": "Public service catalog",
+      "description": "Read-only service catalog endpoints for public pages. No authentication is required. Create the sample category and subcategory from the Admin service catalog folder first if the database is empty.",
+      "item": [
+        {
+          "name": "List public categories with subcategories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/service-categories?page=1&limit=10&search=",
+            "description": "Returns paginated categories. Every category contains its complete subcategories array, allowing the public UI to render categories and their child options together.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get selected public category with subcategories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/service-categories/{{serviceCategoryId}}",
+            "description": "Use this after a public user selects a category. The response includes the selected category and all of its subcategories.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List public subcategories for selected category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/service-subcategories?page=1&limit=100&serviceCategoryId={{serviceCategoryId}}&search=",
+            "description": "Returns the subcategories belonging to the selected category. Pass the category ID using serviceCategoryId.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get public subcategory",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/service-subcategories/{{serviceSubcategoryId}}",
+            "description": "Returns one subcategory and its parent service category.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "Admin service catalog",
-      "description": "Admin-only CRUD for service categories and subcategories. Run create requests first so their test scripts save IDs for later requests.",
+      "description": "Admin-only CRUD for service categories and subcategories. Run Create categories with subcategories first so its test script saves IDs for later requests.",
       "item": [
     {
-        "name":  "Create service category",
-        "event":  [
-                      {
-                          "script":  {
-                                         "exec":  [
-                                                      "const json = pm.response.json();",
-                                                      "if (json.data \u0026\u0026 json.data.id) pm.collectionVariables.set(\u0027serviceCategoryId\u0027, json.data.id);"
-                                                  ]
-                                     },
-                          "listen":  "test"
-                      }
-                  ],
-        "request":  {
-                        "method":  "POST",
-                        "header":  [
-                                       {
-                                           "key":  "Content-Type",
-                                           "value":  "application/json"
-                                       }
-                                   ],
-                        "url":  "{{baseUrl}}/api/v1/admin/service-categories",
-                        "auth":  {
-                                     "bearer":  [
-                                                    {
-                                                        "key":  "token",
-                                                        "type":  "string",
-                                                        "value":  "{{adminAccessToken}}"
-                                                    }
-                                                ],
-                                     "type":  "bearer"
-                                 },
-                        "body":  {
-                                     "raw":  "{\n  \"name\": \"Wedding Photography\"\n}",
-                                     "options":  {
-                                                     "raw":  {
-                                                                 "language":  "json"
-                                                             }
-                                                 },
-                                     "mode":  "raw"
-                                 },
-                        "description":  "Creates a category. Only name is required. Optional fields: description, imageUrl, and imagePublicId. You may alternatively upload an image using multipart/form-data with a file field."
-                    },
-        "response":  [
-
-                     ]
+        "name": "Create categories with subcategories",
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "const json = pm.response.json();",
+                "const first = json.data?.categories?.[0];",
+                "if (first?.id) pm.collectionVariables.set('serviceCategoryId', first.id);",
+                "if (first?.subcategories?.[0]?.id) pm.collectionVariables.set('serviceSubcategoryId', first.subcategories[0].id);"
+              ]
+            }
+          }
+        ],
+        "request": {
+          "method": "POST",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "url": "{{baseUrl}}/api/v1/admin/service-categories",
+          "auth": {
+            "type": "bearer",
+            "bearer": [
+              {
+                "key": "token",
+                "value": "{{adminAccessToken}}",
+                "type": "string"
+              }
+            ]
+          },
+          "body": {
+            "mode": "raw",
+            "raw": "[\n  {\n    \"name\": \"Photography\",\n    \"subcategories\": [\n      { \"name\": \"Candid Photography\" },\n      { \"name\": \"Traditional Photography\" }\n    ]\n  },\n  {\n    \"name\": \"Transport\",\n    \"subcategories\": [\n      { \"name\": \"Wedding Cars\" },\n      { \"name\": \"Guest Transport\" }\n    ]\n  }\n]",
+            "options": {
+              "raw": {
+                "language": "json"
+              }
+            }
+          },
+          "description": "Creates one or multiple categories with nested subcategories in one transaction. Always send an array: keep one item for a single category or add more items for multiple categories. Use imageUrl fields for images. If any record fails, nothing from the request is created."
+        },
+        "response": []
     },
     {
         "name":  "List service categories",
@@ -1201,7 +1260,7 @@
                      ]
     },
     {
-        "name":  "Update service category",
+        "name":  "Update categories with subcategories",
         "request":  {
                         "method":  "PATCH",
                         "header":  [
@@ -1210,7 +1269,7 @@
                                            "value":  "application/json"
                                        }
                                    ],
-                        "url":  "{{baseUrl}}/api/v1/admin/service-categories/{{serviceCategoryId}}",
+                        "url":  "{{baseUrl}}/api/v1/admin/service-categories",
                         "auth":  {
                                      "bearer":  [
                                                     {
@@ -1222,14 +1281,15 @@
                                      "type":  "bearer"
                                  },
                         "body":  {
-                                     "raw":  "{\n  \"name\": \"Wedding Photography \u0026 Films\",\n  \"description\": \"Updated photography and cinematography services\"\n}",
+                                     "raw":  "[\n  {\n    \"id\": \"{{serviceCategoryId}}\",\n    \"name\": \"Wedding Photography & Films\",\n    \"description\": \"Updated photography and cinematography services\",\n    \"subcategories\": [\n      {\n        \"id\": \"{{serviceSubcategoryId}}\",\n        \"name\": \"Candid Wedding Photography\"\n      },\n      {\n        \"name\": \"Drone Photography\",\n        \"description\": \"Aerial wedding coverage\"\n      }\n    ]\n  }\n]",
                                      "options":  {
                                                      "raw":  {
                                                                  "language":  "json"
                                                              }
                                                  },
                                      "mode":  "raw"
-                                 }
+                                 },
+                        "description": "Always send an array. One item updates one category; additional items update more categories in the same transaction. A nested subcategory with an id is updated, while one without an id is created. Omitted subcategories are not deleted."
                     },
         "response":  [
 

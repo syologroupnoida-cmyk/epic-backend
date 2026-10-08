@@ -61,13 +61,27 @@ export const createCategory = async ({ body, file }) => {
     throw error;
   }
 };
-export const listCategories = async ({ page, limit, search }) => {
-  const where = search ? { OR: [{ name: { contains: search, mode: 'insensitive' } }, { description: { contains: search, mode: 'insensitive' } }] } : {};
+const categoryListWhere = ({ id, slug, search }) => ({
+  ...(id && { id }),
+  ...(slug && { slug }),
+  ...(search && {
+    OR: [
+      { name: { contains: search, mode: 'insensitive' } },
+      { description: { contains: search, mode: 'insensitive' } },
+      { subcategories: { some: { OR: [
+        { name: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+      ] } } },
+    ],
+  }),
+});
+export const listCategories = async ({ page, limit, search, id, slug }) => {
+  const where = categoryListWhere({ id, slug, search });
   const { items, total } = await repo.listCategories({ where, skip: (page - 1) * limit, take: limit });
   return { categories: items, pagination: pageInfo(total, page, limit) };
 };
-export const listPublicCategories = async ({ page, limit, search }) => {
-  const where = search ? { OR: [{ name: { contains: search, mode: 'insensitive' } }, { description: { contains: search, mode: 'insensitive' } }] } : {};
+export const listPublicCategories = async ({ page, limit, search, id, slug }) => {
+  const where = categoryListWhere({ id, slug, search });
   const { items, total } = await repo.listPublicCategories({ where, skip: (page - 1) * limit, take: limit });
   return { categories: items, pagination: pageInfo(total, page, limit) };
 };
@@ -83,26 +97,16 @@ export const updateCategory = async ({ id, body, file }) => {
     return updated;
   } catch (error) { if (file) await destroyImage(image.imagePublicId); throw error; }
 };
-export const updateCategories = async ({ body }) => {
-  const updateData = (item) => ({
-    ...(item.name !== undefined && { name: item.name, slug: buildSlug(item.name) }),
-    ...(item.description !== undefined && { description: item.description }),
-    ...(item.imageUrl !== undefined && {
-      imageUrl: item.imageUrl,
-      imagePublicId: item.imageUrl ? item.imagePublicId ?? null : null,
-    }),
-  });
-  const updates = body.map(({ id, ...category }) => ({
-    id,
-    data: updateData(category),
-  }));
-  const categories = await repo.updateCategories(updates);
-  return { categories, count: categories.length };
-};
 export const deleteCategory = async (id) => {
   const current = await getCategory(id);
+  if (current.subcategories.length > 0) {
+    throw ApiError.conflict(
+      'Cannot delete a service category that has subcategories. Delete or move its subcategories first.',
+      { categoryId: id, subcategoryCount: current.subcategories.length },
+    );
+  }
   const deleted = await repo.deleteCategory(id);
-  await Promise.all([destroyImage(current.imagePublicId), ...current.subcategories.map((item) => destroyImage(item.imagePublicId))]);
+  await destroyImage(current.imagePublicId);
   return deleted;
 };
 
@@ -117,9 +121,9 @@ export const createSubcategory = async ({ body, file }) => {
   try { return await repo.createSubcategory({ name: body.name, slug: buildSlug(body.name), description: body.description ?? null, serviceCategoryId: body.serviceCategoryId, ...image }); }
   catch (error) { if (file) await destroyImage(image.imagePublicId); throw error; }
 };
-export const listSubcategories = async ({ page, limit, search, serviceCategoryId, serviceCategory }) => {
+export const listSubcategories = async ({ page, limit, search, id, slug, serviceCategoryId, serviceCategory }) => {
   const parentId = serviceCategoryId ?? serviceCategory;
-  const where = { ...(parentId && { serviceCategoryId: parentId }), ...(search && { OR: [{ name: { contains: search, mode: 'insensitive' } }, { description: { contains: search, mode: 'insensitive' } }] }) };
+  const where = { ...(id && { id }), ...(slug && { slug }), ...(parentId && { serviceCategoryId: parentId }), ...(search && { OR: [{ name: { contains: search, mode: 'insensitive' } }, { description: { contains: search, mode: 'insensitive' } }] }) };
   const { items, total } = await repo.listSubcategories({ where, skip: (page - 1) * limit, take: limit });
   return { subcategories: items, pagination: pageInfo(total, page, limit) };
 };

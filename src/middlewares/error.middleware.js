@@ -27,6 +27,12 @@ export const errorHandler = (err, req, res, _next) => {
     if (err.code === 'P2025') {
       return sendError(res, { statusCode: 404, message: 'Resource not found.' });
     }
+    if (err.code === 'P2003') {
+      return sendError(res, {
+        statusCode: 409,
+        message: 'This record is still referenced by another resource and cannot be deleted.',
+      });
+    }
   }
 
   if (err instanceof Prisma.PrismaClientValidationError) {

@@ -1111,8 +1111,8 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/v1/service-categories?page=1&limit=10&search=",
-            "description": "Returns paginated categories. Every category contains its complete subcategories array, allowing the public UI to render categories and their child options together.",
+            "url": "{{baseUrl}}/api/v1/service-categories?page=1&limit=10&search=Photography",
+            "description": "Returns paginated categories with complete subcategories. search checks category and nested subcategory names/descriptions. Exact id and slug filters are also supported; remove search when it is not needed.",
             "auth": {
               "type": "noauth"
             }
@@ -1137,8 +1137,8 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/v1/service-subcategories?page=1&limit=100&serviceCategoryId={{serviceCategoryId}}&search=",
-            "description": "Returns the subcategories belonging to the selected category. Pass the category ID using serviceCategoryId.",
+            "url": "{{baseUrl}}/api/v1/service-subcategories?page=1&limit=100&serviceCategoryId={{serviceCategoryId}}&search=Candid",
+            "description": "Returns subcategories belonging to the selected category and matching search. Exact id and slug filters are also supported. Remove search when it is not needed.",
             "auth": {
               "type": "noauth"
             }
@@ -1218,7 +1218,7 @@
                         "header":  [
 
                                    ],
-                        "url":  "{{baseUrl}}/api/v1/admin/service-categories?page=1\u0026limit=10\u0026search=",
+                        "url":  "{{baseUrl}}/api/v1/admin/service-categories?page=1\u0026limit=10\u0026search=Photography",
                         "auth":  {
                                      "bearer":  [
                                                     {
@@ -1228,7 +1228,8 @@
                                                     }
                                                 ],
                                      "type":  "bearer"
-                                 }
+                                 },
+                        "description": "Returns paginated categories with complete subcategories and _count.subcategories. search checks category and nested subcategory names/descriptions. Exact id and slug filters are also supported."
                     },
         "response":  [
 
@@ -1259,7 +1260,7 @@
                      ]
     },
     {
-        "name":  "Update categories (category only)",
+        "name":  "Update service category (category only)",
         "request":  {
                         "method":  "PATCH",
                         "header":  [
@@ -1268,7 +1269,7 @@
                                            "value":  "application/json"
                                        }
                                    ],
-                        "url":  "{{baseUrl}}/api/v1/admin/service-categories",
+                        "url":  "{{baseUrl}}/api/v1/admin/service-categories/{{serviceCategoryId}}",
                         "auth":  {
                                      "bearer":  [
                                                     {
@@ -1280,7 +1281,7 @@
                                      "type":  "bearer"
                                  },
                         "body":  {
-                                     "raw":  "[\n  {\n    \"id\": \"{{serviceCategoryId}}\",\n    \"name\": \"Wedding Photography & Films\",\n    \"description\": \"Updated photography and cinematography services\"\n  }\n]",
+                                     "raw":  "{\n  \"name\": \"Wedding Photography & Films\",\n  \"description\": \"Updated photography and cinematography services\"\n}",
                                      "options":  {
                                                      "raw":  {
                                                                  "language":  "json"
@@ -1288,7 +1289,7 @@
                                                  },
                                      "mode":  "raw"
                                  },
-                        "description": "Updates categories only. Always send an array: one item updates one category and additional items update more categories in the same transaction. Update subcategories separately with PATCH /admin/service-subcategories/:id."
+                        "description": "Updates one category only. The category ID is supplied in the URL and the body contains only fields to change. Update subcategories separately with PATCH /admin/service-subcategories/:id."
                     },
         "response":  [
 
@@ -1312,7 +1313,7 @@
                                                 ],
                                      "type":  "bearer"
                                  },
-                        "description":  "Deletes the category and cascades to its subcategories. Run after subcategory requests."
+                        "description":  "Deletes the category only when it has no subcategories. If subcategories exist, the API returns 409 Conflict. Delete them or move them to another category first."
                     },
         "response":  [
 
@@ -1372,7 +1373,7 @@
                         "header":  [
 
                                    ],
-                        "url":  "{{baseUrl}}/api/v1/admin/service-subcategories?page=1\u0026limit=10\u0026serviceCategoryId={{serviceCategoryId}}\u0026search=",
+                        "url":  "{{baseUrl}}/api/v1/admin/service-subcategories?page=1\u0026limit=10\u0026serviceCategoryId={{serviceCategoryId}}\u0026search=Candid",
                         "auth":  {
                                      "bearer":  [
                                                     {

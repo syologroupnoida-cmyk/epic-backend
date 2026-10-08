@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createCategoryPayloadSchema, updateCategoriesPayloadSchema } from '../src/validators/serviceCatalog.validator.js';
+import { createCategoryPayloadSchema, updateCategorySchema, listCatalogSchema, listSubcategoriesSchema } from '../src/validators/serviceCatalog.validator.js';
 
 test('category creation accepts one category without subcategories', () => {
   const result = createCategoryPayloadSchema.safeParse({
@@ -33,25 +33,31 @@ test('category creation rejects duplicate names within a bulk request', () => {
   assert.equal(result.success, false);
 });
 
-test('category update accepts one or many categories', () => {
-  const result = updateCategoriesPayloadSchema.safeParse([
-    {
-      id: 'category-1',
-      name: 'Photography and Films',
-    },
-    { id: 'category-2', description: 'Updated transport services' },
-  ]);
+test('category update accepts one category body without an id', () => {
+  const result = updateCategorySchema.safeParse({
+    name: 'Photography and Films',
+    description: 'Updated photography services',
+  });
   assert.equal(result.success, true);
-  assert.equal(result.data.length, 2);
 });
 
 test('category update rejects nested subcategories', () => {
-  assert.equal(updateCategoriesPayloadSchema.safeParse([{
-    id: 'category-1',
+  assert.equal(updateCategorySchema.safeParse({
     subcategories: [{ id: 'subcategory-1', name: 'Candid Photography' }],
-  }]).success, false);
+  }).success, false);
 });
 
-test('category update rejects an empty update item', () => {
-  assert.equal(updateCategoriesPayloadSchema.safeParse([{ id: 'category-1' }]).success, false);
+test('catalog GET queries accept search and exact filters', () => {
+  const categories = listCatalogSchema.parse({ page: '1', limit: '20', search: 'photo', slug: 'photography' });
+  assert.equal(categories.page, 1);
+  assert.equal(categories.search, 'photo');
+  assert.equal(categories.slug, 'photography');
+
+  const subcategories = listSubcategoriesSchema.parse({
+    serviceCategoryId: 'category-1',
+    search: 'candid',
+    id: 'subcategory-1',
+  });
+  assert.equal(subcategories.serviceCategoryId, 'category-1');
+  assert.equal(subcategories.id, 'subcategory-1');
 });

@@ -22,7 +22,7 @@ model ServiceSubcategory {
   serviceCategoryId String
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
-  serviceCategory   ServiceCategory @relation(fields: [serviceCategoryId], references: [id], onDelete: Cascade)
+  serviceCategory   ServiceCategory @relation(fields: [serviceCategoryId], references: [id], onDelete: Restrict)
 
   @@unique([serviceCategoryId, name])
   @@index([serviceCategoryId])

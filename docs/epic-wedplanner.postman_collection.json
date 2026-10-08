@@ -1162,10 +1162,10 @@
     },
     {
       "name": "Admin service catalog",
-      "description": "Admin-only CRUD for service categories and subcategories. Run Create categories with subcategories first so its test script saves IDs for later requests.",
+      "description": "Admin-only CRUD for service categories and subcategories. Run Create categories first, then create subcategories separately using the saved category ID.",
       "item": [
     {
-        "name": "Create categories with subcategories",
+        "name": "Create categories",
         "event": [
           {
             "listen": "test",
@@ -1174,8 +1174,7 @@
               "exec": [
                 "const json = pm.response.json();",
                 "const first = json.data?.categories?.[0];",
-                "if (first?.id) pm.collectionVariables.set('serviceCategoryId', first.id);",
-                "if (first?.subcategories?.[0]?.id) pm.collectionVariables.set('serviceSubcategoryId', first.subcategories[0].id);"
+                "if (first?.id) pm.collectionVariables.set('serviceCategoryId', first.id);"
               ]
             }
           }
@@ -1201,14 +1200,14 @@
           },
           "body": {
             "mode": "raw",
-            "raw": "[\n  {\n    \"name\": \"Photography\",\n    \"subcategories\": [\n      { \"name\": \"Candid Photography\" },\n      { \"name\": \"Traditional Photography\" }\n    ]\n  },\n  {\n    \"name\": \"Transport\",\n    \"subcategories\": [\n      { \"name\": \"Wedding Cars\" },\n      { \"name\": \"Guest Transport\" }\n    ]\n  }\n]",
+            "raw": "[\n  {\n    \"name\": \"Photography\",\n    \"description\": \"Wedding photography services\"\n  },\n  {\n    \"name\": \"Transport\",\n    \"description\": \"Wedding transport services\"\n  }\n]",
             "options": {
               "raw": {
                 "language": "json"
               }
             }
           },
-          "description": "Creates one or multiple categories with nested subcategories in one transaction. Always send an array: keep one item for a single category or add more items for multiple categories. Use imageUrl fields for images. If any record fails, nothing from the request is created."
+          "description": "Creates categories only. Send one array item for one category or multiple items for bulk creation. Create subcategories separately after this request using POST /admin/service-subcategories and the saved serviceCategoryId. If any category fails, nothing from this request is created."
         },
         "response": []
     },
@@ -1260,7 +1259,7 @@
                      ]
     },
     {
-        "name":  "Update categories with subcategories",
+        "name":  "Update categories (category only)",
         "request":  {
                         "method":  "PATCH",
                         "header":  [
@@ -1281,7 +1280,7 @@
                                      "type":  "bearer"
                                  },
                         "body":  {
-                                     "raw":  "[\n  {\n    \"id\": \"{{serviceCategoryId}}\",\n    \"name\": \"Wedding Photography & Films\",\n    \"description\": \"Updated photography and cinematography services\",\n    \"subcategories\": [\n      {\n        \"id\": \"{{serviceSubcategoryId}}\",\n        \"name\": \"Candid Wedding Photography\"\n      },\n      {\n        \"name\": \"Drone Photography\",\n        \"description\": \"Aerial wedding coverage\"\n      }\n    ]\n  }\n]",
+                                     "raw":  "[\n  {\n    \"id\": \"{{serviceCategoryId}}\",\n    \"name\": \"Wedding Photography & Films\",\n    \"description\": \"Updated photography and cinematography services\"\n  }\n]",
                                      "options":  {
                                                      "raw":  {
                                                                  "language":  "json"
@@ -1289,7 +1288,7 @@
                                                  },
                                      "mode":  "raw"
                                  },
-                        "description": "Always send an array. One item updates one category; additional items update more categories in the same transaction. A nested subcategory with an id is updated, while one without an id is created. Omitted subcategories are not deleted."
+                        "description": "Updates categories only. Always send an array: one item updates one category and additional items update more categories in the same transaction. Update subcategories separately with PATCH /admin/service-subcategories/:id."
                     },
         "response":  [
 
@@ -1413,7 +1412,7 @@
                      ]
     },
     {
-        "name":  "Update service subcategory",
+        "name":  "Update service subcategory (subcategory only)",
         "request":  {
                         "method":  "PATCH",
                         "header":  [
@@ -1441,7 +1440,8 @@
                                                              }
                                                  },
                                      "mode":  "raw"
-                                 }
+                                 },
+                        "description": "Updates one subcategory only. This request does not update the parent category. serviceCategoryId is optional and is used only when moving the subcategory to another existing category."
                     },
         "response":  [
 

@@ -6,47 +6,28 @@ const imageUrl = z.string().trim().url('imageUrl must be a valid URL').nullable(
 const imagePublicId = z.string().trim().min(1).max(255).nullable().optional();
 
 export const createCategorySchema = z.object({ name, description, imageUrl, imagePublicId }).strict();
-const createCategoryWithSubcategoriesSchema = createCategorySchema.extend({
-  subcategories: z.array(createCategorySchema).max(100).optional().default([]),
-});
 export const createCategoryPayloadSchema = z.union([
-  createCategoryWithSubcategoriesSchema,
-  z.array(createCategoryWithSubcategoriesSchema).min(1, 'At least one category is required').max(100),
+  createCategorySchema,
+  z.array(createCategorySchema).min(1, 'At least one category is required').max(100),
 ]).superRefine((payload, ctx) => {
   const categories = Array.isArray(payload) ? payload : [payload];
   const categoryNames = categories.map((item) => item.name.toLowerCase());
   if (new Set(categoryNames).size !== categoryNames.length) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Category names must be unique within the request' });
   }
-  const subcategoryNames = categories.flatMap((category) =>
-    category.subcategories.map((item) => item.name.toLowerCase()));
-  if (new Set(subcategoryNames).size !== subcategoryNames.length) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Subcategory names must be unique within the request' });
-  }
 });
 const updateFields = z.object({
   name: name.optional(), description, imageUrl, imagePublicId,
 }).strict();
 export const updateCategorySchema = updateFields;
-const updateNestedSubcategorySchema = updateFields.extend({
-  id: z.string().trim().min(1).optional(),
-}).superRefine((item, ctx) => {
-  if (!item.id && !item.name) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['name'], message: 'name is required when creating a subcategory' });
-  }
-  if (item.id && Object.keys(item).length === 1) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Provide at least one field to update' });
-  }
-});
-const updateCategoryTreeSchema = updateFields.extend({
+const updateCategoryItemSchema = updateFields.extend({
   id: z.string().trim().min(1, 'Category id is required'),
-  subcategories: z.array(updateNestedSubcategorySchema).max(100).optional(),
 }).superRefine((item, ctx) => {
   if (Object.keys(item).length === 1) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Provide at least one category or subcategory change' });
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Provide at least one category field to update' });
   }
 });
-export const updateCategoriesPayloadSchema = z.array(updateCategoryTreeSchema)
+export const updateCategoriesPayloadSchema = z.array(updateCategoryItemSchema)
   .min(1, 'At least one category is required').max(100)
   .superRefine((categories, ctx) => {
     const ids = categories.map(({ id }) => id);

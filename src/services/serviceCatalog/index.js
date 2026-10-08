@@ -51,13 +51,10 @@ export const createCategory = async ({ body, file }) => {
   const data = categories.map((category, index) => ({
     ...itemData(category),
     ...(index === 0 ? uploadedImage : {}),
-    ...(category.subcategories.length > 0 && {
-      subcategories: { create: category.subcategories.map(itemData) },
-    }),
   }));
 
   try {
-    const created = await repo.createCategoriesWithSubcategories(data);
+    const created = await repo.createCategories(data);
     return isBulk ? { categories: created, count: created.length } : created[0];
   } catch (error) {
     if (file) await destroyImage(uploadedImage.imagePublicId);
@@ -95,15 +92,11 @@ export const updateCategories = async ({ body }) => {
       imagePublicId: item.imageUrl ? item.imagePublicId ?? null : null,
     }),
   });
-  const updates = body.map(({ id, subcategories = [], ...category }) => ({
+  const updates = body.map(({ id, ...category }) => ({
     id,
     data: updateData(category),
-    subcategories: subcategories.map(({ id: subcategoryId, ...subcategory }) => ({
-      id: subcategoryId,
-      data: updateData(subcategory),
-    })),
   }));
-  const categories = await repo.updateCategoriesWithSubcategories(updates);
+  const categories = await repo.updateCategories(updates);
   return { categories, count: categories.length };
 };
 export const deleteCategory = async (id) => {

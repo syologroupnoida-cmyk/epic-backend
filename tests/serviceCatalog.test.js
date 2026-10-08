@@ -2,25 +2,27 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createCategoryPayloadSchema, updateCategoriesPayloadSchema } from '../src/validators/serviceCatalog.validator.js';
 
-test('category creation accepts one category with multiple subcategories', () => {
+test('category creation accepts one category without subcategories', () => {
   const result = createCategoryPayloadSchema.safeParse({
     name: 'Photography',
-    subcategories: [
-      { name: 'Wedding Photography' },
-      { name: 'Candid Photography' },
-    ],
   });
   assert.equal(result.success, true);
-  assert.equal(result.data.subcategories.length, 2);
 });
 
-test('category creation accepts multiple categories with nested subcategories', () => {
+test('category creation accepts multiple categories', () => {
   const result = createCategoryPayloadSchema.safeParse([
-    { name: 'Photography', subcategories: [{ name: 'Candid Photography' }] },
-    { name: 'Transport', subcategories: [{ name: 'Wedding Cars' }] },
+    { name: 'Photography' },
+    { name: 'Transport' },
   ]);
   assert.equal(result.success, true);
   assert.equal(result.data.length, 2);
+});
+
+test('category creation rejects nested subcategories', () => {
+  const result = createCategoryPayloadSchema.safeParse([
+    { name: 'Photography', subcategories: [{ name: 'Candid Photography' }] },
+  ]);
+  assert.equal(result.success, false);
 });
 
 test('category creation rejects duplicate names within a bulk request', () => {
@@ -31,20 +33,23 @@ test('category creation rejects duplicate names within a bulk request', () => {
   assert.equal(result.success, false);
 });
 
-test('category update accepts one or many categories with nested updates and additions', () => {
+test('category update accepts one or many categories', () => {
   const result = updateCategoriesPayloadSchema.safeParse([
     {
       id: 'category-1',
       name: 'Photography and Films',
-      subcategories: [
-        { id: 'subcategory-1', name: 'Candid Wedding Photography' },
-        { name: 'Drone Photography' },
-      ],
     },
     { id: 'category-2', description: 'Updated transport services' },
   ]);
   assert.equal(result.success, true);
   assert.equal(result.data.length, 2);
+});
+
+test('category update rejects nested subcategories', () => {
+  assert.equal(updateCategoriesPayloadSchema.safeParse([{
+    id: 'category-1',
+    subcategories: [{ id: 'subcategory-1', name: 'Candid Photography' }],
+  }]).success, false);
 });
 
 test('category update rejects an empty update item', () => {

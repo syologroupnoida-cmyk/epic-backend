@@ -1,19 +1,15 @@
 import prisma from '../config/db.js';
-import { ApiError } from '../utils/ApiError.js';
 
 const categoryInclude = { _count: { select: { subcategories: true } } };
 const subcategoryInclude = { serviceCategory: true };
 
 export const createCategory = (data) => prisma.serviceCategory.create({ data, include: categoryInclude });
-export const createCategoriesWithSubcategories = (categories) => prisma.$transaction(async (tx) => {
+export const createCategories = (categories) => prisma.$transaction(async (tx) => {
   const created = [];
   for (const category of categories) {
     created.push(await tx.serviceCategory.create({
       data: category,
-      include: {
-        subcategories: { orderBy: { createdAt: 'desc' } },
-        _count: { select: { subcategories: true } },
-      },
+      include: categoryInclude,
     }));
   }
   return created;
@@ -40,44 +36,13 @@ export const listPublicCategories = async ({ where, skip, take }) => {
   return { items, total };
 };
 export const updateCategory = (id, data) => prisma.serviceCategory.update({ where: { id }, data, include: categoryInclude });
-export const updateCategoriesWithSubcategories = (updates) => prisma.$transaction(async (tx) => {
-  const currentCategories = await tx.serviceCategory.findMany({
-    where: { id: { in: updates.map(({ id }) => id) } },
-    select: { id: true, subcategories: { select: { id: true } } },
-  });
-  const currentById = new Map(currentCategories.map((item) => [item.id, item]));
-  const missingCategoryIds = updates.map(({ id }) => id).filter((id) => !currentById.has(id));
-  if (missingCategoryIds.length) {
-    throw ApiError.notFound('One or more service categories were not found.', { missingCategoryIds });
-  }
-
+export const updateCategories = (updates) => prisma.$transaction(async (tx) => {
   const categories = [];
   for (const update of updates) {
-    const validSubcategoryIds = new Set(currentById.get(update.id).subcategories.map(({ id }) => id));
-    const invalidSubcategoryIds = update.subcategories
-      .filter(({ id }) => id && !validSubcategoryIds.has(id))
-      .map(({ id }) => id);
-    if (invalidSubcategoryIds.length) {
-      throw ApiError.badRequest('A subcategory does not belong to its supplied category.', {
-        categoryId: update.id,
-        invalidSubcategoryIds,
-      });
-    }
-
-    for (const subcategory of update.subcategories) {
-      if (subcategory.id) {
-        await tx.serviceSubcategory.update({ where: { id: subcategory.id }, data: subcategory.data });
-      } else {
-        await tx.serviceSubcategory.create({ data: { ...subcategory.data, serviceCategoryId: update.id } });
-      }
-    }
     categories.push(await tx.serviceCategory.update({
       where: { id: update.id },
       data: update.data,
-      include: {
-        subcategories: { orderBy: { createdAt: 'desc' } },
-        _count: { select: { subcategories: true } },
-      },
+      include: categoryInclude,
     }));
   }
   return categories;

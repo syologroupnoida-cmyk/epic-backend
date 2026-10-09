@@ -18,6 +18,12 @@ export const documentNumberSchemas = {
   CIN: z.object({ number: z.string().trim().toUpperCase().regex(/^[A-Z][0-9]{5}[A-Z]{2}[0-9]{4}[A-Z]{3}[0-9]{6}$/, 'Invalid CIN format') }).strict(),
 };
 
+const uploadedDocument = (numberSchema) => z.object({
+  number: numberSchema.shape.number,
+  url: z.string().trim().url('Document URL must be valid'),
+  publicId: z.string().trim().min(1, 'Document publicId is required').max(500),
+}).strict();
+
 const optionalLink = z.string().trim().max(500).optional();
 
 // Accept the public-form field names while normalizing them to the canonical
@@ -44,12 +50,18 @@ export const submitKycSchema = z.object({
     facebook: optionalLink,
     instagram: optionalLink,
   }).strict(),
+  documents: z.object({
+    pan: uploadedDocument(documentNumberSchemas.PAN),
+    aadhaar: uploadedDocument(documentNumberSchemas.AADHAR),
+    gst: uploadedDocument(documentNumberSchemas.GSTIN).optional(),
+    cin: uploadedDocument(documentNumberSchemas.CIN).optional(),
+  }).strict(),
   verified: z.object({
     aadhaar: z.boolean(),
     pan: z.boolean(),
     cin: z.boolean(),
     gst: z.boolean(),
-  }).strict(),
+  }).strict().optional(),
   source: z.array(z.string().trim().min(1).max(100)).min(1).max(20),
   sourceNote: z.string().trim().max(500).optional().default(''),
 }).strict().superRefine((data, ctx) => {

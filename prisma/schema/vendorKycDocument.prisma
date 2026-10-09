@@ -5,6 +5,7 @@ model VendorKycDocument {
   type           KycDocumentType
   documentNumber String?
   documentUrl    String?
+  documentPublicId String?
 
   // Admin verification (manual review during KYC approval).
   isVerified        Boolean   @default(false)

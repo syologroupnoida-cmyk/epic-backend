@@ -19,7 +19,11 @@ router.get('/ping', (req, res) =>
 // ---- KYC status + final submission ----
 router.get('/kyc', kycController.getMyKycStatus);
 for (const [slug, type] of [['pan', 'PAN'], ['aadhaar', 'AADHAR'], ['gstin', 'GSTIN'], ['cin', 'CIN']]) {
-  router.post(`/kyc/documents/${slug}`, validateRequest(documentNumberSchemas[type]), kycController.saveDocumentNumber(type));
+  router.post(
+    `/kyc/validate/${slug}`,
+    validateRequest(documentNumberSchemas[type]),
+    kycController.validateDocumentNumber(type),
+  );
 }
 router.post('/kyc', validateRequest(submitKycSchema), kycController.submitMyKyc);
 

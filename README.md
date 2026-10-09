@@ -49,7 +49,8 @@ Admins update one category at a time through `PATCH /api/v1/admin/service-catego
 
 ## Manual KYC review
 
-PAN, Aadhaar, GSTIN, and CIN continue to use their existing document-number routes and matching `kyc-pan`, `kyc-aadhaar`, `kyc-gst`, and `kyc-cin` upload purposes. PAN and Aadhaar are required; GSTIN and CIN remain optional, but an optional document must include both its number and image.
+Upload PAN, Aadhaar, GSTIN, and CIN files with the matching `kyc-pan`, `kyc-aadhaar`, `kyc-gst`, and `kyc-cin` purposes. Uploading returns `url` and `publicId` without writing a KYC document row. The final `POST /api/v1/vendor/kyc` body sends each document's number, URL, and public ID; the backend validates and saves the form and document rows in one transaction. PAN and Aadhaar are required, while GSTIN and CIN are optional.
+Document numbers can be checked before submission through `POST /api/v1/vendor/kyc/validate/pan`, `/aadhaar`, `/gstin`, or `/cin`. These endpoints validate and normalize only; they never write to the database. Final KYC submission revalidates the numbers and remains the only document persistence operation.
 
 Registration captures the account holder's name, mobile number, email address, and password. The final `POST /api/v1/vendor/kyc` form separately captures the company and KYC contact details. The document routes are unchanged.
 The current public form accepts `servicecategoriesIds` and `servicesSubCategoryIds` arrays (the canonical `serviceCategoryIds` and `serviceSubcategoryIds` names remain supported). It also captures company/contact details, address, logo filename, description, social links, referral sources, source notes, and the vendor's document checklist. Every submitted catalog ID must exist, and every selected subcategory must belong to one of the selected categories. Document checklist values are declarations only; only an admin can set the actual document verification status.

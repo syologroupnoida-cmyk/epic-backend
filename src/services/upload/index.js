@@ -15,8 +15,8 @@ const sanitizeName = (name) =>
  *   - If `name` is NOT provided → publicId = `<timestamp>-<originalname>`.
  *     Use this for ad-hoc uploads where each upload should be preserved.
  *
- * Returns the public URL and metadata. The upload controller saves KYC document
- * URLs to the matching document row after this Cloudinary call succeeds.
+ * Returns the public URL and metadata. KYC document references are persisted
+ * only when the vendor submits the complete KYC form.
  */
 export const uploadImage = async ({ buffer, mimetype, originalname, purpose, userId, name }) => {
   if (!buffer || buffer.length === 0) {

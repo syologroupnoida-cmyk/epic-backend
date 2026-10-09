@@ -26,10 +26,6 @@ export const uploadImage = asyncHandler(async (req, res) => {
     userId: req.user.id,
   });
 
-  if (isKycDocument) {
-    result.document = await kycService.saveDocumentImage({ vendorUserId: req.user.id, purpose: req.body.purpose, url: result.url });
-  }
-
   return sendSuccess(res, {
     statusCode: 201,
     message: 'File uploaded successfully.',

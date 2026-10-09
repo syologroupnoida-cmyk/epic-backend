@@ -96,7 +96,12 @@ const mapPayloadToKyc = (payload) => ({
   sourceNote: payload.sourceNote,
   // This captures what the vendor declared in the form. It never controls the
   // admin-owned VendorKycDocument.isVerified flag.
-  declaredDocumentStatus: payload.verified,
+  declaredDocumentStatus: {
+    pan: true,
+    aadhaar: true,
+    gst: Boolean(payload.documents.gst),
+    cin: Boolean(payload.documents.cin),
+  },
 });
 
 export const getMyKycStatus = async (vendorUserId) => {
@@ -107,8 +112,11 @@ export const getMyKycStatus = async (vendorUserId) => {
   return buildVendorKycView(profile);
 };
 
-const DOCUMENT_PURPOSE_TYPES = {
-  'kyc-pan': 'PAN', 'kyc-aadhaar': 'AADHAR', 'kyc-gst': 'GSTIN', 'kyc-cin': 'CIN',
+const DOCUMENT_INPUTS = {
+  pan: { type: 'PAN', purpose: 'kyc-pan' },
+  aadhaar: { type: 'AADHAR', purpose: 'kyc-aadhaar' },
+  gst: { type: 'GSTIN', purpose: 'kyc-gst' },
+  cin: { type: 'CIN', purpose: 'kyc-cin' },
 };
 
 export const assertKycEditable = async (vendorUserId) => {
@@ -119,17 +127,40 @@ export const assertKycEditable = async (vendorUserId) => {
   }
 };
 
-export const saveDocumentNumber = async ({ vendorUserId, type, number }) => {
-  await assertKycEditable(vendorUserId);
-  const storedNumber = type === 'AADHAR' ? `XXXXXXXX${number.slice(-4)}` : number;
-  return kycRepo.upsertDocumentPart({ vendorUserId, type, field: 'documentNumber', value: storedNumber });
-};
+export const buildDocumentValidationResult = ({ type, number }) => ({
+  type,
+  valid: true,
+  normalizedNumber: type === 'AADHAR' ? `XXXXXXXX${number.slice(-4)}` : number,
+});
 
-export const saveDocumentImage = async ({ vendorUserId, purpose, url }) => {
-  const type = DOCUMENT_PURPOSE_TYPES[purpose];
-  if (!type) throw ApiError.badRequest('Invalid KYC document purpose.');
-  await assertKycEditable(vendorUserId);
-  return kycRepo.upsertDocumentPart({ vendorUserId, type, field: 'documentUrl', value: url });
+const mapDocumentsForSubmission = ({ vendorUserId, documents }) => {
+  return Object.entries(DOCUMENT_INPUTS).flatMap(([key, config]) => {
+    const document = documents[key];
+    if (!document) return [];
+
+    const expectedPrefix = `epic-wedplanner/${config.purpose}/${vendorUserId}/`;
+    let parsedUrl;
+    try { parsedUrl = new URL(document.url); }
+    catch { throw ApiError.badRequest(`Invalid ${key} document URL.`); }
+    const decodedPath = decodeURIComponent(parsedUrl.pathname);
+    const validCloudinaryAsset = parsedUrl.protocol === 'https:' &&
+      parsedUrl.hostname === 'res.cloudinary.com' &&
+      decodedPath.startsWith(`/${env.CLOUDINARY_CLOUD_NAME}/`) &&
+      document.publicId.startsWith(expectedPrefix) &&
+      decodedPath.includes(`/${document.publicId}`);
+    if (!validCloudinaryAsset) {
+      throw ApiError.badRequest(`${key} document must be uploaded by this vendor using purpose ${config.purpose}.`);
+    }
+
+    return [{
+      type: config.type,
+      documentNumber: config.type === 'AADHAR'
+        ? `XXXXXXXX${document.number.slice(-4)}`
+        : document.number,
+      documentUrl: document.url,
+      documentPublicId: document.publicId,
+    }];
+  });
 };
 
 export const submitMyKyc = async ({ vendorUserId, payload }) => {
@@ -165,9 +196,11 @@ export const submitMyKyc = async ({ vendorUserId, payload }) => {
   }
 
   const kycFields = mapPayloadToKyc(payload);
+  const documents = mapDocumentsForSubmission({ vendorUserId, documents: payload.documents });
   const { kyc, profile: updatedProfile } = await kycRepo.upsertKycAndMarkSubmitted({
     vendorUserId,
     kyc: kycFields,
+    documents,
   });
 
   return {

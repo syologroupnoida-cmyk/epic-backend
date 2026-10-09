@@ -32,6 +32,7 @@ const DOC_SELECT = {
   type: true,
   documentNumber: true,
   documentUrl: true,
+  documentPublicId: true,
   isVerified: true,
   verifiedAt: true,
   verifiedByAdminId: true,
@@ -60,36 +61,6 @@ export const findVendorKycStatus = async (userId) => {
   });
 };
 
-/**
- * Fetch a single KYC document row by (vendorUserId, type). Used to inspect the stored number and image for a document type.
- */
-export const findKycDocument = async ({ vendorUserId, type }) => {
-  return prisma.vendorKycDocument.findUnique({
-    where: { vendorUserId_type: { vendorUserId, type } },
-    select: DOC_SELECT,
-  });
-};
-
-export const upsertDocumentPart = async ({ vendorUserId, type, field, value }) => {
-  return prisma.$transaction(async (tx) => {
-    const profile = await tx.vendorProfile.findUnique({ where: { userId: vendorUserId }, select: { kycStatus: true } });
-    if (!profile) throw ApiError.notFound('Vendor profile not found.');
-    if (profile.kycStatus !== 'PENDING' && profile.kycStatus !== 'REJECTED') {
-      throw ApiError.forbidden('KYC is under review or already approved.');
-    }
-    return tx.vendorKycDocument.upsert({
-      where: { vendorUserId_type: { vendorUserId, type } },
-      create: { vendorUserId, type, [field]: value },
-      update: {
-        [field]: value, isVerified: false, verifiedAt: null, verifiedByAdminId: null,
-        notes: null, thirdPartyVerified: false, thirdPartyProvider: null,
-        thirdPartyVerifiedAt: null, thirdPartyResponse: null,
-      },
-      select: DOC_SELECT,
-    });
-  });
-};
-
 // ---- Whole-KYC writes (used by /vendor/kyc submit + admin review) ----
 
 /**
@@ -104,18 +75,30 @@ export const upsertDocumentPart = async ({ vendorUserId, type, field, value }) =
  *      (~15 min) so the vendor can see the "thank you" screen.
  *   4. Revokes all refresh tokens so the session can't be extended.
  */
-export const upsertKycAndMarkSubmitted = async ({ vendorUserId, kyc }) => {
+export const upsertKycAndMarkSubmitted = async ({ vendorUserId, kyc, documents }) => {
   return prisma.$transaction(async (tx) => {
     const profileForSubmit = await tx.vendorProfile.findUnique({ where: { userId: vendorUserId }, select: { kycStatus: true } });
     if (!profileForSubmit || !['PENDING', 'REJECTED'].includes(profileForSubmit.kycStatus)) {
       throw ApiError.forbidden('KYC cannot be submitted in its current state.');
     }
-    const documentRows = await tx.vendorKycDocument.findMany({ where: { vendorUserId }, select: DOC_SELECT });
-    const pan = documentRows.find((doc) => doc.type === 'PAN');
-    const aadhaar = documentRows.find((doc) => doc.type === 'AADHAR');
-    if (!pan?.documentNumber || !pan?.documentUrl || !aadhaar?.documentNumber || !aadhaar?.documentUrl ||
-        documentRows.some((doc) => !doc.documentNumber || !doc.documentUrl)) {
-      throw new ApiError(422, 'Save PAN and Aadhaar numbers and upload both card images before submitting KYC. Optional documents also need both parts.');
+    for (const document of documents) {
+      await tx.vendorKycDocument.upsert({
+        where: { vendorUserId_type: { vendorUserId, type: document.type } },
+        create: { vendorUserId, ...document },
+        update: {
+          documentNumber: document.documentNumber,
+          documentUrl: document.documentUrl,
+          documentPublicId: document.documentPublicId,
+          isVerified: false,
+          verifiedAt: null,
+          verifiedByAdminId: null,
+          notes: null,
+          thirdPartyVerified: false,
+          thirdPartyProvider: null,
+          thirdPartyVerifiedAt: null,
+          thirdPartyResponse: null,
+        },
+      });
     }
     const created = await tx.vendorKyc.upsert({
       where: { vendorUserId },

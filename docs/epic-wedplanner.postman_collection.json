@@ -673,7 +673,7 @@
       "name": "Cloudinary upload",
       "item": [
         {
-          "name": "Upload KYC or avatar file",
+          "name": "Upload PAN card image",
           "request": {
             "method": "POST",
             "header": [],
@@ -698,7 +698,7 @@
                 }
               ]
             },
-            "description": "Choose a local file in Postman. Allowed types: JPEG, PNG, WebP, PDF. purpose can be kyc-pan, kyc-aadhaar, kyc-gst, kyc-cin, company-logo, avatar, favicon_icon, header_logo, or other.",
+            "description": "Uploads the PAN image to Cloudinary and returns url/publicId. It does not write a KYC document row; the final Submit KYC request saves it.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -724,7 +724,8 @@
                   "    if (pm.environment.name) pm.environment.set(key, value);",
                   "    else pm.collectionVariables.set(key, value);",
                   "  };",
-                  "  save('uploadUrl', body.data?.url);",
+                  "  save('panUploadUrl', body.data?.url);",
+                  "  save('panPublicId', body.data?.publicId);",
                   "}"
                 ]
               }
@@ -757,7 +758,7 @@
                 }
               ]
             },
-            "description": "Select a masked Aadhaar card image. Saves its Cloudinary URL as aadhaarUploadUrl.",
+            "description": "Uploads the Aadhaar image to Cloudinary and returns url/publicId. It does not write a KYC document row; the final Submit KYC request saves it.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -784,6 +785,7 @@
                   "    else pm.collectionVariables.set(key, value);",
                   "  };",
                   "  save('aadhaarUploadUrl', body.data?.url);",
+                  "  save('aadhaarPublicId', body.data?.publicId);",
                   "}"
                 ]
               }
@@ -835,138 +837,66 @@
           "response": []
         },
         {
-          "name": "Save PAN number",
+          "name": "Validate PAN number (no save)",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": "{{baseUrl}}/api/v1/vendor/kyc/documents/pan",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/vendor/kyc/validate/pan",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"number\": \"{{panNumber}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "options": { "raw": { "language": "json" } }
             },
-            "description": "Saves the PAN number to its KYC document row. Upload the matching image separately; either order works.",
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{vendorAccessToken}}",
-                  "type": "string"
-                }
-              ]
-            }
+            "description": "Validates and normalizes PAN format only. Nothing is saved to the database.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
           },
           "response": []
         },
         {
-          "name": "Save Aadhaar number",
+          "name": "Validate Aadhaar number (no save)",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": "{{baseUrl}}/api/v1/vendor/kyc/documents/aadhaar",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/vendor/kyc/validate/aadhaar",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"number\": \"{{aadhaarNumber}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "options": { "raw": { "language": "json" } }
             },
-            "description": "Saves the Aadhaar number to its KYC document row. Upload the matching image separately; either order works.",
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{vendorAccessToken}}",
-                  "type": "string"
-                }
-              ]
-            }
+            "description": "Validates Aadhaar format and returns only its masked normalized value. Nothing is saved to the database.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
           },
           "response": []
         },
         {
-          "name": "Save GSTIN number",
+          "name": "Validate GSTIN number (no save)",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": "{{baseUrl}}/api/v1/vendor/kyc/documents/gstin",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/vendor/kyc/validate/gstin",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"number\": \"{{gstinNumber}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "options": { "raw": { "language": "json" } }
             },
-            "description": "Saves the GSTIN number to its KYC document row. Upload the matching image separately; either order works.",
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{vendorAccessToken}}",
-                  "type": "string"
-                }
-              ]
-            }
+            "description": "Validates and normalizes GSTIN format only. Nothing is saved to the database.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
           },
           "response": []
         },
         {
-          "name": "Save CIN number",
+          "name": "Validate CIN number (no save)",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": "{{baseUrl}}/api/v1/vendor/kyc/documents/cin",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/vendor/kyc/validate/cin",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"number\": \"{{cinNumber}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "options": { "raw": { "language": "json" } }
             },
-            "description": "Saves the CIN number to its KYC document row. Upload the matching image separately; either order works.",
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{vendorAccessToken}}",
-                  "type": "string"
-                }
-              ]
-            }
+            "description": "Validates and normalizes CIN format only. Nothing is saved to the database.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
           },
           "response": []
         },
@@ -983,14 +913,14 @@
             "url": "{{baseUrl}}/api/v1/vendor/kyc",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"servicecategoriesIds\": [\n    \"{{serviceCategoryId}}\"\n  ],\n  \"servicesSubCategoryIds\": [\n    \"{{serviceSubcategoryId}}\"\n  ],\n  \"companyName\": \"Transport\",\n  \"contactPerson\": \"Person\",\n  \"businessAddress\": {\n    \"street\": \"123 Main Street\",\n    \"locality\": \"Andheri West\",\n    \"state\": \"Maharashtra\",\n    \"pincode\": \"400053\"\n  },\n  \"logoName\": \"EPIC final.jpg.jpeg\",\n  \"description\": \"test vendor\",\n  \"socialLinks\": {\n    \"facebook\": \"#\",\n    \"instagram\": \"E\"\n  },\n  \"verified\": {\n    \"aadhaar\": true,\n    \"pan\": true,\n    \"cin\": true,\n    \"gst\": true\n  },\n  \"source\": [\n    \"Epic Wedz Team\"\n  ],\n  \"sourceNote\": \"\"\n}",
+              "raw": "{\n  \"servicecategoriesIds\": [\n    \"{{serviceCategoryId}}\"\n  ],\n  \"servicesSubCategoryIds\": [\n    \"{{serviceSubcategoryId}}\"\n  ],\n  \"companyName\": \"Transport\",\n  \"contactPerson\": \"Person\",\n  \"businessAddress\": {\n    \"street\": \"123 Main Street\",\n    \"locality\": \"Andheri West\",\n    \"state\": \"Maharashtra\",\n    \"pincode\": \"400053\"\n  },\n  \"logoName\": \"EPIC final.jpg.jpeg\",\n  \"description\": \"test vendor\",\n  \"socialLinks\": {\n    \"facebook\": \"#\",\n    \"instagram\": \"E\"\n  },\n  \"documents\": {\n    \"pan\": {\n      \"number\": \"{{panNumber}}\",\n      \"url\": \"{{panUploadUrl}}\",\n      \"publicId\": \"{{panPublicId}}\"\n    },\n    \"aadhaar\": {\n      \"number\": \"{{aadhaarNumber}}\",\n      \"url\": \"{{aadhaarUploadUrl}}\",\n      \"publicId\": \"{{aadhaarPublicId}}\"\n    }\n  },\n  \"source\": [\n    \"Epic Wedz Team\"\n  ],\n  \"sourceNote\": \"\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
             },
-            "description": "Final vendor KYC form with multiple service categories/subcategories, company profile, social links, sources, and a submitted document checklist. The verified object is only the vendor's declaration; admin-controlled document verification is not changed by it. Save PAN and Aadhaar numbers and upload both card images first. GSTIN and CIN remain optional, but each optional document needs both its number and image.",
+            "description": "Validates and saves the complete KYC form and all document rows in one transaction. PAN and Aadhaar are required. GST and CIN may be added under documents with number, url, and publicId. Each asset must come from this vendor's matching Cloudinary KYC upload folder.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -1633,7 +1563,12 @@
       "type": "string"
     },
     {
-      "key": "uploadUrl",
+      "key": "panUploadUrl",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "panPublicId",
       "value": "",
       "type": "string"
     },
@@ -1663,7 +1598,22 @@
       "type": "string"
     },
     {
+      "key": "gstinNumber",
+      "value": "27ABCDE1234F1Z5",
+      "type": "string"
+    },
+    {
+      "key": "cinNumber",
+      "value": "U12345MH2020PTC123456",
+      "type": "string"
+    },
+    {
       "key": "aadhaarUploadUrl",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "aadhaarPublicId",
       "value": "",
       "type": "string"
     },

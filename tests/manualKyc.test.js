@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { submitKycSchema, documentNumberSchemas } from '../src/validators/vendorKyc.validator.js';
+import { buildDocumentValidationResult } from '../src/services/vendorKyc/index.js';
 
 const form = {
   servicecategoriesIds: ['category-1', 'category-2'],
@@ -12,6 +13,18 @@ const form = {
   description: 'Wedding services vendor',
   socialLinks: { facebook: '#', instagram: 'E' },
   verified: { aadhaar: true, pan: true, cin: true, gst: true },
+  documents: {
+    pan: {
+      number: 'ABCDE1234F',
+      url: 'https://res.cloudinary.com/demo/image/upload/pan.jpg',
+      publicId: 'epic-wedplanner/kyc-pan/vendor-1/pan-card',
+    },
+    aadhaar: {
+      number: '123456789012',
+      url: 'https://res.cloudinary.com/demo/image/upload/aadhaar.jpg',
+      publicId: 'epic-wedplanner/kyc-aadhaar/vendor-1/aadhaar-card',
+    },
+  },
   source: ['Epic Wedz Team'],
   sourceNote: '',
 };
@@ -34,10 +47,31 @@ test('KYC form normalizes public category field names', () => {
   assert.equal('servicesSubCategoryIds' in parsed, false);
 });
 
-test('document number endpoints validate each number independently', () => {
+test('final KYC submission requires valid PAN and Aadhaar document data', () => {
+  assert.equal(submitKycSchema.safeParse({ ...form, documents: undefined }).success, false);
+  assert.equal(submitKycSchema.safeParse({
+    ...form,
+    documents: { ...form.documents, pan: { ...form.documents.pan, number: 'BAD' } },
+  }).success, false);
+  assert.equal(submitKycSchema.safeParse({
+    ...form,
+    documents: { pan: form.documents.pan },
+  }).success, false);
+});
+
+test('final KYC document numbers validate independently', () => {
   assert.equal(documentNumberSchemas.PAN.safeParse({ number: 'abcde1234f' }).data.number, 'ABCDE1234F');
   assert.equal(documentNumberSchemas.PAN.safeParse({ number: 'BAD' }).success, false);
   assert.equal(documentNumberSchemas.AADHAR.safeParse({ number: '123456789012' }).success, true);
   assert.equal(documentNumberSchemas.AADHAR.safeParse({ number: '123' }).success, false);
   assert.equal(documentNumberSchemas.GSTIN.safeParse({ number: '27ABCDE1234F1Z5' }).success, true);
+});
+
+test('document validation result masks Aadhaar and does not represent persistence', () => {
+  assert.deepEqual(buildDocumentValidationResult({ type: 'PAN', number: 'ABCDE1234F' }), {
+    type: 'PAN', valid: true, normalizedNumber: 'ABCDE1234F',
+  });
+  assert.deepEqual(buildDocumentValidationResult({ type: 'AADHAR', number: '123456789012' }), {
+    type: 'AADHAR', valid: true, normalizedNumber: 'XXXXXXXX9012',
+  });
 });

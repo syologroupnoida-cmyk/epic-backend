@@ -13,9 +13,14 @@ export const getMyKycStatus = asyncHandler(async (req, res) => {
   });
 });
 
-export const saveDocumentNumber = (type) => asyncHandler(async (req, res) => {
-  const data = await kycService.saveDocumentNumber({ vendorUserId: req.user.id, type, number: req.body.number });
-  return sendSuccess(res, { statusCode: 200, message: `${type} number saved.`, data });
+export const validateDocumentNumber = (type) => asyncHandler(async (req, res) => {
+  await kycService.assertKycEditable(req.user.id);
+  const data = kycService.buildDocumentValidationResult({ type, number: req.body.number });
+  return sendSuccess(res, {
+    statusCode: 200,
+    message: `${type} number format is valid.`,
+    data,
+  });
 });
 
 export const submitMyKyc = asyncHandler(async (req, res) => {

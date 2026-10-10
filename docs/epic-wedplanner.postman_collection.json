@@ -1250,13 +1250,14 @@
                      ]
     },
     {
-        "name":  "Create service subcategory",
+        "name":  "Create subcategories for one category",
         "event":  [
                       {
                           "script":  {
                                          "exec":  [
                                                       "const json = pm.response.json();",
-                                                      "if (json.data \u0026\u0026 json.data.id) pm.collectionVariables.set(\u0027serviceSubcategoryId\u0027, json.data.id);"
+                                                      "const first = json.data?.subcategories?.[0] ?? json.data;",
+                                                      "if (first?.id) pm.collectionVariables.set(\u0027serviceSubcategoryId\u0027, first.id);"
                                                   ]
                                      },
                           "listen":  "test"
@@ -1282,7 +1283,7 @@
                                      "type":  "bearer"
                                  },
                         "body":  {
-                                     "raw":  "{\n  \"name\": \"Candid Photography\",\n  \"serviceCategoryId\": \"{{serviceCategoryId}}\"\n}",
+                                     "raw":  "{\n  \"serviceCategoryId\": \"{{serviceCategoryId}}\",\n  \"subcategories\": [\n    {\n      \"name\": \"Candid Photography\",\n      \"description\": \"Natural wedding photography\"\n    },\n    {\n      \"name\": \"Traditional Photography\"\n    }\n  ]\n}",
                                      "options":  {
                                                      "raw":  {
                                                                  "language":  "json"
@@ -1290,7 +1291,7 @@
                                                  },
                                      "mode":  "raw"
                                  },
-                        "description":  "Creates a subcategory. Required fields: name and serviceCategoryId. Optional fields: description, imageUrl, and imagePublicId. You may alternatively upload an image using multipart/form-data with a file field."
+                        "description":  "Creates multiple subcategories under one existing category in a single transaction. Each subcategory requires name and may include description, imageUrl, and imagePublicId. The original single-subcategory body is also supported."
                     },
         "response":  [
 

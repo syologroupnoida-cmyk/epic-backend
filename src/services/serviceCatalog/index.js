@@ -117,9 +117,33 @@ export const getSubcategory = async (id) => {
 };
 export const createSubcategory = async ({ body, file }) => {
   await getCategory(body.serviceCategoryId);
-  const image = await getImage({ body, file, folder: 'epic-wedplanner/service-subcategories' });
-  try { return await repo.createSubcategory({ name: body.name, slug: buildSlug(body.name), description: body.description ?? null, serviceCategoryId: body.serviceCategoryId, ...image }); }
-  catch (error) { if (file) await destroyImage(image.imagePublicId); throw error; }
+  const isGrouped = Array.isArray(body.subcategories);
+  if (file && isGrouped) {
+    throw ApiError.badRequest('A file upload is supported only when creating one subcategory. Use imageUrl for multiple subcategories.');
+  }
+  const items = isGrouped ? body.subcategories : [body];
+  const image = file
+    ? await getImage({ body, file, folder: 'epic-wedplanner/service-subcategories' })
+    : {};
+  const data = items.map((item, index) => ({
+    name: item.name,
+    slug: buildSlug(item.name),
+    description: item.description ?? null,
+    serviceCategoryId: body.serviceCategoryId,
+    ...(item.imageUrl !== undefined && {
+      imageUrl: item.imageUrl,
+      imagePublicId: item.imageUrl ? item.imagePublicId ?? null : null,
+    }),
+    ...(index === 0 ? image : {}),
+  }));
+  try {
+    if (!isGrouped) return await repo.createSubcategory(data[0]);
+    const subcategories = await repo.createSubcategories(data);
+    return { subcategories, count: subcategories.length, serviceCategoryId: body.serviceCategoryId };
+  } catch (error) {
+    if (file) await destroyImage(image.imagePublicId);
+    throw error;
+  }
 };
 export const listSubcategories = async ({ page, limit, search, id, slug, serviceCategoryId, serviceCategory }) => {
   const parentId = serviceCategoryId ?? serviceCategory;

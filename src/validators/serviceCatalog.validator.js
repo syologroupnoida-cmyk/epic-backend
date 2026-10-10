@@ -23,6 +23,21 @@ export const updateCategorySchema = updateFields;
 export const createSubcategorySchema = createCategorySchema.extend({
   serviceCategoryId: z.string().trim().min(1, 'serviceCategoryId is required'),
 });
+const createSubcategoriesForCategorySchema = z.object({
+  serviceCategoryId: z.string().trim().min(1, 'serviceCategoryId is required'),
+  subcategories: z.array(createCategorySchema)
+    .min(1, 'At least one subcategory is required')
+    .max(100),
+}).strict().superRefine(({ subcategories }, ctx) => {
+  const names = subcategories.map(({ name }) => name.toLowerCase());
+  if (new Set(names).size !== names.length) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['subcategories'], message: 'Subcategory names must be unique within the request' });
+  }
+});
+export const createSubcategoryPayloadSchema = z.union([
+  createSubcategorySchema,
+  createSubcategoriesForCategorySchema,
+]);
 export const updateSubcategorySchema = updateFields.extend({
   serviceCategoryId: z.string().trim().min(1).optional(),
 });

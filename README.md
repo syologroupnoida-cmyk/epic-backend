@@ -42,6 +42,7 @@ All routes use `/api/v1`:
 Send access tokens as `Authorization: Bearer <token>`. Web refresh tokens also use an HTTP-only cookie; API clients can send the refresh token in JSON.
 
 Admins can create one or multiple service categories through `POST /api/v1/admin/service-categories`. Send one category object for a single result, or an array of category objects for transactional bulk creation. Categories and subcategories are created separately; use `POST /api/v1/admin/service-subcategories` to create each subcategory under an existing category.
+To add multiple subcategories to one category in a single transaction, send `serviceCategoryId` with a `subcategories` array to `POST /api/v1/admin/service-subcategories`. The original single-subcategory body remains supported.
 Both public and admin category GET responses include the complete `subcategories` array and `_count.subcategories`.
 Category and subcategory list endpoints support `search`, exact `id`, exact `slug`, `page`, and `limit` query parameters. Subcategory lists additionally support `serviceCategoryId`; category search also checks nested subcategory names and descriptions.
 A category cannot be deleted while it contains subcategories. Delete the subcategories or move them to another category first; the category delete endpoint returns `409 Conflict` otherwise.

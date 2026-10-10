@@ -8,7 +8,7 @@ import {
 } from '../../validators/vendorKyc.validator.js';
 import * as catalogController from '../../controllers/serviceCatalog.controller.js';
 import { uploadSingleFile } from '../../middlewares/upload.middleware.js';
-import { createCategoryPayloadSchema, updateCategorySchema, createSubcategorySchema, updateSubcategorySchema, listCatalogSchema, listSubcategoriesSchema } from '../../validators/serviceCatalog.validator.js';
+import { createCategoryPayloadSchema, updateCategorySchema, createSubcategoryPayloadSchema, updateSubcategorySchema, listCatalogSchema, listSubcategoriesSchema } from '../../validators/serviceCatalog.validator.js';
 
 const router = Router();
 
@@ -44,7 +44,7 @@ router.route('/service-categories/:id')
   .delete(catalogController.deleteCategory);
 router.route('/service-subcategories')
   .get(validateRequest(listSubcategoriesSchema, 'query'), catalogController.listSubcategories)
-  .post(uploadSingleFile, validateRequest(createSubcategorySchema), catalogController.createSubcategory);
+  .post(uploadSingleFile, validateRequest(createSubcategoryPayloadSchema), catalogController.createSubcategory);
 router.route('/service-subcategories/:id')
   .get(catalogController.getSubcategory)
   .patch(uploadSingleFile, validateRequest(updateSubcategorySchema), catalogController.updateSubcategory)

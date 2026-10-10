@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createCategoryPayloadSchema, updateCategorySchema, listCatalogSchema, listSubcategoriesSchema } from '../src/validators/serviceCatalog.validator.js';
+import { createCategoryPayloadSchema, createSubcategoryPayloadSchema, updateCategorySchema, listCatalogSchema, listSubcategoriesSchema } from '../src/validators/serviceCatalog.validator.js';
 
 test('category creation accepts one category without subcategories', () => {
   const result = createCategoryPayloadSchema.safeParse({
@@ -60,4 +60,24 @@ test('catalog GET queries accept search and exact filters', () => {
   });
   assert.equal(subcategories.serviceCategoryId, 'category-1');
   assert.equal(subcategories.id, 'subcategory-1');
+});
+
+test('subcategory creation accepts multiple items for one category', () => {
+  const result = createSubcategoryPayloadSchema.safeParse({
+    serviceCategoryId: 'category-1',
+    subcategories: [
+      { name: 'Candid Photography' },
+      { name: 'Traditional Photography' },
+    ],
+  });
+  assert.equal(result.success, true);
+  assert.equal(result.data.subcategories.length, 2);
+});
+
+test('subcategory creation rejects duplicate names in one request', () => {
+  const result = createSubcategoryPayloadSchema.safeParse({
+    serviceCategoryId: 'category-1',
+    subcategories: [{ name: 'Candid' }, { name: 'candid' }],
+  });
+  assert.equal(result.success, false);
 });

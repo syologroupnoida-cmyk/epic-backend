@@ -133,11 +133,11 @@ export const upsertKycAndMarkSubmitted = async ({ vendorUserId, kyc, documents }
       data: { isRevoked: true },
     });
 
-    const documents = await tx.vendorKycDocument.findMany({
+    const savedDocuments = await tx.vendorKycDocument.findMany({
       where: { vendorUserId },
       select: DOC_SELECT,
     });
-    return { kyc: { ...created, documents }, profile };
+    return { kyc: { ...created, documents: savedDocuments }, profile };
   });
 };
 

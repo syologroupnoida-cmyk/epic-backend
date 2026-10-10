@@ -41,6 +41,13 @@ export const listPublicCategories = async ({ where, skip, take }) => {
 export const updateCategory = (id, data) => prisma.serviceCategory.update({ where: { id }, data, include: categoryInclude });
 export const deleteCategory = (id) => prisma.serviceCategory.delete({ where: { id } });
 export const createSubcategory = (data) => prisma.serviceSubcategory.create({ data, include: subcategoryInclude });
+export const createSubcategories = (items) => prisma.$transaction(async (tx) => {
+  const created = [];
+  for (const data of items) {
+    created.push(await tx.serviceSubcategory.create({ data, include: subcategoryInclude }));
+  }
+  return created;
+});
 export const findSubcategory = (id) => prisma.serviceSubcategory.findUnique({ where: { id }, include: subcategoryInclude });
 export const listSubcategories = async ({ where, skip, take }) => {
   const [items, total] = await Promise.all([

@@ -29,6 +29,11 @@ export const getCategory = async (id) => {
   if (!item) throw ApiError.notFound('Service category not found.');
   return item;
 };
+export const getPublicCategory = async (id) => {
+  const item = await repo.findPublicCategory(id);
+  if (!item) throw ApiError.notFound('Service category not found.');
+  return item;
+};
 export const createCategory = async ({ body, file }) => {
   const isBulk = Array.isArray(body);
   const categories = isBulk ? body : [body];
@@ -43,6 +48,8 @@ export const createCategory = async ({ body, file }) => {
     name: item.name,
     slug: buildSlug(item.name),
     description: item.description ?? null,
+    offeringKind: item.offeringKind,
+    isActive: item.isActive,
     ...(item.imageUrl !== undefined && {
       imageUrl: item.imageUrl,
       imagePublicId: item.imageUrl ? item.imagePublicId ?? null : null,
@@ -61,34 +68,41 @@ export const createCategory = async ({ body, file }) => {
     throw error;
   }
 };
-const categoryListWhere = ({ id, slug, search }) => ({
+const categoryListWhere = ({ id, slug, search, offeringKind, isActive }) => ({
   ...(id && { id }),
   ...(slug && { slug }),
+  ...(offeringKind && { offeringKind }),
+  ...(isActive !== undefined && { isActive }),
   ...(search && {
     OR: [
       { name: { contains: search, mode: 'insensitive' } },
       { description: { contains: search, mode: 'insensitive' } },
-      { subcategories: { some: { OR: [
+      { subcategories: { some: { ...(isActive === true && { isActive: true }), OR: [
         { name: { contains: search, mode: 'insensitive' } },
         { description: { contains: search, mode: 'insensitive' } },
       ] } } },
     ],
   }),
 });
-export const listCategories = async ({ page, limit, search, id, slug }) => {
-  const where = categoryListWhere({ id, slug, search });
+export const listCategories = async ({ page, limit, search, id, slug, offeringKind, isActive }) => {
+  const where = categoryListWhere({ id, slug, search, offeringKind, isActive });
   const { items, total } = await repo.listCategories({ where, skip: (page - 1) * limit, take: limit });
   return { categories: items, pagination: pageInfo(total, page, limit) };
 };
-export const listPublicCategories = async ({ page, limit, search, id, slug }) => {
-  const where = categoryListWhere({ id, slug, search });
+export const listPublicCategories = async ({ page, limit, search, id, slug, offeringKind }) => {
+  const where = categoryListWhere({ id, slug, search, offeringKind, isActive: true });
   const { items, total } = await repo.listPublicCategories({ where, skip: (page - 1) * limit, take: limit });
   return { categories: items, pagination: pageInfo(total, page, limit) };
 };
 export const updateCategory = async ({ id, body, file }) => {
   if (!file && Object.keys(body).length === 0) throw ApiError.badRequest('At least one field or image is required.');
   const current = await getCategory(id);
-  const data = { ...(body.name && { name: body.name, slug: buildSlug(body.name) }), ...(body.description !== undefined && { description: body.description }) };
+  const data = {
+    ...(body.name && { name: body.name, slug: buildSlug(body.name) }),
+    ...(body.description !== undefined && { description: body.description }),
+    ...(body.offeringKind !== undefined && { offeringKind: body.offeringKind }),
+    ...(body.isActive !== undefined && { isActive: body.isActive }),
+  };
   const image = await getImage({ body, file, folder: 'epic-wedplanner/service-categories' });
   Object.assign(data, image);
   try {
@@ -115,6 +129,11 @@ export const getSubcategory = async (id) => {
   if (!item) throw ApiError.notFound('Service subcategory not found.');
   return item;
 };
+export const getPublicSubcategory = async (id) => {
+  const item = await repo.findPublicSubcategory(id);
+  if (!item) throw ApiError.notFound('Service subcategory not found.');
+  return item;
+};
 export const createSubcategory = async ({ body, file }) => {
   await getCategory(body.serviceCategoryId);
   const isGrouped = Array.isArray(body.subcategories);
@@ -130,6 +149,7 @@ export const createSubcategory = async ({ body, file }) => {
     slug: buildSlug(item.name),
     description: item.description ?? null,
     serviceCategoryId: body.serviceCategoryId,
+    isActive: item.isActive,
     ...(item.imageUrl !== undefined && {
       imageUrl: item.imageUrl,
       imagePublicId: item.imageUrl ? item.imagePublicId ?? null : null,
@@ -145,17 +165,19 @@ export const createSubcategory = async ({ body, file }) => {
     throw error;
   }
 };
-export const listSubcategories = async ({ page, limit, search, id, slug, serviceCategoryId, serviceCategory }) => {
+export const listSubcategories = async ({ page, limit, search, id, slug, serviceCategoryId, serviceCategory, offeringKind, isActive, activeParentOnly = false }) => {
   const parentId = serviceCategoryId ?? serviceCategory;
-  const where = { ...(id && { id }), ...(slug && { slug }), ...(parentId && { serviceCategoryId: parentId }), ...(search && { OR: [{ name: { contains: search, mode: 'insensitive' } }, { description: { contains: search, mode: 'insensitive' } }] }) };
+  const filterParent = activeParentOnly || offeringKind;
+  const where = { ...(id && { id }), ...(slug && { slug }), ...(parentId && { serviceCategoryId: parentId }), ...(isActive !== undefined && { isActive }), ...(filterParent && { serviceCategory: { ...(activeParentOnly && { isActive: true }), ...(offeringKind && { offeringKind }) } }), ...(search && { OR: [{ name: { contains: search, mode: 'insensitive' } }, { description: { contains: search, mode: 'insensitive' } }] }) };
   const { items, total } = await repo.listSubcategories({ where, skip: (page - 1) * limit, take: limit });
   return { subcategories: items, pagination: pageInfo(total, page, limit) };
 };
+export const listPublicSubcategories = (query) => listSubcategories({ ...query, isActive: true, activeParentOnly: true });
 export const updateSubcategory = async ({ id, body, file }) => {
   if (!file && Object.keys(body).length === 0) throw ApiError.badRequest('At least one field or image is required.');
   const current = await getSubcategory(id);
   if (body.serviceCategoryId) await getCategory(body.serviceCategoryId);
-  const data = { ...(body.name && { name: body.name, slug: buildSlug(body.name) }), ...(body.description !== undefined && { description: body.description }), ...(body.serviceCategoryId !== undefined && { serviceCategoryId: body.serviceCategoryId }) };
+  const data = { ...(body.name && { name: body.name, slug: buildSlug(body.name) }), ...(body.description !== undefined && { description: body.description }), ...(body.serviceCategoryId !== undefined && { serviceCategoryId: body.serviceCategoryId }), ...(body.isActive !== undefined && { isActive: body.isActive }) };
   const image = await getImage({ body, file, folder: 'epic-wedplanner/service-subcategories' });
   Object.assign(data, image);
   try {

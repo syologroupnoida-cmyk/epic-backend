@@ -8,7 +8,15 @@ const form = {
   servicesSubCategoryIds: ['subcategory-1', 'subcategory-2'],
   companyName: 'Asha Events',
   contactPerson: 'Asha Sharma',
-  businessAddress: { street: '123 Main Street', locality: 'Andheri West', state: 'Maharashtra', pincode: '400053' },
+  primaryCityId: 'city-mumbai',
+  businessAddress: {
+    street: '123 Main Street',
+    locality: 'Andheri West',
+    city: 'Mumbai',
+    state: 'Maharashtra',
+    pincode: '400053',
+    countryCode: 'IN',
+  },
   logoName: 'EPIC final.jpg.jpeg',
   description: 'Wedding services vendor',
   socialLinks: { facebook: '#', instagram: 'E' },
@@ -37,14 +45,49 @@ test('final KYC form accepts the expanded company profile', () => {
   assert.equal(submitKycSchema.safeParse({ ...form, servicecategoriesIds: [] }).success, false);
   assert.equal(submitKycSchema.safeParse({ ...form, servicesSubCategoryIds: [] }).success, false);
   assert.equal(submitKycSchema.safeParse({ ...form, servicecategoriesIds: ['category-1', 'category-1'] }).success, false);
+  assert.equal(submitKycSchema.safeParse({ ...form, primaryCityId: undefined }).success, false);
+  assert.equal(submitKycSchema.safeParse({ ...form, primaryCityId: '   ' }).success, false);
+  assert.equal(submitKycSchema.safeParse({ ...form, primaryOperatingCity: 'Mumbai' }).success, false);
+  assert.equal(submitKycSchema.safeParse({
+    ...form,
+    businessAddress: { ...form.businessAddress, city: undefined },
+  }).success, false);
+  assert.equal(submitKycSchema.safeParse({
+    ...form,
+    businessAddress: { ...form.businessAddress, city: '   ' },
+  }).success, false);
+  assert.equal(submitKycSchema.safeParse({
+    ...form,
+    businessAddress: { ...form.businessAddress, countryCode: undefined },
+  }).success, false);
+  assert.equal(submitKycSchema.safeParse({
+    ...form,
+    businessAddress: { ...form.businessAddress, countryCode: 'IND' },
+  }).success, false);
+  assert.equal(submitKycSchema.safeParse({
+    ...form,
+    businessAddress: { ...form.businessAddress, countryCode: 'US' },
+  }).success, false);
 });
 
 test('KYC form normalizes public category field names', () => {
   const parsed = submitKycSchema.parse(form);
   assert.deepEqual(parsed.serviceCategoryIds, form.servicecategoriesIds);
   assert.deepEqual(parsed.serviceSubcategoryIds, form.servicesSubCategoryIds);
+  assert.equal(parsed.primaryCityId, form.primaryCityId);
+  assert.equal(parsed.businessAddress.city, form.businessAddress.city);
+  assert.equal(parsed.businessAddress.countryCode, 'IN');
   assert.equal('servicecategoriesIds' in parsed, false);
   assert.equal('servicesSubCategoryIds' in parsed, false);
+});
+
+test('KYC form normalizes the supported country code', () => {
+  const parsed = submitKycSchema.parse({
+    ...form,
+    businessAddress: { ...form.businessAddress, countryCode: ' in ' },
+  });
+
+  assert.equal(parsed.businessAddress.countryCode, 'IN');
 });
 
 test('final KYC submission requires valid PAN and Aadhaar document data', () => {

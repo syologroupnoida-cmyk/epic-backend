@@ -5,26 +5,32 @@ model ServiceCategory {
   description   String?
   imageUrl      String?
   imagePublicId String?
+  offeringKind  OfferingKind         @default(SERVICE)
+  isActive      Boolean              @default(true)
   createdAt     DateTime             @default(now())
   updatedAt     DateTime             @updatedAt
   subcategories ServiceSubcategory[]
 
+  @@index([offeringKind, isActive])
   @@map("service_categories")
 }
 
 model ServiceSubcategory {
-  id                String           @id @default(cuid())
-  name              String
-  slug              String           @unique
-  description       String?
-  imageUrl          String?
-  imagePublicId     String?
-  serviceCategoryId String
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
-  serviceCategory   ServiceCategory @relation(fields: [serviceCategoryId], references: [id], onDelete: Restrict)
+  id                 String             @id @default(cuid())
+  name               String
+  slug               String             @unique
+  description        String?
+  imageUrl           String?
+  imagePublicId      String?
+  serviceCategoryId  String
+  isActive           Boolean            @default(true)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  serviceCategory    ServiceCategory    @relation(fields: [serviceCategoryId], references: [id], onDelete: Restrict)
+  vendorCapabilities VendorCapability[]
 
   @@unique([serviceCategoryId, name])
   @@index([serviceCategoryId])
+  @@index([isActive])
   @@map("service_subcategories")
 }

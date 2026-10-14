@@ -4,6 +4,10 @@ const categoryInclude = {
   subcategories: { orderBy: { createdAt: 'desc' } },
   _count: { select: { subcategories: true } },
 };
+const publicCategoryInclude = {
+  subcategories: { where: { isActive: true }, orderBy: { createdAt: 'desc' } },
+  _count: { select: { subcategories: { where: { isActive: true } } } },
+};
 const subcategoryInclude = { serviceCategory: true };
 
 export const createCategory = (data) => prisma.serviceCategory.create({ data, include: categoryInclude });
@@ -18,6 +22,10 @@ export const createCategories = (categories) => prisma.$transaction(async (tx) =
   return created;
 });
 export const findCategory = (id) => prisma.serviceCategory.findUnique({ where: { id }, include: categoryInclude });
+export const findPublicCategory = (id) => prisma.serviceCategory.findFirst({
+  where: { id, isActive: true },
+  include: publicCategoryInclude,
+});
 export const listCategories = async ({ where, skip, take }) => {
   const [items, total] = await Promise.all([
     prisma.serviceCategory.findMany({ where, skip, take, orderBy: { createdAt: 'desc' }, include: categoryInclude }),
@@ -32,7 +40,7 @@ export const listPublicCategories = async ({ where, skip, take }) => {
       skip,
       take,
       orderBy: { createdAt: 'desc' },
-      include: categoryInclude,
+      include: publicCategoryInclude,
     }),
     prisma.serviceCategory.count({ where }),
   ]);
@@ -49,6 +57,10 @@ export const createSubcategories = (items) => prisma.$transaction(async (tx) => 
   return created;
 });
 export const findSubcategory = (id) => prisma.serviceSubcategory.findUnique({ where: { id }, include: subcategoryInclude });
+export const findPublicSubcategory = (id) => prisma.serviceSubcategory.findFirst({
+  where: { id, isActive: true, serviceCategory: { isActive: true } },
+  include: subcategoryInclude,
+});
 export const listSubcategories = async ({ where, skip, take }) => {
   const [items, total] = await Promise.all([
     prisma.serviceSubcategory.findMany({ where, skip, take, orderBy: { createdAt: 'desc' }, include: subcategoryInclude }),
@@ -62,11 +74,15 @@ export const deleteSubcategory = (id) => prisma.serviceSubcategory.delete({ wher
 export const findCatalogSelections = async ({ serviceCategoryIds, serviceSubcategoryIds }) => {
   const [categories, subcategories] = await Promise.all([
     prisma.serviceCategory.findMany({
-      where: { id: { in: serviceCategoryIds } },
+      where: { id: { in: serviceCategoryIds }, isActive: true },
       select: { id: true },
     }),
     prisma.serviceSubcategory.findMany({
-      where: { id: { in: serviceSubcategoryIds } },
+      where: {
+        id: { in: serviceSubcategoryIds },
+        isActive: true,
+        serviceCategory: { isActive: true },
+      },
       select: { id: true, serviceCategoryId: true },
     }),
   ]);

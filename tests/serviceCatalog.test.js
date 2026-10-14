@@ -7,6 +7,16 @@ test('category creation accepts one category without subcategories', () => {
     name: 'Photography',
   });
   assert.equal(result.success, true);
+  assert.equal(result.data.offeringKind, 'SERVICE');
+  assert.equal(result.data.isActive, true);
+});
+
+test('category creation accepts a venue-property offering kind', () => {
+  const result = createCategoryPayloadSchema.parse({
+    name: 'Venue Properties',
+    offeringKind: 'VENUE_PROPERTY',
+  });
+  assert.equal(result.offeringKind, 'VENUE_PROPERTY');
 });
 
 test('category creation accepts multiple categories', () => {
@@ -53,13 +63,19 @@ test('catalog GET queries accept search and exact filters', () => {
   assert.equal(categories.search, 'photo');
   assert.equal(categories.slug, 'photography');
 
+  const activeVenues = listCatalogSchema.parse({ offeringKind: 'VENUE_PROPERTY', isActive: 'true' });
+  assert.equal(activeVenues.offeringKind, 'VENUE_PROPERTY');
+  assert.equal(activeVenues.isActive, true);
+
   const subcategories = listSubcategoriesSchema.parse({
     serviceCategoryId: 'category-1',
     search: 'candid',
     id: 'subcategory-1',
+    offeringKind: 'SERVICE',
   });
   assert.equal(subcategories.serviceCategoryId, 'category-1');
   assert.equal(subcategories.id, 'subcategory-1');
+  assert.equal(subcategories.offeringKind, 'SERVICE');
 });
 
 test('subcategory creation accepts multiple items for one category', () => {

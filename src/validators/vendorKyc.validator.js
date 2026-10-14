@@ -38,13 +38,19 @@ export const submitKycSchema = z.object({
   logoName: z.string().trim().min(1).max(255).nullable().optional(),
   description: requiredText(2, 2000, 'Description'),
   whatsappNumber: z.string().trim().regex(/^\d{10,15}$/, 'WhatsApp number must be 10 to 15 digits').optional(),
-  primaryOperatingCity: requiredText(2, 100, 'Primary operating city').optional(),
+  primaryCityId: z.string({ required_error: 'Primary city is required' }).trim()
+    .min(1, 'Primary city is required')
+    .max(100, 'Primary city ID is invalid'),
   businessAddress: z.object({
     street: requiredText(2, 200, 'Street'),
     locality: requiredText(2, 100, 'Locality'),
+    city: requiredText(2, 100, 'Business address city'),
     state: requiredText(2, 100, 'State'),
     pincode: z.string({ required_error: 'Pincode is required' }).trim()
       .regex(/^\d{6}$/, 'Pincode must be exactly 6 digits'),
+    countryCode: z.string({ required_error: 'Country code is required' }).trim()
+      .toUpperCase()
+      .refine((code) => code === 'IN', 'Only the IN country code is currently supported'),
   }).strict(),
   socialLinks: z.object({
     facebook: optionalLink,

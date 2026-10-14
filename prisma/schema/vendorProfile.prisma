@@ -1,13 +1,24 @@
 model VendorProfile {
-  userId    String    @id
-  kycStatus KycStatus @default(PENDING)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  userId        String              @id
+  kycStatus     KycStatus           @default(PENDING)
+  businessName  String?
+  slug          String?             @unique
+  about         String?
+  logoUrl       String?
+  logoPublicId  String?
+  primaryCityId String?
+  profileStatus VendorProfileStatus @default(DRAFT)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
 
-  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  kyc       VendorKyc?
-  documents VendorKycDocument[]
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kyc          VendorKyc?
+  documents    VendorKycDocument[]
+  primaryCity  City?               @relation(fields: [primaryCityId], references: [id], onDelete: SetNull)
+  capabilities VendorCapability[]
 
   @@index([kycStatus])
+  @@index([profileStatus])
+  @@index([primaryCityId])
   @@map("vendor_profiles")
 }

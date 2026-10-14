@@ -10,10 +10,13 @@ export const createCategory = handler(service.createCategory, 'Service category 
 export const listCategories = handler(service.listCategories, 'Service categories retrieved.');
 export const listPublicCategories = handler(service.listPublicCategories, 'Service categories and subcategories retrieved.');
 export const getCategory = handler(({ id }) => service.getCategory(id), 'Service category retrieved.');
+export const getPublicCategory = handler(({ id }) => service.getPublicCategory(id), 'Service category retrieved.');
 export const updateCategory = handler(service.updateCategory, 'Service category updated.');
 export const deleteCategory = handler(({ id }) => service.deleteCategory(id), 'Service category deleted.');
 export const createSubcategory = handler(service.createSubcategory, 'Service subcategory created.', 201);
 export const listSubcategories = handler(service.listSubcategories, 'Service subcategories retrieved.');
+export const listPublicSubcategories = handler(service.listPublicSubcategories, 'Active service subcategories retrieved.');
 export const getSubcategory = handler(({ id }) => service.getSubcategory(id), 'Service subcategory retrieved.');
+export const getPublicSubcategory = handler(({ id }) => service.getPublicSubcategory(id), 'Service subcategory retrieved.');
 export const updateSubcategory = handler(service.updateSubcategory, 'Service subcategory updated.');
 export const deleteSubcategory = handler(({ id }) => service.deleteSubcategory(id), 'Service subcategory deleted.');

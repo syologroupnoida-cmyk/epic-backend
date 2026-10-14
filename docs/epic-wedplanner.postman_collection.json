@@ -2,7 +2,7 @@
   "info": {
     "name": "Epic Wedplanner API",
     "_postman_id": "b531a667-8de6-4f49-9c93-8907e44e0031",
-    "description": "Epic Wedplanner authentication, public and admin service catalog, Cloudinary uploads, and manual KYC review. Import the matching Postman environment. Save each document number and upload its image in separate requests; both write to the same document row. Submit the company form last.",
+    "description": "Epic Wedplanner authentication, service catalog, vendor KYC, vendor business profiles and capabilities, normalized cities, and public vendor discovery. Import the matching Postman environment. For the vendor-foundation flow: create or select an active city, submit and approve vendor KYC, review/update the vendor profile, then open the public profile by its saved slug.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -913,14 +913,14 @@
             "url": "{{baseUrl}}/api/v1/vendor/kyc",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"servicecategoriesIds\": [\n    \"{{serviceCategoryId}}\"\n  ],\n  \"servicesSubCategoryIds\": [\n    \"{{serviceSubcategoryId}}\"\n  ],\n  \"companyName\": \"Transport\",\n  \"contactPerson\": \"Person\",\n  \"businessAddress\": {\n    \"street\": \"123 Main Street\",\n    \"locality\": \"Andheri West\",\n    \"state\": \"Maharashtra\",\n    \"pincode\": \"400053\"\n  },\n  \"logoName\": \"EPIC final.jpg.jpeg\",\n  \"description\": \"test vendor\",\n  \"socialLinks\": {\n    \"facebook\": \"#\",\n    \"instagram\": \"E\"\n  },\n  \"documents\": {\n    \"pan\": {\n      \"number\": \"{{panNumber}}\",\n      \"url\": \"{{panUploadUrl}}\",\n      \"publicId\": \"{{panPublicId}}\"\n    },\n    \"aadhaar\": {\n      \"number\": \"{{aadhaarNumber}}\",\n      \"url\": \"{{aadhaarUploadUrl}}\",\n      \"publicId\": \"{{aadhaarPublicId}}\"\n    }\n  },\n  \"source\": [\n    \"Epic Wedz Team\"\n  ],\n  \"sourceNote\": \"\"\n}",
+              "raw": "{\n  \"servicecategoriesIds\": [\n    \"{{serviceCategoryId}}\"\n  ],\n  \"servicesSubCategoryIds\": [\n    \"{{serviceSubcategoryId}}\"\n  ],\n  \"primaryCityId\": \"{{cityId}}\",\n  \"companyName\": \"Transport\",\n  \"contactPerson\": \"Person\",\n  \"businessAddress\": {\n    \"street\": \"123 Main Street\",\n    \"locality\": \"Andheri West\",\n    \"city\": \"Mumbai\",\n    \"state\": \"Maharashtra\",\n    \"pincode\": \"400053\",\n    \"countryCode\": \"IN\"\n  },\n  \"logoName\": \"EPIC final.jpg.jpeg\",\n  \"description\": \"test vendor\",\n  \"socialLinks\": {\n    \"facebook\": \"#\",\n    \"instagram\": \"E\"\n  },\n  \"documents\": {\n    \"pan\": {\n      \"number\": \"{{panNumber}}\",\n      \"url\": \"{{panUploadUrl}}\",\n      \"publicId\": \"{{panPublicId}}\"\n    },\n    \"aadhaar\": {\n      \"number\": \"{{aadhaarNumber}}\",\n      \"url\": \"{{aadhaarUploadUrl}}\",\n      \"publicId\": \"{{aadhaarPublicId}}\"\n    }\n  },\n  \"source\": [\n    \"Epic Wedz Team\"\n  ],\n  \"sourceNote\": \"\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
             },
-            "description": "Validates and saves the complete KYC form and all document rows in one transaction. PAN and Aadhaar are required. GST and CIN may be added under documents with number, url, and publicId. Each asset must come from this vendor's matching Cloudinary KYC upload folder.",
+            "description": "Before submitting KYC, an admin must create supported cities and the vendor frontend must load them with GET /api/v1/cities. Submit the vendor's selected active operating city as the required primaryCityId. The legal businessAddress separately requires city and countryCode; the current India-only API accepts and normalizes countryCode as IN. The business-address city may differ from the primary operating city. The request validates and saves the complete KYC form and all document rows in one transaction. PAN and Aadhaar are required. GST and CIN may be added under documents with number, url, and publicId. Each asset must come from this vendor's matching Cloudinary KYC upload folder.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -984,6 +984,7 @@
             "method": "POST",
             "header": [],
             "url": "{{baseUrl}}/api/v1/admin/vendor-kyc/{{vendorUserId}}/approve",
+            "description": "Approves the submitted KYC, initializes the vendor business profile, and creates approved capabilities from the submitted subcategories. The generated public profile slug is saved as vendorSlug.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -995,7 +996,25 @@
               ]
             }
           },
-          "response": []
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const body = pm.response.json();",
+                  "  const vendorSlug = body.data?.businessProfile?.slug;",
+                  "  if (vendorSlug) {",
+                  "    if (pm.environment.name) pm.environment.set('vendorSlug', vendorSlug);",
+                  "    else pm.collectionVariables.set('vendorSlug', vendorSlug);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Reject vendor KYC",
@@ -1041,8 +1060,8 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/v1/service-categories?page=1&limit=10&search=Photography",
-            "description": "Returns paginated categories with complete subcategories. search checks category and nested subcategory names/descriptions. Exact id and slug filters are also supported; remove search when it is not needed.",
+            "url": "{{baseUrl}}/api/v1/service-categories?page=1&limit=10&offeringKind=SERVICE&search=Photography",
+            "description": "Returns active categories with active subcategories. Supports search, id, slug, and offeringKind=SERVICE|VENUE_PROPERTY; remove search when it is not needed.",
             "auth": {
               "type": "noauth"
             }
@@ -1130,14 +1149,14 @@
           },
           "body": {
             "mode": "raw",
-            "raw": "[\n  {\n    \"name\": \"Photography\",\n    \"description\": \"Wedding photography services\"\n  },\n  {\n    \"name\": \"Transport\",\n    \"description\": \"Wedding transport services\"\n  }\n]",
+            "raw": "[\n  {\n    \"name\": \"Photography\",\n    \"description\": \"Wedding photography services\",\n    \"offeringKind\": \"SERVICE\",\n    \"isActive\": true\n  },\n  {\n    \"name\": \"Wedding Venues\",\n    \"description\": \"Physical venue properties such as banquet halls, lawns, and resorts\",\n    \"offeringKind\": \"VENUE_PROPERTY\",\n    \"isActive\": true\n  }\n]",
             "options": {
               "raw": {
                 "language": "json"
               }
             }
           },
-          "description": "Creates categories only. Send one array item for one category or multiple items for bulk creation. Create subcategories separately after this request using POST /admin/service-subcategories and the saved serviceCategoryId. If any category fails, nothing from this request is created."
+          "description": "Creates categories only. offeringKind separates normal services from physical venue properties; isActive controls public visibility. Create subcategories separately using the saved serviceCategoryId. If any category fails, nothing is created."
         },
         "response": []
     },
@@ -1148,7 +1167,7 @@
                         "header":  [
 
                                    ],
-                        "url":  "{{baseUrl}}/api/v1/admin/service-categories?page=1\u0026limit=10\u0026search=Photography",
+                        "url":  "{{baseUrl}}/api/v1/admin/service-categories?page=1\u0026limit=10\u0026offeringKind=SERVICE\u0026isActive=true\u0026search=Photography",
                         "auth":  {
                                      "bearer":  [
                                                     {
@@ -1159,7 +1178,7 @@
                                                 ],
                                      "type":  "bearer"
                                  },
-                        "description": "Returns paginated categories with complete subcategories and _count.subcategories. search checks category and nested subcategory names/descriptions. Exact id and slug filters are also supported."
+                        "description": "Returns paginated categories with complete subcategories and _count.subcategories. Supports search, id, slug, offeringKind=SERVICE|VENUE_PROPERTY, and isActive=true|false."
                     },
         "response":  [
 
@@ -1211,7 +1230,7 @@
                                      "type":  "bearer"
                                  },
                         "body":  {
-                                     "raw":  "{\n  \"name\": \"Wedding Photography & Films\",\n  \"description\": \"Updated photography and cinematography services\"\n}",
+                                     "raw":  "{\n  \"name\": \"Wedding Photography & Films\",\n  \"description\": \"Updated photography and cinematography services\",\n  \"offeringKind\": \"SERVICE\",\n  \"isActive\": true\n}",
                                      "options":  {
                                                      "raw":  {
                                                                  "language":  "json"
@@ -1219,7 +1238,7 @@
                                                  },
                                      "mode":  "raw"
                                  },
-                        "description": "Updates one category only. The category ID is supplied in the URL and the body contains only fields to change. Update subcategories separately with PATCH /admin/service-subcategories/:id."
+                        "description": "Updates one category only. offeringKind accepts SERVICE or VENUE_PROPERTY; isActive=false hides it from the public catalog without deleting it. Update subcategories separately with PATCH /admin/service-subcategories/:id."
                     },
         "response":  [
 
@@ -1283,7 +1302,7 @@
                                      "type":  "bearer"
                                  },
                         "body":  {
-                                     "raw":  "{\n  \"serviceCategoryId\": \"{{serviceCategoryId}}\",\n  \"subcategories\": [\n    {\n      \"name\": \"Candid Photography\",\n      \"description\": \"Natural wedding photography\"\n    },\n    {\n      \"name\": \"Traditional Photography\"\n    }\n  ]\n}",
+                                     "raw":  "{\n  \"serviceCategoryId\": \"{{serviceCategoryId}}\",\n  \"subcategories\": [\n    {\n      \"name\": \"Candid Photography\",\n      \"description\": \"Natural wedding photography\",\n      \"isActive\": true\n    },\n    {\n      \"name\": \"Traditional Photography\",\n      \"isActive\": true\n    }\n  ]\n}",
                                      "options":  {
                                                      "raw":  {
                                                                  "language":  "json"
@@ -1291,7 +1310,7 @@
                                                  },
                                      "mode":  "raw"
                                  },
-                        "description":  "Creates multiple subcategories under one existing category in a single transaction. Each subcategory requires name and may include description, imageUrl, and imagePublicId. The original single-subcategory body is also supported."
+                        "description":  "Creates multiple subcategories under one existing category in a single transaction. Each item may include description, imageUrl, imagePublicId, and isActive. The original single-subcategory body is also supported."
                     },
         "response":  [
 
@@ -1304,7 +1323,7 @@
                         "header":  [
 
                                    ],
-                        "url":  "{{baseUrl}}/api/v1/admin/service-subcategories?page=1\u0026limit=10\u0026serviceCategoryId={{serviceCategoryId}}\u0026search=Candid",
+                        "url":  "{{baseUrl}}/api/v1/admin/service-subcategories?page=1\u0026limit=10\u0026serviceCategoryId={{serviceCategoryId}}\u0026isActive=true\u0026search=Candid",
                         "auth":  {
                                      "bearer":  [
                                                     {
@@ -1365,7 +1384,7 @@
                                      "type":  "bearer"
                                  },
                         "body":  {
-                                     "raw":  "{\n  \"name\": \"Candid Wedding Photography\",\n  \"description\": \"Updated candid photography offering\",\n  \"serviceCategoryId\": \"{{serviceCategoryId}}\"\n}",
+                                     "raw":  "{\n  \"name\": \"Candid Wedding Photography\",\n  \"description\": \"Updated candid photography offering\",\n  \"serviceCategoryId\": \"{{serviceCategoryId}}\",\n  \"isActive\": true\n}",
                                      "options":  {
                                                      "raw":  {
                                                                  "language":  "json"
@@ -1373,7 +1392,7 @@
                                                  },
                                      "mode":  "raw"
                                  },
-                        "description": "Updates one subcategory only. This request does not update the parent category. serviceCategoryId is optional and is used only when moving the subcategory to another existing category."
+                        "description": "Updates one subcategory only. serviceCategoryId is optional and moves it to another category; isActive=false hides it from public selection without deleting it."
                     },
         "response":  [
 
@@ -1403,6 +1422,409 @@
                      ]
     }
 ]
+    },
+    {
+      "name": "Vendor business profile",
+      "description": "Vendor-only profile endpoints. GET is available while the KYC-built profile is still a draft. PATCH and capabilities require APPROVED KYC. Create/select an active city and approve the vendor KYC before running the update request.",
+      "item": [
+        {
+          "name": "Get my business profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/vendor/profile",
+            "description": "Returns the authenticated vendor's own business profile, including private management fields such as logoPublicId and profile status. This is not the public marketplace response.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{vendorAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const body = pm.response.json();",
+                  "  const save = (key, value) => {",
+                  "    if (!value) return;",
+                  "    if (pm.environment.name) pm.environment.set(key, value);",
+                  "    else pm.collectionVariables.set(key, value);",
+                  "  };",
+                  "  save('vendorSlug', body.data?.slug);",
+                  "  save('cityId', body.data?.primaryCity?.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update and publish my business profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/vendor/profile",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessName\": \"Royal Events\",\n  \"about\": \"Wedding planning, venue assistance, and decoration services for memorable celebrations.\",\n  \"primaryCityId\": \"{{cityId}}\",\n  \"profileStatus\": \"ACTIVE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Requires APPROVED KYC and an active primaryCityId. ACTIVE requires businessName, about, primaryCityId, and the server-generated slug. Optional fields are logoUrl and logoPublicId; use null to clear nullable fields. Vendors cannot set SUSPENDED.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{vendorAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const body = pm.response.json();",
+                  "  const save = (key, value) => {",
+                  "    if (!value) return;",
+                  "    if (pm.environment.name) pm.environment.set(key, value);",
+                  "    else pm.collectionVariables.set(key, value);",
+                  "  };",
+                  "  save('vendorSlug', body.data?.slug);",
+                  "  save('cityId', body.data?.primaryCity?.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get my approved capabilities",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/vendor/capabilities",
+            "description": "Requires APPROVED KYC. Returns normalized capabilities created from the KYC service-subcategory selections; capabilities describe what the vendor is approved to offer and are not marketplace listings.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{vendorAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Public vendor profiles",
+      "description": "Unauthenticated marketplace-safe vendor discovery and detail. Only vendors with an active account, APPROVED KYC, an ACTIVE profile, and an active primary city are returned. KYC documents, document numbers, legal addresses, contact details, and internal management fields are excluded.",
+      "item": [
+        {
+          "name": "List public vendors",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/marketplace/vendors?page=1&limit=20&search=Wedding&cityId={{cityId}}&serviceCategoryId={{serviceCategoryId}}&serviceSubcategoryId={{serviceSubcategoryId}}&offeringKind=SERVICE",
+            "description": "Returns data.vendors and data.pagination without authentication. Only active accounts with approved KYC, an ACTIVE profile, and an active primary city are listed. Optional filters are page, limit, search, cityId, serviceCategoryId, serviceSubcategoryId, and offeringKind=SERVICE|VENUE_PROPERTY; remove filters that are not needed. Each vendor includes vendorId and safe public profile, city, and active approved service data. The first result's slug is saved as vendorSlug for the detail request.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const body = pm.response.json();",
+                  "  const vendorSlug = body.data?.vendors?.[0]?.slug;",
+                  "  if (vendorSlug) {",
+                  "    if (pm.environment.name) pm.environment.set('vendorSlug', vendorSlug);",
+                  "    else pm.collectionVariables.set('vendorSlug', vendorSlug);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get public vendor by slug",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/marketplace/vendors/{{vendorSlug}}",
+            "description": "Run List public vendors or Update and publish my business profile first so vendorSlug is saved. The response includes vendorId, the public profile, primary city, and active approved services only.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Public cities",
+      "description": "Read-only normalized city lookup for KYC/profile forms and future marketplace filters. Public lists always return active cities only.",
+      "item": [
+        {
+          "name": "List active cities",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/cities?page=1&limit=20&countryCode=IN",
+            "description": "Supports page, limit, search, stateName, and countryCode. Public results are restricted to active cities. The first result is saved as cityId for the profile update flow.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const body = pm.response.json();",
+                  "  const cityId = body.data?.cities?.[0]?.id;",
+                  "  if (cityId) {",
+                  "    if (pm.environment.name) pm.environment.set('cityId', cityId);",
+                  "    else pm.collectionVariables.set('cityId', cityId);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get city by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/cities/{{cityId}}",
+            "description": "Returns one normalized city by the cityId saved by a city list/create request.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin cities",
+      "description": "Admin-only city management. Cities are disabled with isActive=false rather than deleted once referenced by vendor profiles.",
+      "item": [
+        {
+          "name": "Create city",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/admin/cities",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"New Delhi\",\n  \"stateName\": \"Delhi\",\n  \"countryCode\": \"IN\",\n  \"isActive\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Creates a normalized city and saves its ID as cityId for the vendor-profile flow. A unique slug is generated by the server.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const body = pm.response.json();",
+                  "  const cityId = body.data?.id;",
+                  "  if (cityId) {",
+                  "    if (pm.environment.name) pm.environment.set('cityId', cityId);",
+                  "    else pm.collectionVariables.set('cityId', cityId);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List cities",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/admin/cities?page=1&limit=20&countryCode=IN",
+            "description": "Supports page, limit, search, stateName, countryCode, and isActive=true|false. Unlike the public list, admins may include inactive cities by omitting isActive.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const body = pm.response.json();",
+                  "  const cityId = body.data?.cities?.[0]?.id;",
+                  "  if (cityId) {",
+                  "    if (pm.environment.name) pm.environment.set('cityId', cityId);",
+                  "    else pm.collectionVariables.set('cityId', cityId);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get city",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/admin/cities/{{cityId}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update city",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/admin/cities/{{cityId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isActive\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Updates one or more city fields. Send isActive=false to disable a city without deleting referenced profile data.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Replace city fields",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/admin/cities/{{cityId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"New Delhi\",\n  \"stateName\": \"Delhi\",\n  \"countryCode\": \"IN\",\n  \"isActive\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Uses the implemented PUT alias to update city fields. The current API accepts partial or complete update bodies for both PATCH and PUT.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
     },
     {
       "name": "Super admin",      "item": [
@@ -1625,6 +2047,16 @@
     },
     {
       "key": "serviceSubcategoryId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "cityId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "vendorSlug",
       "value": "",
       "type": "string"
     }

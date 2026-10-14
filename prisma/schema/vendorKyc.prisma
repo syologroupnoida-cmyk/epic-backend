@@ -2,20 +2,23 @@ model VendorKyc {
   vendorUserId String @id
 
   // Contact name, mobile, email and password are captured at registration.
-  businessName          String?
-  contactPerson         String?
-  logoName              String?
-  description           String?
-  whatsappNumber        String?
-  primaryOperatingCity  String?
-  serviceCategoryIds    String[] @default([])
-  serviceSubcategoryIds String[] @default([])
-  addressStreet         String?
-  addressLocality       String?
-  addressState          String?
-  addressPincode        String?
-  source                String[] @default([])
-  sourceNote            String?
+  businessName           String?
+  contactPerson          String?
+  logoName               String?
+  description            String?
+  whatsappNumber         String?
+  primaryCityId          String?
+  primaryOperatingCity   String?
+  serviceCategoryIds     String[] @default([])
+  serviceSubcategoryIds  String[] @default([])
+  addressStreet          String?
+  addressLocality        String?
+  addressCity            String?
+  addressState           String?
+  addressPincode         String?
+  addressCountryCode     String   @default("IN")
+  source                 String[] @default([])
+  sourceNote             String?
   declaredDocumentStatus Json?
 
   // Legacy columns retained for non-destructive migration compatibility.
@@ -46,7 +49,9 @@ model VendorKyc {
   reviewedByAdminId String?
   rejectionReason   String?
 
-  vendor VendorProfile @relation(fields: [vendorUserId], references: [userId], onDelete: Cascade)
+  vendor      VendorProfile @relation(fields: [vendorUserId], references: [userId], onDelete: Cascade)
+  primaryCity City?         @relation("VendorKycPrimaryCity", fields: [primaryCityId], references: [id], onDelete: SetNull)
 
+  @@index([primaryCityId])
   @@map("vendor_kyc")
 }

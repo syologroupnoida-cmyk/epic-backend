@@ -9,6 +9,8 @@ import {
 import * as catalogController from '../../controllers/serviceCatalog.controller.js';
 import { uploadSingleFile } from '../../middlewares/upload.middleware.js';
 import { createCategoryPayloadSchema, updateCategorySchema, createSubcategoryPayloadSchema, updateSubcategorySchema, listCatalogSchema, listSubcategoriesSchema } from '../../validators/serviceCatalog.validator.js';
+import * as cityController from '../../controllers/city.controller.js';
+import { createCitySchema, updateCitySchema, listCitiesSchema } from '../../validators/city.validator.js';
 
 const router = Router();
 
@@ -50,5 +52,13 @@ router.route('/service-subcategories/:id')
   .patch(uploadSingleFile, validateRequest(updateSubcategorySchema), catalogController.updateSubcategory)
   .put(uploadSingleFile, validateRequest(updateSubcategorySchema), catalogController.updateSubcategory)
   .delete(catalogController.deleteSubcategory);
+
+router.route('/cities')
+  .get(validateRequest(listCitiesSchema, 'query'), cityController.listCities)
+  .post(validateRequest(createCitySchema), cityController.createCity);
+router.route('/cities/:id')
+  .get(cityController.getCity)
+  .patch(validateRequest(updateCitySchema), cityController.updateCity)
+  .put(validateRequest(updateCitySchema), cityController.updateCity);
 
 export default router;

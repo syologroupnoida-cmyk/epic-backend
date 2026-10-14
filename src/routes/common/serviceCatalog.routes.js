@@ -11,12 +11,12 @@ router.get(
   validateRequest(listCatalogSchema, 'query'),
   catalogController.listPublicCategories,
 );
-router.get('/service-categories/:id', catalogController.getCategory);
+router.get('/service-categories/:id', catalogController.getPublicCategory);
 router.get(
   '/service-subcategories',
   validateRequest(listSubcategoriesSchema, 'query'),
-  catalogController.listSubcategories,
+  catalogController.listPublicSubcategories,
 );
-router.get('/service-subcategories/:id', catalogController.getSubcategory);
+router.get('/service-subcategories/:id', catalogController.getPublicSubcategory);
 
 export default router;

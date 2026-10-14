@@ -1,0 +1,19 @@
+model VendorCapability {
+  id                   String           @id @default(cuid())
+  vendorUserId         String
+  serviceSubcategoryId String
+  status               CapabilityStatus @default(PENDING)
+  source               CapabilitySource @default(KYC)
+  reviewedAt           DateTime?
+  reviewedByAdminId    String?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  vendor      VendorProfile      @relation(fields: [vendorUserId], references: [userId], onDelete: Cascade)
+  subcategory ServiceSubcategory @relation(fields: [serviceSubcategoryId], references: [id], onDelete: Restrict)
+
+  @@unique([vendorUserId, serviceSubcategoryId])
+  @@index([vendorUserId, status])
+  @@index([serviceSubcategoryId, status])
+  @@map("vendor_capabilities")
+}

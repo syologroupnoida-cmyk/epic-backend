@@ -9,13 +9,16 @@ const KYC_SELECT = {
   logoName: true,
   description: true,
   whatsappNumber: true,
+  primaryCityId: true,
   primaryOperatingCity: true,
   serviceCategoryIds: true,
   serviceSubcategoryIds: true,
   addressStreet: true,
   addressLocality: true,
+  addressCity: true,
   addressState: true,
   addressPincode: true,
+  addressCountryCode: true,
   facebookUrl: true,
   instagramUrl: true,
   source: true,
@@ -41,6 +44,45 @@ const DOC_SELECT = {
   updatedAt: true,
 };
 
+const MANAGED_KYC_DOCUMENT_TYPES = ['PAN', 'AADHAR', 'GSTIN', 'CIN'];
+
+const claimKycStatus = async ({ tx, vendorUserId, expectedStatus, nextStatus }) => {
+  const expectedStatuses = Array.isArray(expectedStatus) ? expectedStatus : [expectedStatus];
+  const { count } = await tx.vendorProfile.updateMany({
+    where: {
+      userId: vendorUserId,
+      kycStatus: { in: expectedStatuses },
+    },
+    data: { kycStatus: nextStatus },
+  });
+  if (count !== 1) {
+    throw ApiError.conflict(
+      'KYC status changed while this action was being processed. Refresh and try again.',
+    );
+  }
+};
+
+const reviewKycSnapshot = async ({
+  tx,
+  vendorUserId,
+  expectedSubmittedAt,
+  reviewData,
+}) => {
+  const { count } = await tx.vendorKyc.updateMany({
+    where: { vendorUserId, submittedAt: expectedSubmittedAt },
+    data: reviewData,
+  });
+  if (count !== 1) {
+    throw ApiError.conflict(
+      'The vendor submitted a newer KYC application. Refresh before reviewing it.',
+    );
+  }
+  return tx.vendorKyc.findUnique({
+    where: { vendorUserId },
+    select: KYC_SELECT,
+  });
+};
+
 export const findVendorProfile = async (userId) => {
   return prisma.vendorProfile.findUnique({
     where: { userId },
@@ -64,12 +106,12 @@ export const findVendorKycStatus = async (userId) => {
 // ---- Whole-KYC writes (used by /vendor/kyc submit + admin review) ----
 
 /**
- * Vendor submits or resubmits the company-level fields. Documents are NOT
- * touched here — they are managed by the number and image upload endpoints.
+ * Vendor submits or resubmits a complete KYC snapshot, including document
+ * references produced by the upload endpoints.
  *
  * Transactionally:
- *   1. Upserts the VendorKyc main row (resets review fields on resubmit).
- *   2. Flips VendorProfile.kycStatus → SUBMITTED.
+ *   1. Atomically claims the SUBMITTED state.
+ *   2. Replaces managed document rows and upserts the VendorKyc main row.
  *   3. Deactivates the User (isActive=false) — vendor can't log in again
  *      until admin approves. Existing access tokens still work until expiry
  *      (~15 min) so the vendor can see the "thank you" screen.
@@ -77,10 +119,26 @@ export const findVendorKycStatus = async (userId) => {
  */
 export const upsertKycAndMarkSubmitted = async ({ vendorUserId, kyc, documents }) => {
   return prisma.$transaction(async (tx) => {
-    const profileForSubmit = await tx.vendorProfile.findUnique({ where: { userId: vendorUserId }, select: { kycStatus: true } });
-    if (!profileForSubmit || !['PENDING', 'REJECTED'].includes(profileForSubmit.kycStatus)) {
-      throw ApiError.forbidden('KYC cannot be submitted in its current state.');
+    await claimKycStatus({
+      tx,
+      vendorUserId,
+      expectedStatus: ['PENDING', 'REJECTED'],
+      nextStatus: 'SUBMITTED',
+    });
+
+    const submittedDocumentTypes = new Set(documents.map(({ type }) => type));
+    const removedDocumentTypes = MANAGED_KYC_DOCUMENT_TYPES.filter(
+      (type) => !submittedDocumentTypes.has(type),
+    );
+    if (removedDocumentTypes.length) {
+      await tx.vendorKycDocument.deleteMany({
+        where: {
+          vendorUserId,
+          type: { in: removedDocumentTypes },
+        },
+      });
     }
+
     for (const document of documents) {
       await tx.vendorKycDocument.upsert({
         where: { vendorUserId_type: { vendorUserId, type: document.type } },
@@ -115,8 +173,14 @@ export const upsertKycAndMarkSubmitted = async ({ vendorUserId, kyc, documents }
 
     const profile = await tx.vendorProfile.update({
       where: { userId: vendorUserId },
+      // Submission only advances the verification workflow. Public business
+      // fields are initialized after an admin approves this KYC snapshot.
       data: { kycStatus: 'SUBMITTED' },
-      select: { userId: true, kycStatus: true, updatedAt: true },
+      select: {
+        userId: true,
+        kycStatus: true,
+        updatedAt: true,
+      },
     });
 
     // Deactivate the account so the vendor can't log in again until admin
@@ -143,25 +207,114 @@ export const upsertKycAndMarkSubmitted = async ({ vendorUserId, kyc, documents }
 
 // Admin approves the KYC — also re-activates the User so the vendor can
 // log back in. From here on they have full marketplace access.
-export const approveKyc = async ({ vendorUserId, adminId }) => {
+export const approveKyc = async ({
+  vendorUserId,
+  adminId,
+  profileSlug,
+  expectedSubmittedAt,
+}) => {
   return prisma.$transaction(async (tx) => {
-    const kyc = await tx.vendorKyc.update({
-      where: { vendorUserId },
-      data: {
+    await claimKycStatus({
+      tx,
+      vendorUserId,
+      expectedStatus: 'SUBMITTED',
+      nextStatus: 'APPROVED',
+    });
+
+    const kyc = await reviewKycSnapshot({
+      tx,
+      vendorUserId,
+      expectedSubmittedAt,
+      reviewData: {
         reviewedAt: new Date(),
         reviewedByAdminId: adminId,
         rejectionReason: null,
       },
-      select: KYC_SELECT,
     });
+
+    let primaryCity = null;
+    if (kyc.primaryCityId) {
+      primaryCity = await tx.city.findFirst({
+        where: { id: kyc.primaryCityId, isActive: true },
+        select: { id: true },
+      });
+      if (!primaryCity) {
+        throw ApiError.conflict(
+          'The selected primary city is no longer active. Reactivate it or reject the KYC for correction.',
+        );
+      }
+    } else if (kyc.primaryOperatingCity) {
+      // Compatibility for submissions created before KYC stored City IDs.
+      const matchingCities = await tx.city.findMany({
+        where: {
+          name: { equals: kyc.primaryOperatingCity, mode: 'insensitive' },
+          isActive: true,
+        },
+        select: { id: true },
+        take: 2,
+      });
+      primaryCity = matchingCities.length === 1 ? matchingCities[0] : null;
+    }
+
+    await tx.vendorCapability.updateMany({
+      where: {
+        vendorUserId,
+        source: 'KYC',
+        serviceSubcategoryId: { notIn: kyc.serviceSubcategoryIds },
+      },
+      data: {
+        status: 'INACTIVE',
+        reviewedAt: new Date(),
+        reviewedByAdminId: adminId,
+      },
+    });
+
+    for (const serviceSubcategoryId of kyc.serviceSubcategoryIds) {
+      await tx.vendorCapability.upsert({
+        where: {
+          vendorUserId_serviceSubcategoryId: { vendorUserId, serviceSubcategoryId },
+        },
+        create: {
+          vendorUserId,
+          serviceSubcategoryId,
+          status: 'APPROVED',
+          source: 'KYC',
+          reviewedAt: new Date(),
+          reviewedByAdminId: adminId,
+        },
+        update: {
+          status: 'APPROVED',
+          source: 'KYC',
+          reviewedAt: new Date(),
+          reviewedByAdminId: adminId,
+        },
+      });
+    }
+
     await tx.vendorKycDocument.updateMany({
       where: { vendorUserId },
       data: { isVerified: true, verifiedAt: new Date(), verifiedByAdminId: adminId },
     });
     const profile = await tx.vendorProfile.update({
       where: { userId: vendorUserId },
-      data: { kycStatus: 'APPROVED' },
-      select: { userId: true, kycStatus: true, updatedAt: true },
+      data: {
+        kycStatus: 'APPROVED',
+        businessName: kyc.businessName ?? kyc.companyName ?? null,
+        about: kyc.description ?? null,
+        slug: profileSlug,
+        ...(primaryCity && { primaryCityId: primaryCity.id }),
+        profileStatus: 'DRAFT',
+      },
+      select: {
+        userId: true,
+        kycStatus: true,
+        businessName: true,
+        slug: true,
+        about: true,
+        primaryCityId: true,
+        profileStatus: true,
+        updatedAt: true,
+      },
     });
     const user = await tx.user.update({
       where: { id: vendorUserId },
@@ -172,23 +325,46 @@ export const approveKyc = async ({ vendorUserId, adminId }) => {
       where: { vendorUserId },
       select: DOC_SELECT,
     });
-    return { kyc: { ...kyc, documents }, profile, user };
+    const capabilities = await tx.vendorCapability.findMany({
+      where: { vendorUserId, status: 'APPROVED' },
+      include: {
+        subcategory: {
+          include: { serviceCategory: true },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+    return { kyc: { ...kyc, documents }, profile, capabilities, user };
   });
 };
 
 // Admin rejects the KYC — re-activates the User so the vendor can log
 // back in, see the rejection reason, and resubmit a corrected KYC.
 // (A second submission will flip isActive back to false.)
-export const rejectKyc = async ({ vendorUserId, adminId, reason }) => {
+export const rejectKyc = async ({
+  vendorUserId,
+  adminId,
+  reason,
+  expectedKycStatus,
+  expectedSubmittedAt,
+}) => {
   return prisma.$transaction(async (tx) => {
-    const kyc = await tx.vendorKyc.update({
-      where: { vendorUserId },
-      data: {
+    await claimKycStatus({
+      tx,
+      vendorUserId,
+      expectedStatus: expectedKycStatus,
+      nextStatus: 'REJECTED',
+    });
+
+    const kyc = await reviewKycSnapshot({
+      tx,
+      vendorUserId,
+      expectedSubmittedAt,
+      reviewData: {
         reviewedAt: new Date(),
         reviewedByAdminId: adminId,
         rejectionReason: reason,
       },
-      select: KYC_SELECT,
     });
     await tx.vendorKycDocument.updateMany({
       where: { vendorUserId },
@@ -196,8 +372,17 @@ export const rejectKyc = async ({ vendorUserId, adminId, reason }) => {
     });
     const profile = await tx.vendorProfile.update({
       where: { userId: vendorUserId },
-      data: { kycStatus: 'REJECTED' },
-      select: { userId: true, kycStatus: true, updatedAt: true },
+      data: { kycStatus: 'REJECTED', profileStatus: 'SUSPENDED' },
+      select: {
+        userId: true,
+        kycStatus: true,
+        profileStatus: true,
+        updatedAt: true,
+      },
+    });
+    await tx.vendorCapability.updateMany({
+      where: { vendorUserId },
+      data: { status: 'INACTIVE', reviewedAt: new Date(), reviewedByAdminId: adminId },
     });
     const user = await tx.user.update({
       where: { id: vendorUserId },

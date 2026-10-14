@@ -2,6 +2,8 @@ import { ApiError } from '../../utils/ApiError.js';
 import { env } from '../../config/env.js';
 import * as kycRepo from '../../repositories/vendorKyc.repository.js';
 import * as catalogRepo from '../../repositories/serviceCatalog.repository.js';
+import * as cityRepo from '../../repositories/city.repository.js';
+import { toSlug } from '../../utils/slug.js';
 import {
   sendVendorApprovedNotice,
   sendVendorRejectedNotice,
@@ -76,20 +78,25 @@ const buildApprovalSummary = (kycStatus) => {
 /**
  * Persist only fields not already collected during vendor registration.
  */
-const mapPayloadToKyc = (payload) => ({
+const mapPayloadToKyc = (payload, primaryCity) => ({
   businessName: payload.companyName,
   companyName: payload.companyName,
   contactPerson: payload.contactPerson,
   logoName: payload.logoName ?? null,
   description: payload.description,
   whatsappNumber: payload.whatsappNumber,
-  primaryOperatingCity: payload.primaryOperatingCity,
+  primaryCityId: primaryCity.id,
+  // Keep the submitted display name as an audit snapshot. The relation ID is
+  // the source of truth for filtering and profile creation.
+  primaryOperatingCity: primaryCity.name,
   serviceCategoryIds: payload.serviceCategoryIds,
   serviceSubcategoryIds: payload.serviceSubcategoryIds,
   addressStreet: payload.businessAddress.street,
   addressLocality: payload.businessAddress.locality,
+  addressCity: payload.businessAddress.city,
   addressState: payload.businessAddress.state,
   addressPincode: payload.businessAddress.pincode,
+  addressCountryCode: payload.businessAddress.countryCode,
   facebookUrl: payload.socialLinks.facebook ?? null,
   instagramUrl: payload.socialLinks.instagram ?? null,
   source: payload.source,
@@ -140,9 +147,12 @@ const mapDocumentsForSubmission = ({ vendorUserId, documents }) => {
 
     const expectedPrefix = `epic-wedplanner/${config.purpose}/${vendorUserId}/`;
     let parsedUrl;
-    try { parsedUrl = new URL(document.url); }
+    let decodedPath;
+    try {
+      parsedUrl = new URL(document.url);
+      decodedPath = decodeURIComponent(parsedUrl.pathname);
+    }
     catch { throw ApiError.badRequest(`Invalid ${key} document URL.`); }
-    const decodedPath = decodeURIComponent(parsedUrl.pathname);
     const validCloudinaryAsset = parsedUrl.protocol === 'https:' &&
       parsedUrl.hostname === 'res.cloudinary.com' &&
       decodedPath.startsWith(`/${env.CLOUDINARY_CLOUD_NAME}/`) &&
@@ -179,7 +189,13 @@ export const submitMyKyc = async ({ vendorUserId, payload }) => {
     );
   }
 
-  const { categories, subcategories } = await catalogRepo.findCatalogSelections(payload);
+  const [{ categories, subcategories }, primaryCity] = await Promise.all([
+    catalogRepo.findCatalogSelections(payload),
+    cityRepo.findActiveCityById(payload.primaryCityId),
+  ]);
+  if (!primaryCity) {
+    throw ApiError.badRequest('Select an active primary city.');
+  }
   const foundCategoryIds = new Set(categories.map(({ id }) => id));
   const foundSubcategoryIds = new Set(subcategories.map(({ id }) => id));
   const invalidServiceCategoryIds = payload.serviceCategoryIds.filter((id) => !foundCategoryIds.has(id));
@@ -195,7 +211,7 @@ export const submitMyKyc = async ({ vendorUserId, payload }) => {
     );
   }
 
-  const kycFields = mapPayloadToKyc(payload);
+  const kycFields = mapPayloadToKyc(payload, primaryCity);
   const documents = mapDocumentsForSubmission({ vendorUserId, documents: payload.documents });
   const { kyc, profile: updatedProfile } = await kycRepo.upsertKycAndMarkSubmitted({
     vendorUserId,
@@ -242,9 +258,15 @@ export const approveVendorKyc = async ({ vendorUserId, adminId }) => {
     throw new ApiError(422, 'PAN and Aadhaar numbers and card images are required before approval.');
   }
 
-  const { kyc, profile: updatedProfile, user } = await kycRepo.approveKyc({
+  const businessName = profile.kyc.businessName ?? profile.kyc.companyName;
+  const slugBase = toSlug(businessName ?? '') || 'vendor';
+  const profileSlug = profile.slug ?? `${slugBase}-${vendorUserId.toLowerCase()}`;
+
+  const { kyc, profile: updatedProfile, capabilities, user } = await kycRepo.approveKyc({
     vendorUserId,
     adminId,
+    profileSlug,
+    expectedSubmittedAt: profile.kyc.submittedAt,
   });
 
   // Fire-and-forget approval email. Approval still succeeds if SMTP fails —
@@ -260,6 +282,8 @@ export const approveVendorKyc = async ({ vendorUserId, adminId }) => {
   return {
     kycStatus: updatedProfile.kycStatus,
     kyc,
+    businessProfile: updatedProfile,
+    capabilities,
     approval: buildApprovalSummary(updatedProfile.kycStatus),
   };
 };
@@ -281,12 +305,17 @@ export const rejectVendorKyc = async ({ vendorUserId, adminId, reason }) => {
         `Vendor must be in one of: ${REJECTABLE_KYC_STATES.join(', ')}.`,
     );
   }
+  if (!profile.kyc) {
+    throw ApiError.conflict('KYC submission not found. Refresh before reviewing it.');
+  }
   const wasApproved = profile.kycStatus === 'APPROVED';
 
   const { kyc, profile: updatedProfile, user } = await kycRepo.rejectKyc({
     vendorUserId,
     adminId,
     reason,
+    expectedKycStatus: profile.kycStatus,
+    expectedSubmittedAt: profile.kyc.submittedAt,
   });
 
   // Audit trail — explicit log line for the rarer "approval undone" path so it's

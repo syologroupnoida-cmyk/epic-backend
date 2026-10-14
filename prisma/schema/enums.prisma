@@ -49,3 +49,27 @@ enum KycDocumentType {
   AADHAR
   OTHER
 }
+
+enum OfferingKind {
+  SERVICE
+  VENUE_PROPERTY
+}
+
+enum VendorProfileStatus {
+  DRAFT
+  ACTIVE
+  SUSPENDED
+}
+
+enum CapabilityStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  INACTIVE
+}
+
+enum CapabilitySource {
+  KYC
+  VENDOR_REQUEST
+  ADMIN
+}

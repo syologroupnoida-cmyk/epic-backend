@@ -1,0 +1,17 @@
+model City {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  stateName   String
+  countryCode String   @default("IN")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  vendorProfiles VendorProfile[]
+  vendorKycs     VendorKyc[]     @relation("VendorKycPrimaryCity")
+
+  @@unique([name, stateName, countryCode])
+  @@index([isActive])
+  @@map("cities")
+}

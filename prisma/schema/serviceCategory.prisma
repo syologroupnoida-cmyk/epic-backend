@@ -28,6 +28,7 @@ model ServiceSubcategory {
   updatedAt          DateTime           @updatedAt
   serviceCategory    ServiceCategory    @relation(fields: [serviceCategoryId], references: [id], onDelete: Restrict)
   vendorCapabilities VendorCapability[]
+  listingComponents  ListingServiceComponent[]
 
   @@unique([serviceCategoryId, name])
   @@index([serviceCategoryId])

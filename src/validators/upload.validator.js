@@ -6,6 +6,7 @@ export const UPLOAD_PURPOSES = [
   'kyc-gst',
   'kyc-cin',
   'company-logo',
+  'listing-media',
   'avatar',
   'favicon_icon',
   'header_logo',

@@ -10,6 +10,7 @@ model City {
 
   vendorProfiles VendorProfile[]
   vendorKycs     VendorKyc[]     @relation("VendorKycPrimaryCity")
+  listings       VendorListing[] @relation("ListingCity")
 
   @@unique([name, stateName, countryCode])
   @@index([isActive])

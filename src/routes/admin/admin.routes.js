@@ -11,6 +11,12 @@ import { uploadSingleFile } from '../../middlewares/upload.middleware.js';
 import { createCategoryPayloadSchema, updateCategorySchema, createSubcategoryPayloadSchema, updateSubcategorySchema, listCatalogSchema, listSubcategoriesSchema } from '../../validators/serviceCatalog.validator.js';
 import * as cityController from '../../controllers/city.controller.js';
 import { createCitySchema, updateCitySchema, listCitiesSchema } from '../../validators/city.validator.js';
+import * as listingController from '../../controllers/listing.controller.js';
+import {
+  adminListingListQuerySchema,
+  listingIdParamsSchema,
+  rejectListingSchema,
+} from '../../validators/listing.validator.js';
 
 const router = Router();
 
@@ -60,5 +66,23 @@ router.route('/cities/:id')
   .get(cityController.getCity)
   .patch(validateRequest(updateCitySchema), cityController.updateCity)
   .put(validateRequest(updateCitySchema), cityController.updateCity);
+
+// --- Service listing review ---
+router.get(
+  '/listings',
+  validateRequest(adminListingListQuerySchema, 'query'),
+  listingController.listListingsForAdmin,
+);
+router.post(
+  '/listings/:listingId/approve',
+  validateRequest(listingIdParamsSchema, 'params'),
+  listingController.approveListing,
+);
+router.post(
+  '/listings/:listingId/reject',
+  validateRequest(listingIdParamsSchema, 'params'),
+  validateRequest(rejectListingSchema),
+  listingController.rejectListing,
+);
 
 export default router;

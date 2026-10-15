@@ -1,0 +1,64 @@
+model VendorListing {
+  id              String           @id @default(cuid())
+  vendorUserId    String
+  listingType     OfferingKind     @default(SERVICE)
+  title           String
+  slug            String           @unique
+  description     String
+  startingPrice   Int
+  priceType       ListingPriceType @default(STARTING_FROM)
+  cityId          String
+  metadata        Json?
+  status          ListingStatus    @default(DRAFT)
+  submittedAt     DateTime?
+  reviewedAt      DateTime?
+  reviewedByAdminId String?
+  rejectionReason String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  vendor     VendorProfile            @relation(fields: [vendorUserId], references: [userId], onDelete: Cascade)
+  city       City                     @relation("ListingCity", fields: [cityId], references: [id], onDelete: Restrict)
+  components ListingServiceComponent[]
+  media      ListingMedia[]
+
+  @@index([vendorUserId, status])
+  @@index([cityId, status])
+  @@index([status, listingType])
+  @@map("vendor_listings")
+}
+
+model ListingServiceComponent {
+  id                   String        @id @default(cuid())
+  listingId            String
+  serviceSubcategoryId String
+  price                Int?
+  metadata             Json?
+  sortOrder            Int           @default(0)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  listing     VendorListing      @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  subcategory ServiceSubcategory @relation(fields: [serviceSubcategoryId], references: [id], onDelete: Restrict)
+
+  @@unique([listingId, serviceSubcategoryId])
+  @@index([serviceSubcategoryId])
+  @@map("listing_service_components")
+}
+
+model ListingMedia {
+  id        String           @id @default(cuid())
+  listingId String
+  url       String
+  publicId  String
+  mediaType ListingMediaType @default(IMAGE)
+  sortOrder Int              @default(0)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  listing VendorListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([listingId, publicId])
+  @@index([listingId, sortOrder])
+  @@map("listing_media")
+}

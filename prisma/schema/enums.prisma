@@ -70,6 +70,29 @@ enum CapabilityStatus {
 
 enum CapabilitySource {
   KYC
+  VENDOR_PROFILE
   VENDOR_REQUEST
   ADMIN
+}
+
+enum ListingStatus {
+  DRAFT
+  PENDING_REVIEW
+  ACTIVE
+  REJECTED
+  PAUSED
+}
+
+enum ListingPriceType {
+  FIXED
+  STARTING_FROM
+  PER_PERSON
+  PER_PLATE
+  PER_DAY
+  CUSTOM
+}
+
+enum ListingMediaType {
+  IMAGE
+  VIDEO
 }

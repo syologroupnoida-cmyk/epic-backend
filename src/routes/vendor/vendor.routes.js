@@ -3,12 +3,22 @@ import { sendSuccess } from '../../utils/response.js';
 import { validateRequest } from '../../middlewares/validation.middleware.js';
 import * as kycController from '../../controllers/vendorKyc.controller.js';
 import * as profileController from '../../controllers/vendorProfile.controller.js';
+import * as listingController from '../../controllers/listing.controller.js';
 import { requireKycApproved } from '../../middlewares/kyc.middleware.js';
-import { updateVendorProfileSchema } from '../../validators/vendorProfile.validator.js';
+import {
+  updateVendorCapabilitiesSchema,
+  updateVendorProfileSchema,
+} from '../../validators/vendorProfile.validator.js';
 import {
   submitKycSchema,
   documentNumberSchemas,
 } from '../../validators/vendorKyc.validator.js';
+import {
+  createServiceListingSchema,
+  listingIdParamsSchema,
+  updateServiceListingSchema,
+  vendorListingListQuerySchema,
+} from '../../validators/listing.validator.js';
 
 const router = Router();
 
@@ -44,6 +54,44 @@ router.get(
   '/capabilities',
   requireKycApproved,
   profileController.getMyCapabilities,
+);
+router.put(
+  '/capabilities',
+  requireKycApproved,
+  validateRequest(updateVendorCapabilitiesSchema),
+  profileController.updateMyCapabilities,
+);
+
+// ---- Service listings ----
+router.route('/listings')
+  .get(
+    requireKycApproved,
+    validateRequest(vendorListingListQuerySchema, 'query'),
+    listingController.listMyListings,
+  )
+  .post(
+    requireKycApproved,
+    validateRequest(createServiceListingSchema),
+    listingController.createMyServiceListing,
+  );
+router.get(
+  '/listings/:listingId',
+  requireKycApproved,
+  validateRequest(listingIdParamsSchema, 'params'),
+  listingController.getMyListing,
+);
+router.patch(
+  '/listings/:listingId',
+  requireKycApproved,
+  validateRequest(listingIdParamsSchema, 'params'),
+  validateRequest(updateServiceListingSchema),
+  listingController.updateMyListing,
+);
+router.post(
+  '/listings/:listingId/submit',
+  requireKycApproved,
+  validateRequest(listingIdParamsSchema, 'params'),
+  listingController.submitMyListing,
 );
 
 export default router;

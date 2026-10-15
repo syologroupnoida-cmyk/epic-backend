@@ -151,6 +151,73 @@ export const listVendorCapabilities = (vendorUserId) =>
     },
   });
 
+export const replaceVendorCapabilities = (vendorUserId, serviceSubcategoryIds) =>
+  prisma.$transaction(async (tx) => {
+    await tx.vendorCapability.updateMany({
+      where: {
+        vendorUserId,
+        serviceSubcategoryId: { notIn: serviceSubcategoryIds },
+        status: { not: 'INACTIVE' },
+      },
+      data: { status: 'INACTIVE' },
+    });
+
+    // A public listing must never continue advertising a service the vendor
+    // has just removed from their capabilities. Drafts remain editable; only
+    // already-public listings are paused automatically.
+    await tx.vendorListing.updateMany({
+      where: {
+        vendorUserId,
+        status: 'ACTIVE',
+        components: {
+          some: { serviceSubcategoryId: { notIn: serviceSubcategoryIds } },
+        },
+      },
+      data: { status: 'PAUSED' },
+    });
+
+    for (const serviceSubcategoryId of serviceSubcategoryIds) {
+      await tx.vendorCapability.upsert({
+        where: {
+          vendorUserId_serviceSubcategoryId: { vendorUserId, serviceSubcategoryId },
+        },
+        create: {
+          vendorUserId,
+          serviceSubcategoryId,
+          status: 'APPROVED',
+          source: 'VENDOR_PROFILE',
+        },
+        update: {
+          status: 'APPROVED',
+          source: 'VENDOR_PROFILE',
+          reviewedAt: null,
+          reviewedByAdminId: null,
+        },
+      });
+    }
+
+    return tx.vendorCapability.findMany({
+      where: {
+        vendorUserId,
+        status: 'APPROVED',
+        subcategory: {
+          isActive: true,
+          serviceCategory: { isActive: true },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+      select: {
+        id: true,
+        status: true,
+        source: true,
+        reviewedAt: true,
+        createdAt: true,
+        updatedAt: true,
+        subcategory: { select: SUBCATEGORY_SELECT },
+      },
+    });
+  });
+
 export const findPublicVendorBySlug = (slug) =>
   prisma.vendorProfile.findFirst({
     where: {

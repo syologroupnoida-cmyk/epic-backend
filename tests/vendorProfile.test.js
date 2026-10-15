@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   publicVendorListQuerySchema,
   publicVendorSlugSchema,
+  updateVendorCapabilitiesSchema,
   updateVendorProfileSchema,
 } from '../src/validators/vendorProfile.validator.js';
 import {
@@ -46,6 +47,26 @@ test('vendor profile logo URL and public ID must be updated together', () => {
     logoUrl: null,
     logoPublicId: null,
   }).success, true);
+});
+
+test('vendor capability update accepts unique category and subcategory selections', () => {
+  const parsed = updateVendorCapabilitiesSchema.parse({
+    serviceCategoryIds: ['  cat-planning  ', 'cat-venue'],
+    serviceSubcategoryIds: ['sub-full-planning', 'sub-banquet'],
+  });
+
+  assert.deepEqual(parsed, {
+    serviceCategoryIds: ['cat-planning', 'cat-venue'],
+    serviceSubcategoryIds: ['sub-full-planning', 'sub-banquet'],
+  });
+  assert.equal(updateVendorCapabilitiesSchema.safeParse({
+    serviceCategoryIds: ['cat-planning', 'cat-planning'],
+    serviceSubcategoryIds: ['sub-full-planning'],
+  }).success, false);
+  assert.equal(updateVendorCapabilitiesSchema.safeParse({
+    serviceCategoryIds: ['cat-planning'],
+    serviceSubcategoryIds: [],
+  }).success, false);
 });
 
 test('public vendor slug validation rejects non-canonical paths', () => {

@@ -851,6 +851,35 @@
               }
             }
           ]
+        },
+        {
+          "name": "Upload listing media",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/uploads/image",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": [] },
+                { "key": "purpose", "type": "text", "value": "listing-media" }
+              ]
+            },
+            "description": "Upload as the approved vendor before creating/updating a service listing. Its test script saves data.url and data.publicId as listingMediaUrl/listingMediaPublicId; only uploads owned by this vendor with purpose listing-media are accepted.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
+          },
+          "response": [],
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "if (pm.response.code >= 200 && pm.response.code < 300) {",
+              "  const body = pm.response.json();",
+              "  const save = (key, value) => pm.environment.name ? pm.environment.set(key, value) : pm.collectionVariables.set(key, value);",
+              "  if (body.data?.url) save('listingMediaUrl', body.data.url);",
+              "  if (body.data?.publicId) save('listingMediaPublicId', body.data.publicId);",
+              "}"
+            ] }
+          }]
         }
       ]
     },
@@ -1600,6 +1629,209 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "Replace my services",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/vendor/capabilities",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceCategoryIds\": [\n    \"{{serviceCategoryId}}\"\n  ],\n  \"serviceSubcategoryIds\": [\n    \"{{serviceSubcategoryId}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Requires APPROVED KYC. This directly replaces the vendor's selected services; it does not create or edit the admin-owned category catalog and does not need another admin review. Every selected subcategory must be active and belong to a selected active category. The updated services appear on the public vendor profile immediately.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{vendorAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Vendor service listings",
+      "description": "Service-only listing workflow. The vendor can select only active approved capabilities. Create or edit a DRAFT/REJECTED listing, then submit it for admin review.",
+      "item": [
+        {
+          "name": "Create single-service listing draft",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/vendor/listings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Full Wedding Planning Package\",\n  \"description\": \"End-to-end wedding planning, event coordination, and guest management support.\",\n  \"startingPrice\": 150000,\n  \"priceType\": \"STARTING_FROM\",\n  \"cityId\": \"{{cityId}}\",\n  \"metadata\": {\n    \"teamSize\": 5,\n    \"guestCapacity\": 500\n  },\n  \"services\": [\n    {\n      \"serviceSubcategoryId\": \"{{serviceSubcategoryId}}\",\n      \"price\": 150000,\n      \"metadata\": {\n        \"durationDays\": 2\n      }\n    }\n  ],\n  \"media\": [\n    {\n      \"url\": \"{{listingMediaUrl}}\",\n      \"publicId\": \"{{listingMediaPublicId}}\",\n      \"mediaType\": \"IMAGE\"\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Single-service listing: services contains exactly one subcategory. Requires APPROVED KYC. The selected subcategory must be an active approved SERVICE capability of this vendor. The new listing starts as DRAFT.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
+          },
+          "response": [],
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "if (pm.response.code >= 200 && pm.response.code < 300) {",
+              "  const body = pm.response.json();",
+              "  const save = (key, value) => pm.environment.name ? pm.environment.set(key, value) : pm.collectionVariables.set(key, value);",
+              "  if (body.data?.id) save('listingId', body.data.id);",
+              "  if (body.data?.slug) save('listingSlug', body.data.slug);",
+              "}"
+            ] }
+          }]
+        },
+        {
+          "name": "Create multi-service package listing draft",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/vendor/listings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Complete Wedding Planning and Coordination Package\",\n  \"description\": \"A combined package for planning, wedding-day coordination, and guest management.\",\n  \"startingPrice\": 220000,\n  \"priceType\": \"STARTING_FROM\",\n  \"cityId\": \"{{cityId}}\",\n  \"metadata\": {\n    \"teamSize\": 8,\n    \"guestCapacity\": 800,\n    \"packageType\": \"COMPLETE_WEDDING\"\n  },\n  \"services\": [\n    {\n      \"serviceSubcategoryId\": \"{{serviceSubcategoryId}}\",\n      \"price\": 150000,\n      \"metadata\": {\n        \"durationDays\": 2\n      }\n    },\n    {\n      \"serviceSubcategoryId\": \"{{secondServiceSubcategoryId}}\",\n      \"price\": 45000,\n      \"metadata\": {\n        \"durationDays\": 1\n      }\n    },\n    {\n      \"serviceSubcategoryId\": \"{{thirdServiceSubcategoryId}}\",\n      \"price\": 25000\n    }\n  ],\n  \"media\": [\n    {\n      \"url\": \"{{listingMediaUrl}}\",\n      \"publicId\": \"{{listingMediaPublicId}}\",\n      \"mediaType\": \"IMAGE\"\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Multi-service package listing: send two or more unique services. Each selected subcategory can be from the same or different SERVICE categories, but every one must be an active approved capability of this vendor. Do not include Venue Property subcategories here.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
+          },
+          "response": [],
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "if (pm.response.code >= 200 && pm.response.code < 300) {",
+              "  const body = pm.response.json();",
+              "  const save = (key, value) => pm.environment.name ? pm.environment.set(key, value) : pm.collectionVariables.set(key, value);",
+              "  if (body.data?.id) save('listingId', body.data.id);",
+              "  if (body.data?.slug) save('listingSlug', body.data.slug);",
+              "}"
+            ] }
+          }]
+        },
+        {
+          "name": "List my service listings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/vendor/listings?page=1&limit=20",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Update my service listing",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/vendor/listings/{{listingId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startingPrice\": 175000,\n  \"metadata\": {\n    \"teamSize\": 6,\n    \"guestCapacity\": 600\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Only DRAFT or REJECTED listings can be edited. Sending services replaces all selected service components; sending media replaces all media.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Submit service listing for review",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/vendor/listings/{{listingId}}/submit",
+            "description": "Rechecks the active city and selected capabilities, then changes the listing to PENDING_REVIEW.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin service listing review",
+      "item": [
+        {
+          "name": "List listings pending review",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/admin/listings?page=1&limit=20&status=PENDING_REVIEW",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Approve service listing",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/admin/listings/{{listingId}}/approve",
+            "description": "Publishes a PENDING_REVIEW service listing after rechecking that its vendor still has all selected active capabilities.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Reject service listing",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/admin/listings/{{listingId}}/reject",
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Please add clear package inclusions and at least one representative image.\"\n}", "options": { "raw": { "language": "json" } } },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Public service listings",
+      "description": "Unauthenticated discovery for ACTIVE service listings only. The vendor profile, listing city, service categories, and service subcategories must remain active.",
+      "item": [
+        {
+          "name": "List public service listings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/marketplace/listings?page=1&limit=20&search=Wedding&cityId={{cityId}}&serviceSubcategoryId={{serviceSubcategoryId}}",
+            "auth": { "type": "noauth" }
+          },
+          "response": [],
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "if (pm.response.code >= 200 && pm.response.code < 300) {",
+              "  const slug = pm.response.json().data?.listings?.[0]?.slug;",
+              "  if (slug) pm.environment.name ? pm.environment.set('listingSlug', slug) : pm.collectionVariables.set('listingSlug', slug);",
+              "}"
+            ] }
+          }]
+        },
+        {
+          "name": "Get public service listing by slug",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/marketplace/listings/{{listingSlug}}",
+            "auth": { "type": "noauth" }
+          },
+          "response": []
         }
       ]
     },
@@ -2111,12 +2343,42 @@
       "type": "string"
     },
     {
+      "key": "secondServiceSubcategoryId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "thirdServiceSubcategoryId",
+      "value": "",
+      "type": "string"
+    },
+    {
       "key": "cityId",
       "value": "",
       "type": "string"
     },
     {
       "key": "vendorSlug",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "listingId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "listingSlug",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "listingMediaUrl",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "listingMediaPublicId",
       "value": "",
       "type": "string"
     },

@@ -378,7 +378,7 @@ INDEX(serviceSubcategoryId, status)
 INDEX(vendorUserId, status)
 ```
 
-On initial KYC approval, valid selected subcategories should be upserted as `APPROVED` capabilities inside the approval transaction. Later additions can use a separate capability-request workflow without resubmitting legal KYC.
+On initial KYC approval, valid selected subcategories are upserted as `APPROVED` capabilities inside the approval transaction. Later, an approved vendor can directly replace its selected active categories/subcategories with `PUT /vendor/capabilities`; this updates only that vendor's capability rows and does not change the admin-owned catalog or require KYC resubmission.
 
 ### 10.3 Location and service-area models
 
@@ -978,7 +978,7 @@ All routes continue under `/api/v1`. The exact response envelope should reuse th
 GET    /vendor/business-profile
 PATCH  /vendor/business-profile
 GET    /vendor/capabilities
-POST   /vendor/capability-requests
+PUT    /vendor/capabilities
 ```
 
 `PATCH` edits only public/business-profile fields. It must not mutate KYC legal documents.
@@ -1513,7 +1513,7 @@ Recommended defaults are provided so engineering can proceed without redesigning
 | Separate solo/multiple listing types? | No; derive from component count |
 | Can a physical venue be embedded directly into a service listing? | No; create a separate venue listing and link/cross-sell later |
 | Must a listing service be an approved capability? | Yes |
-| Can vendors add capabilities after KYC? | Yes, through a separately reviewed capability request |
+| Can vendors add capabilities after KYC? | Yes, by directly replacing their selected active category/subcategory capabilities |
 | Can guest users submit leads? | Yes only with contact verification and consent; otherwise require client login for first release |
 | How many vendors receive one lead? | Start with maximum 3-5 |
 | Monetization | Paid lead unlock using prepaid credits |

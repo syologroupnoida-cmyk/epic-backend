@@ -51,6 +51,17 @@ const publicVendorFilterId = (fieldName) => z.string().trim()
   .max(100, `${fieldName} must not exceed 100 characters`)
   .optional();
 
+const selectedCatalogIds = (label) => z.array(
+  z.string().trim().min(1, `${label} must contain valid IDs`),
+  { required_error: `${label} is required` },
+).min(1, `Select at least one ${label}`).max(100, `You can select at most 100 ${label}`)
+  .refine((ids) => new Set(ids).size === ids.length, `${label} must not contain duplicate IDs`);
+
+export const updateVendorCapabilitiesSchema = z.object({
+  serviceCategoryIds: selectedCatalogIds('service category'),
+  serviceSubcategoryIds: selectedCatalogIds('service subcategory'),
+}).strict();
+
 export const publicVendorListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),

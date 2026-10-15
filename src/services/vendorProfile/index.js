@@ -1,6 +1,7 @@
 import { ApiError } from '../../utils/ApiError.js';
 import { toSlug } from '../../utils/slug.js';
 import * as profileRepo from '../../repositories/vendorProfile.repository.js';
+import * as catalogRepo from '../../repositories/serviceCatalog.repository.js';
 import { env } from '../../config/env.js';
 
 const serializeCity = (city) => {
@@ -175,6 +176,46 @@ export const getMyCapabilities = async (vendorUserId) => {
     })),
     total: capabilities.length,
   };
+};
+
+const serializeCapabilities = (capabilities) => ({
+  capabilities: capabilities.map((capability) => ({
+    id: capability.id,
+    status: capability.status,
+    source: capability.source,
+    reviewedAt: capability.reviewedAt,
+    createdAt: capability.createdAt,
+    updatedAt: capability.updatedAt,
+    service: serializeService(capability.subcategory),
+  })),
+  total: capabilities.length,
+});
+
+export const updateMyCapabilities = async ({ vendorUserId, payload }) => {
+  const profile = await requireProfile(vendorUserId);
+  assertApproved(profile);
+
+  const { categories, subcategories } = await catalogRepo.findCatalogSelections(payload);
+  if (categories.length !== payload.serviceCategoryIds.length) {
+    throw ApiError.badRequest('Select only active service categories.');
+  }
+  if (subcategories.length !== payload.serviceSubcategoryIds.length) {
+    throw ApiError.badRequest('Select only active service subcategories.');
+  }
+
+  const selectedCategoryIds = new Set(payload.serviceCategoryIds);
+  const invalidSubcategory = subcategories.find(
+    (subcategory) => !selectedCategoryIds.has(subcategory.serviceCategoryId),
+  );
+  if (invalidSubcategory) {
+    throw ApiError.badRequest('Every selected subcategory must belong to a selected category.');
+  }
+
+  const capabilities = await profileRepo.replaceVendorCapabilities(
+    vendorUserId,
+    payload.serviceSubcategoryIds,
+  );
+  return serializeCapabilities(capabilities);
 };
 
 export const getPublicVendorProfile = async (slug) => {

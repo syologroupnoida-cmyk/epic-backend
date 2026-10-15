@@ -29,6 +29,17 @@ export const getMyCapabilities = asyncHandler(async (req, res) => {
   });
 });
 
+export const updateMyCapabilities = asyncHandler(async (req, res) => {
+  const data = await profileService.updateMyCapabilities({
+    vendorUserId: req.user.id,
+    payload: req.body,
+  });
+  return sendSuccess(res, {
+    message: 'Vendor capabilities updated.',
+    data,
+  });
+});
+
 export const getPublicVendorProfile = asyncHandler(async (req, res) => {
   const data = await profileService.getPublicVendorProfile(req.params.slug);
   return sendSuccess(res, {

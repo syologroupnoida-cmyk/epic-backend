@@ -4,6 +4,8 @@ model VendorKyc {
   // Contact name, mobile, email and password are captured at registration.
   businessName           String?
   contactPerson          String?
+  // Legacy database column. New KYC submissions do not accept or return this;
+  // public logos are managed through VendorProfile.logoUrl/logoPublicId.
   logoName               String?
   description            String?
   whatsappNumber         String?

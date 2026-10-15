@@ -17,7 +17,6 @@ const form = {
     pincode: '400053',
     countryCode: 'IN',
   },
-  logoName: 'EPIC final.jpg.jpeg',
   description: 'Wedding services vendor',
   socialLinks: { facebook: '#', instagram: 'E' },
   verified: { aadhaar: true, pan: true, cin: true, gst: true },
@@ -42,6 +41,7 @@ test('final KYC form accepts the expanded company profile', () => {
   assert.equal(submitKycSchema.safeParse({ ...form, email: 'vendor@example.com' }).success, false);
   assert.equal(submitKycSchema.safeParse({ ...form, password: 'Secret123' }).success, false);
   assert.equal(submitKycSchema.safeParse({ ...form, panNumber: 'ABCDE1234F' }).success, false);
+  assert.equal(submitKycSchema.safeParse({ ...form, logoName: 'old-logo.png' }).success, false);
   assert.equal(submitKycSchema.safeParse({ ...form, servicecategoriesIds: [] }).success, false);
   assert.equal(submitKycSchema.safeParse({ ...form, servicesSubCategoryIds: [] }).success, false);
   assert.equal(submitKycSchema.safeParse({ ...form, servicecategoriesIds: ['category-1', 'category-1'] }).success, false);

@@ -35,7 +35,6 @@ export const submitKycSchema = z.object({
   serviceSubcategoryIds: uniqueIdArray('service subcategories').optional(),
   companyName: requiredText(2, 100, 'Company name'),
   contactPerson: requiredText(2, 100, 'Contact person'),
-  logoName: z.string().trim().min(1).max(255).nullable().optional(),
   description: requiredText(2, 2000, 'Description'),
   whatsappNumber: z.string().trim().regex(/^\d{10,15}$/, 'WhatsApp number must be 10 to 15 digits').optional(),
   primaryCityId: z.string({ required_error: 'Primary city is required' }).trim()

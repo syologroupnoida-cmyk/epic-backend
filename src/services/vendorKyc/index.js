@@ -82,7 +82,6 @@ const mapPayloadToKyc = (payload, primaryCity) => ({
   businessName: payload.companyName,
   companyName: payload.companyName,
   contactPerson: payload.contactPerson,
-  logoName: payload.logoName ?? null,
   description: payload.description,
   whatsappNumber: payload.whatsappNumber,
   primaryCityId: primaryCity.id,

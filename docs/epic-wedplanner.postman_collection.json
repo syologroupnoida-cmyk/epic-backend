@@ -479,6 +479,66 @@
               }
             }
           ]
+        },
+        {
+          "name": "Upload company logo",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/uploads/image",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "purpose",
+                  "type": "text",
+                  "value": "company-logo"
+                },
+                {
+                  "key": "name",
+                  "type": "text",
+                  "value": "company-logo"
+                }
+              ]
+            },
+            "description": "Run this after KYC approval with the vendor token. It uploads the public company logo and saves its url/publicId as companyLogoUrl/companyLogoPublicId for the business-profile update request.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{vendorAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const body = pm.response.json();",
+                  "  const save = (key, value) => {",
+                  "    if (!value) return;",
+                  "    if (pm.environment.name) pm.environment.set(key, value);",
+                  "    else pm.collectionVariables.set(key, value);",
+                  "  };",
+                  "  save('companyLogoUrl', body.data?.url);",
+                  "  save('companyLogoPublicId', body.data?.publicId);",
+                  "}"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
@@ -913,7 +973,7 @@
             "url": "{{baseUrl}}/api/v1/vendor/kyc",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"servicecategoriesIds\": [\n    \"{{serviceCategoryId}}\"\n  ],\n  \"servicesSubCategoryIds\": [\n    \"{{serviceSubcategoryId}}\"\n  ],\n  \"primaryCityId\": \"{{cityId}}\",\n  \"companyName\": \"Transport\",\n  \"contactPerson\": \"Person\",\n  \"businessAddress\": {\n    \"street\": \"123 Main Street\",\n    \"locality\": \"Andheri West\",\n    \"city\": \"Mumbai\",\n    \"state\": \"Maharashtra\",\n    \"pincode\": \"400053\",\n    \"countryCode\": \"IN\"\n  },\n  \"logoName\": \"EPIC final.jpg.jpeg\",\n  \"description\": \"test vendor\",\n  \"socialLinks\": {\n    \"facebook\": \"#\",\n    \"instagram\": \"E\"\n  },\n  \"documents\": {\n    \"pan\": {\n      \"number\": \"{{panNumber}}\",\n      \"url\": \"{{panUploadUrl}}\",\n      \"publicId\": \"{{panPublicId}}\"\n    },\n    \"aadhaar\": {\n      \"number\": \"{{aadhaarNumber}}\",\n      \"url\": \"{{aadhaarUploadUrl}}\",\n      \"publicId\": \"{{aadhaarPublicId}}\"\n    }\n  },\n  \"source\": [\n    \"Epic Wedz Team\"\n  ],\n  \"sourceNote\": \"\"\n}",
+              "raw": "{\n  \"servicecategoriesIds\": [\n    \"{{serviceCategoryId}}\"\n  ],\n  \"servicesSubCategoryIds\": [\n    \"{{serviceSubcategoryId}}\"\n  ],\n  \"primaryCityId\": \"{{cityId}}\",\n  \"companyName\": \"Transport\",\n  \"contactPerson\": \"Person\",\n  \"businessAddress\": {\n    \"street\": \"123 Main Street\",\n    \"locality\": \"Andheri West\",\n    \"city\": \"Mumbai\",\n    \"state\": \"Maharashtra\",\n    \"pincode\": \"400053\",\n    \"countryCode\": \"IN\"\n  },\n  \"description\": \"test vendor\",\n  \"socialLinks\": {\n    \"facebook\": \"#\",\n    \"instagram\": \"E\"\n  },\n  \"documents\": {\n    \"pan\": {\n      \"number\": \"{{panNumber}}\",\n      \"url\": \"{{panUploadUrl}}\",\n      \"publicId\": \"{{panPublicId}}\"\n    },\n    \"aadhaar\": {\n      \"number\": \"{{aadhaarNumber}}\",\n      \"url\": \"{{aadhaarUploadUrl}}\",\n      \"publicId\": \"{{aadhaarPublicId}}\"\n    }\n  },\n  \"source\": [\n    \"Epic Wedz Team\"\n  ],\n  \"sourceNote\": \"\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1480,14 +1540,14 @@
             "url": "{{baseUrl}}/api/v1/vendor/profile",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"businessName\": \"Royal Events\",\n  \"about\": \"Wedding planning, venue assistance, and decoration services for memorable celebrations.\",\n  \"primaryCityId\": \"{{cityId}}\",\n  \"profileStatus\": \"ACTIVE\"\n}",
+              "raw": "{\n  \"businessName\": \"Royal Events\",\n  \"about\": \"Wedding planning, venue assistance, and decoration services for memorable celebrations.\",\n  \"logoUrl\": \"{{companyLogoUrl}}\",\n  \"logoPublicId\": \"{{companyLogoPublicId}}\",\n  \"primaryCityId\": \"{{cityId}}\",\n  \"profileStatus\": \"ACTIVE\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
             },
-            "description": "Requires APPROVED KYC and an active primaryCityId. ACTIVE requires businessName, about, primaryCityId, and the server-generated slug. Optional fields are logoUrl and logoPublicId; use null to clear nullable fields. Vendors cannot set SUSPENDED.",
+            "description": "Requires APPROVED KYC and an active primaryCityId. Run Upload company logo first to populate companyLogoUrl and companyLogoPublicId. logoUrl and logoPublicId must always be sent together; set both to null to remove a saved logo. ACTIVE requires businessName, about, primaryCityId, and the server-generated slug. Vendors cannot set SUSPENDED.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -2057,6 +2117,16 @@
     },
     {
       "key": "vendorSlug",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "companyLogoUrl",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "companyLogoPublicId",
       "value": "",
       "type": "string"
     }

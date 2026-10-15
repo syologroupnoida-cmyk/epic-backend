@@ -6,7 +6,6 @@ const KYC_SELECT = {
   businessName: true,
   companyName: true,
   contactPerson: true,
-  logoName: true,
   description: true,
   whatsappNumber: true,
   primaryCityId: true,

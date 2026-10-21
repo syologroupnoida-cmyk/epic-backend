@@ -92,6 +92,10 @@ export const rejectKycSchema = z.object({
   reason: requiredText(5, 500, 'Rejection reason'),
 }).strict();
 
+export const adminVendorKycParamsSchema = z.object({
+  userId: z.string().trim().min(1, 'Vendor user ID is required').max(100, 'Vendor user ID is invalid'),
+}).strict();
+
 export const listKycQuerySchema = z.object({
   status: z.enum(['PENDING', 'SUBMITTED', 'APPROVED', 'REJECTED']).optional(),
   take: z.coerce.number().int().min(1).max(100).optional(),

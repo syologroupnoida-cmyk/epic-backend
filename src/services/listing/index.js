@@ -62,6 +62,9 @@ const serializeVendorListing = (listing) => ({
   submittedAt: listing.submittedAt,
   reviewedAt: listing.reviewedAt,
   rejectionReason: listing.rejectionReason,
+  pausedAt: listing.pausedAt,
+  pauseReason: listing.pauseReason,
+  archivedAt: listing.archivedAt,
   services: listing.components.map(serializeComponent),
   media: listing.media.map(serializeVendorMedia),
   createdAt: listing.createdAt,
@@ -175,6 +178,8 @@ export const createServiceListing = async ({ vendorUserId, payload }) => {
       priceType: payload.priceType,
       cityId: payload.cityId,
       metadata: payload.metadata,
+      status: payload.submitForReview ? 'PENDING_REVIEW' : 'DRAFT',
+      ...(payload.submitForReview && { submittedAt: new Date() }),
     },
     components: mapComponents(payload.services),
     media: mapMedia(payload.media),
@@ -236,6 +241,24 @@ export const submitMyListing = async ({ vendorUserId, listingId }) => {
   return serializeVendorListing(await listingRepo.submitVendorListing(listingId));
 };
 
+export const archiveMyListing = async ({ vendorUserId, listingId }) => {
+  const listing = await listingRepo.findVendorListingById(vendorUserId, listingId);
+  if (!listing) throw ApiError.notFound('Listing not found.');
+  if (!['DRAFT', 'REJECTED', 'ACTIVE', 'PAUSED'].includes(listing.status)) {
+    throw ApiError.conflict('Only draft, rejected, active, or paused listings can be archived.');
+  }
+  return serializeVendorListing(await listingRepo.archiveVendorListing(listingId));
+};
+
+export const unarchiveMyListing = async ({ vendorUserId, listingId }) => {
+  const listing = await listingRepo.findVendorListingById(vendorUserId, listingId);
+  if (!listing) throw ApiError.notFound('Listing not found.');
+  if (listing.status !== 'ARCHIVED') {
+    throw ApiError.conflict('Only archived listings can be restored.');
+  }
+  return serializeVendorListing(await listingRepo.unarchiveVendorListing(listingId));
+};
+
 export const listListingsForAdmin = async (query) => {
   const { listings, total } = await listingRepo.listAdminListings(query);
   return {
@@ -244,6 +267,15 @@ export const listListingsForAdmin = async (query) => {
       vendor: listing.vendor,
     })),
     pagination: pageInfo(total, query.page, query.limit),
+  };
+};
+
+export const getListingForAdmin = async (listingId) => {
+  const listing = await listingRepo.findListingForAdmin(listingId);
+  if (!listing) throw ApiError.notFound('Listing not found.');
+  return {
+    ...serializeVendorListing(listing),
+    vendor: listing.vendor,
   };
 };
 
@@ -275,6 +307,33 @@ export const rejectListing = async ({ listingId, adminId, reason }) => {
     rejectionReason: reason,
   });
   return { ...serializeVendorListing(reviewed), vendor: reviewed.vendor };
+};
+
+export const pauseListing = async ({ listingId, adminId, reason }) => {
+  const listing = await listingRepo.findListingForAdmin(listingId);
+  if (!listing) throw ApiError.notFound('Listing not found.');
+  if (listing.status !== 'ACTIVE') {
+    throw ApiError.conflict('Only active listings can be paused.');
+  }
+
+  const paused = await listingRepo.pauseListing({ listingId, adminId, reason });
+  return { ...serializeVendorListing(paused), vendor: paused.vendor };
+};
+
+export const resumeListing = async ({ listingId }) => {
+  const listing = await listingRepo.findListingForAdmin(listingId);
+  if (!listing) throw ApiError.notFound('Listing not found.');
+  if (listing.status !== 'PAUSED') {
+    throw ApiError.conflict('Only paused listings can be resumed.');
+  }
+
+  await assertActiveCity(listing.city.id);
+  await assertApprovedServiceCapabilities(listing.vendorUserId, listing.components.map((component) => ({
+    serviceSubcategoryId: component.subcategory.id,
+  })));
+
+  const resumed = await listingRepo.resumeListing(listingId);
+  return { ...serializeVendorListing(resumed), vendor: resumed.vendor };
 };
 
 export const getPublicListing = async (slug) => {

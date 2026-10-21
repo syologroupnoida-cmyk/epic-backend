@@ -1068,6 +1068,26 @@
           "response": []
         },
         {
+          "name": "Get one vendor KYC submission",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/admin/vendor-kyc/{{vendorUserId}}",
+            "description": "Admin-only full KYC review page for one vendor. Returns the vendor profile, submitted business and legal-address data, selected services, document records, and review status. Run this before approving or rejecting the vendor.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "Approve vendor KYC",
           "request": {
             "method": "POST",
@@ -1615,8 +1635,8 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/v1/vendor/capabilities",
-            "description": "Requires APPROVED KYC. Returns normalized capabilities created from the KYC service-subcategory selections; capabilities describe what the vendor is approved to offer and are not marketplace listings.",
+            "url": "{{baseUrl}}/api/v1/vendor/capabilities?offeringKind=SERVICE",
+            "description": "Requires APPROVED KYC. Use offeringKind=SERVICE for the service-listing form, offeringKind=VENUE_PROPERTY for the venue-property form, or remove the query parameter to get all capabilities.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -1678,10 +1698,10 @@
             "url": "{{baseUrl}}/api/v1/vendor/listings",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Full Wedding Planning Package\",\n  \"description\": \"End-to-end wedding planning, event coordination, and guest management support.\",\n  \"startingPrice\": 150000,\n  \"priceType\": \"STARTING_FROM\",\n  \"cityId\": \"{{cityId}}\",\n  \"metadata\": {\n    \"teamSize\": 5,\n    \"guestCapacity\": 500\n  },\n  \"services\": [\n    {\n      \"serviceSubcategoryId\": \"{{serviceSubcategoryId}}\",\n      \"price\": 150000,\n      \"metadata\": {\n        \"durationDays\": 2\n      }\n    }\n  ],\n  \"media\": [\n    {\n      \"url\": \"{{listingMediaUrl}}\",\n      \"publicId\": \"{{listingMediaPublicId}}\",\n      \"mediaType\": \"IMAGE\"\n    }\n  ]\n}",
+              "raw": "{\n  \"title\": \"Full Wedding Planning Package\",\n  \"description\": \"End-to-end wedding planning, event coordination, and guest management support.\",\n  \"startingPrice\": 150000,\n  \"priceType\": \"STARTING_FROM\",\n  \"cityId\": \"{{cityId}}\",\n  \"metadata\": {\n    \"teamSize\": 5,\n    \"guestCapacity\": 500\n  },\n  \"services\": [\n    {\n      \"serviceSubcategoryId\": \"{{serviceSubcategoryId}}\",\n      \"price\": 150000,\n      \"metadata\": {\n        \"durationDays\": 2\n      }\n    }\n  ],\n  \"media\": [\n    {\n      \"url\": \"{{listingMediaUrl}}\",\n      \"publicId\": \"{{listingMediaPublicId}}\",\n      \"mediaType\": \"IMAGE\"\n    }\n  ],\n  \"submitForReview\": false\n}",
               "options": { "raw": { "language": "json" } }
             },
-            "description": "Single-service listing: services contains exactly one subcategory. Requires APPROVED KYC. The selected subcategory must be an active approved SERVICE capability of this vendor. The new listing starts as DRAFT.",
+            "description": "Single-service listing: services contains exactly one subcategory. Requires APPROVED KYC. The selected subcategory must be an active approved SERVICE capability of this vendor. submitForReview=false creates a DRAFT; change it to true to create directly in PENDING_REVIEW.",
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
           },
           "response": [],
@@ -1705,10 +1725,10 @@
             "url": "{{baseUrl}}/api/v1/vendor/listings",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Complete Wedding Planning and Coordination Package\",\n  \"description\": \"A combined package for planning, wedding-day coordination, and guest management.\",\n  \"startingPrice\": 220000,\n  \"priceType\": \"STARTING_FROM\",\n  \"cityId\": \"{{cityId}}\",\n  \"metadata\": {\n    \"teamSize\": 8,\n    \"guestCapacity\": 800,\n    \"packageType\": \"COMPLETE_WEDDING\"\n  },\n  \"services\": [\n    {\n      \"serviceSubcategoryId\": \"{{serviceSubcategoryId}}\",\n      \"price\": 150000,\n      \"metadata\": {\n        \"durationDays\": 2\n      }\n    },\n    {\n      \"serviceSubcategoryId\": \"{{secondServiceSubcategoryId}}\",\n      \"price\": 45000,\n      \"metadata\": {\n        \"durationDays\": 1\n      }\n    },\n    {\n      \"serviceSubcategoryId\": \"{{thirdServiceSubcategoryId}}\",\n      \"price\": 25000\n    }\n  ],\n  \"media\": [\n    {\n      \"url\": \"{{listingMediaUrl}}\",\n      \"publicId\": \"{{listingMediaPublicId}}\",\n      \"mediaType\": \"IMAGE\"\n    }\n  ]\n}",
+              "raw": "{\n  \"title\": \"Complete Wedding Planning and Coordination Package\",\n  \"description\": \"A combined package for planning, wedding-day coordination, and guest management.\",\n  \"startingPrice\": 220000,\n  \"priceType\": \"STARTING_FROM\",\n  \"cityId\": \"{{cityId}}\",\n  \"metadata\": {\n    \"teamSize\": 8,\n    \"guestCapacity\": 800,\n    \"packageType\": \"COMPLETE_WEDDING\"\n  },\n  \"services\": [\n    {\n      \"serviceSubcategoryId\": \"{{serviceSubcategoryId}}\",\n      \"price\": 150000,\n      \"metadata\": {\n        \"durationDays\": 2\n      }\n    },\n    {\n      \"serviceSubcategoryId\": \"{{secondServiceSubcategoryId}}\",\n      \"price\": 45000,\n      \"metadata\": {\n        \"durationDays\": 1\n      }\n    },\n    {\n      \"serviceSubcategoryId\": \"{{thirdServiceSubcategoryId}}\",\n      \"price\": 25000\n    }\n  ],\n  \"media\": [\n    {\n      \"url\": \"{{listingMediaUrl}}\",\n      \"publicId\": \"{{listingMediaPublicId}}\",\n      \"mediaType\": \"IMAGE\"\n    }\n  ],\n  \"submitForReview\": true\n}",
               "options": { "raw": { "language": "json" } }
             },
-            "description": "Multi-service package listing: send two or more unique services. Each selected subcategory can be from the same or different SERVICE categories, but every one must be an active approved capability of this vendor. Do not include Venue Property subcategories here.",
+            "description": "Multi-service package listing: send two or more unique services. Each selected subcategory can be from the same or different SERVICE categories, but every one must be an active approved capability of this vendor. submitForReview=true creates the listing directly in PENDING_REVIEW. Do not include Venue Property subcategories here.",
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
           },
           "response": [],
@@ -1760,6 +1780,86 @@
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
           },
           "response": []
+        },
+        {
+          "name": "Archive my service listing",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/vendor/listings/{{listingId}}",
+            "description": "Soft-deletes the vendor's own DRAFT, REJECTED, ACTIVE, or PAUSED listing by changing its status to ARCHIVED. The listing is immediately hidden from the marketplace; its history remains stored.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Restore my archived service listing as draft",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/vendor/listings/{{listingId}}/unarchive",
+            "description": "Changes only an ARCHIVED listing to DRAFT. It stays hidden until the vendor submits it and an admin approves it again.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Vendor venue property listings",
+      "description": "One listing represents one physical venue. Send multiple venueTypes only when the same property is, for example, both a banquet hall and wedding lawn.",
+      "item": [
+        {
+          "name": "Create venue property with multiple venue types",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/vendor/venue-properties",
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Royal Palace Banquet and Lawn\",\n  \"description\": \"A banquet hall and landscaped wedding lawn for celebrations of all sizes.\",\n  \"startingPrice\": 250000,\n  \"priceType\": \"STARTING_FROM\",\n  \"cityId\": \"{{cityId}}\",\n  \"address\": {\n    \"street\": \"12 Palace Road\",\n    \"locality\": \"Civil Lines\",\n    \"state\": \"Delhi\",\n    \"pincode\": \"110054\",\n    \"country\": \"India\"\n  },\n  \"capacityMin\": 100,\n  \"capacityMax\": 1200,\n  \"rooms\": 18,\n  \"parkingCapacity\": 200,\n  \"amenities\": [\"Parking\", \"Bridal room\", \"In-house catering\"],\n  \"metadata\": {\n    \"alcoholAllowed\": false,\n    \"outsideCateringAllowed\": false\n  },\n  \"venueTypes\": [\n    \"{{venueBanquetSubcategoryId}}\",\n    \"{{venueLawnSubcategoryId}}\"\n  ],\n  \"media\": [\n    {\n      \"url\": \"{{venueMediaUrl}}\",\n      \"publicId\": \"{{venueMediaPublicId}}\",\n      \"mediaType\": \"IMAGE\"\n    }\n  ],\n  \"submitForReview\": false\n}", "options": { "raw": { "language": "json" } } },
+            "description": "Requires approved KYC and active approved VENUE_PROPERTY capabilities for every selected venue type. Upload media first with purpose venue-property-media.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "List my venue properties",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/vendor/venue-properties?page=1&limit=20", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] } },
+          "response": []
+        },
+        {
+          "name": "Submit venue property for review",
+          "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/api/v1/vendor/venue-properties/{{venuePropertyId}}/submit", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] } },
+          "response": []
+        },
+        {
+          "name": "Archive my venue property",
+          "request": { "method": "DELETE", "header": [], "url": "{{baseUrl}}/api/v1/vendor/venue-properties/{{venuePropertyId}}", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] } },
+          "response": []
+        },
+        {
+          "name": "Restore my archived venue property as draft",
+          "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/api/v1/vendor/venue-properties/{{venuePropertyId}}/unarchive", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] } },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin venue property review",
+      "item": [
+        {
+          "name": "List venue properties pending review",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/admin/venue-properties?page=1&limit=20&status=PENDING_REVIEW", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] } },
+          "response": []
+        },
+        {
+          "name": "Get one venue property for review",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/admin/venue-properties/{{venuePropertyId}}", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] } },
+          "response": []
+        },
+        {
+          "name": "Approve venue property",
+          "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/api/v1/admin/venue-properties/{{venuePropertyId}}/approve", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] } },
+          "response": []
         }
       ]
     },
@@ -1771,7 +1871,19 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/v1/admin/listings?page=1&limit=20&status=PENDING_REVIEW",
+            "url": "{{baseUrl}}/api/v1/admin/listings?page=1&limit=20&status=PENDING_REVIEW&listingType=SERVICE",
+            "description": "Optional filters: status, vendorUserId, listingType (SERVICE or VENUE_PROPERTY), cityId, and serviceSubcategoryId.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Get one service listing for review",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/admin/listings/{{listingId}}",
+            "description": "Use this before approve or reject to inspect the full listing, selected services, media, city, vendor business profile, and any previous review state.",
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
           },
           "response": []
@@ -1794,6 +1906,29 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": "{{baseUrl}}/api/v1/admin/listings/{{listingId}}/reject",
             "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Please add clear package inclusions and at least one representative image.\"\n}", "options": { "raw": { "language": "json" } } },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Pause active service listing",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/admin/listings/{{listingId}}/pause",
+            "description": "Changes only an ACTIVE listing to PAUSED. A paused listing is not returned by public marketplace APIs.",
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Please correct the price and package information before this listing can be visible again.\"\n}", "options": { "raw": { "language": "json" } } },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Resume paused service listing",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/admin/listings/{{listingId}}/resume",
+            "description": "Changes only a PAUSED listing back to ACTIVE after rechecking its city and current vendor capabilities.",
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
           },
           "response": []

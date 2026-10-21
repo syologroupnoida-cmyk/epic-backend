@@ -63,6 +63,10 @@ const PRIVATE_LISTING_SELECT = {
   reviewedAt: true,
   reviewedByAdminId: true,
   rejectionReason: true,
+  pausedAt: true,
+  pausedByAdminId: true,
+  pauseReason: true,
+  archivedAt: true,
   createdAt: true,
   updatedAt: true,
   city: { select: CITY_SELECT },
@@ -184,8 +188,22 @@ export const findListingForAdmin = (id) => prisma.vendorListing.findUnique({
   },
 });
 
-export const listAdminListings = async ({ page, limit, status, vendorUserId }) => {
-  const where = { ...(status && { status }), ...(vendorUserId && { vendorUserId }) };
+export const listAdminListings = async ({
+  page,
+  limit,
+  status,
+  vendorUserId,
+  listingType,
+  cityId,
+  serviceSubcategoryId,
+}) => {
+  const where = {
+    ...(status && { status }),
+    ...(vendorUserId && { vendorUserId }),
+    ...(listingType && { listingType }),
+    ...(cityId && { cityId }),
+    ...(serviceSubcategoryId && { components: { some: { serviceSubcategoryId } } }),
+  };
   const [listings, total] = await Promise.all([
     prisma.vendorListing.findMany({
       where,
@@ -199,9 +217,9 @@ export const listAdminListings = async ({ page, limit, status, vendorUserId }) =
   return { listings, total };
 };
 
-export const reviewListing = ({ id, adminId, status, rejectionReason = null }) =>
+export const reviewListing = ({ listingId, adminId, status, rejectionReason = null }) =>
   prisma.vendorListing.update({
-    where: { id },
+    where: { id: listingId },
     data: {
       status,
       reviewedAt: new Date(),
@@ -210,6 +228,54 @@ export const reviewListing = ({ id, adminId, status, rejectionReason = null }) =
     },
     select: { ...PRIVATE_LISTING_SELECT, vendor: { select: VENDOR_SELECT } },
   });
+
+export const pauseListing = ({ listingId, adminId, reason }) =>
+  prisma.vendorListing.update({
+    where: { id: listingId },
+    data: {
+      status: 'PAUSED',
+      pausedAt: new Date(),
+      pausedByAdminId: adminId,
+      pauseReason: reason,
+    },
+    select: { ...PRIVATE_LISTING_SELECT, vendor: { select: VENDOR_SELECT } },
+  });
+
+export const resumeListing = (listingId) => prisma.vendorListing.update({
+  where: { id: listingId },
+  data: {
+    status: 'ACTIVE',
+    pausedAt: null,
+    pausedByAdminId: null,
+    pauseReason: null,
+  },
+  select: { ...PRIVATE_LISTING_SELECT, vendor: { select: VENDOR_SELECT } },
+});
+
+export const archiveVendorListing = (id) => prisma.vendorListing.update({
+  where: { id },
+  data: {
+    status: 'ARCHIVED',
+    archivedAt: new Date(),
+  },
+  select: PRIVATE_LISTING_SELECT,
+});
+
+export const unarchiveVendorListing = (id) => prisma.vendorListing.update({
+  where: { id },
+  data: {
+    status: 'DRAFT',
+    archivedAt: null,
+    submittedAt: null,
+    reviewedAt: null,
+    reviewedByAdminId: null,
+    rejectionReason: null,
+    pausedAt: null,
+    pausedByAdminId: null,
+    pauseReason: null,
+  },
+  select: PRIVATE_LISTING_SELECT,
+});
 
 const publicListingWhere = ({ search, cityId, serviceSubcategoryId } = {}) => ({
   listingType: 'SERVICE',

@@ -41,6 +41,7 @@ export const createServiceListingSchema = z.object({
   metadata,
   services: components,
   media: media.default([]),
+  submitForReview: z.boolean().optional().default(false),
 }).strict();
 
 export const updateServiceListingSchema = z.object({
@@ -76,13 +77,16 @@ const pageQuery = {
 
 export const vendorListingListQuerySchema = z.object({
   ...pageQuery,
-  status: z.enum(['DRAFT', 'PENDING_REVIEW', 'ACTIVE', 'REJECTED', 'PAUSED']).optional(),
+  status: z.enum(['DRAFT', 'PENDING_REVIEW', 'ACTIVE', 'REJECTED', 'PAUSED', 'ARCHIVED']).optional(),
 }).strict();
 
 export const adminListingListQuerySchema = z.object({
   ...pageQuery,
-  status: z.enum(['DRAFT', 'PENDING_REVIEW', 'ACTIVE', 'REJECTED', 'PAUSED']).optional(),
+  status: z.enum(['DRAFT', 'PENDING_REVIEW', 'ACTIVE', 'REJECTED', 'PAUSED', 'ARCHIVED']).optional(),
   vendorUserId: id('vendorUserId').optional(),
+  listingType: z.enum(['SERVICE', 'VENUE_PROPERTY']).optional(),
+  cityId: id('cityId').optional(),
+  serviceSubcategoryId: id('serviceSubcategoryId').optional(),
 }).strict();
 
 export const publicListingListQuerySchema = z.object({
@@ -93,6 +97,11 @@ export const publicListingListQuerySchema = z.object({
 }).strict();
 
 export const rejectListingSchema = z.object({
+  reason: z.string().trim().min(5, 'reason must be at least 5 characters long')
+    .max(500, 'reason must not exceed 500 characters'),
+}).strict();
+
+export const pauseListingSchema = z.object({
   reason: z.string().trim().min(5, 'reason must be at least 5 characters long')
     .max(500, 'reason must not exceed 500 characters'),
 }).strict();

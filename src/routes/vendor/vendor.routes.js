@@ -4,10 +4,12 @@ import { validateRequest } from '../../middlewares/validation.middleware.js';
 import * as kycController from '../../controllers/vendorKyc.controller.js';
 import * as profileController from '../../controllers/vendorProfile.controller.js';
 import * as listingController from '../../controllers/listing.controller.js';
+import * as venuePropertyController from '../../controllers/venueProperty.controller.js';
 import { requireKycApproved } from '../../middlewares/kyc.middleware.js';
 import {
   updateVendorCapabilitiesSchema,
   updateVendorProfileSchema,
+  vendorCapabilitiesQuerySchema,
 } from '../../validators/vendorProfile.validator.js';
 import {
   submitKycSchema,
@@ -19,6 +21,12 @@ import {
   updateServiceListingSchema,
   vendorListingListQuerySchema,
 } from '../../validators/listing.validator.js';
+import {
+  createVenuePropertySchema,
+  venuePropertyIdParamsSchema,
+  venuePropertyListQuerySchema,
+  updateVenuePropertySchema,
+} from '../../validators/venueProperty.validator.js';
 
 const router = Router();
 
@@ -53,6 +61,7 @@ router.patch(
 router.get(
   '/capabilities',
   requireKycApproved,
+  validateRequest(vendorCapabilitiesQuerySchema, 'query'),
   profileController.getMyCapabilities,
 );
 router.put(
@@ -93,5 +102,27 @@ router.post(
   validateRequest(listingIdParamsSchema, 'params'),
   listingController.submitMyListing,
 );
+router.delete(
+  '/listings/:listingId',
+  requireKycApproved,
+  validateRequest(listingIdParamsSchema, 'params'),
+  listingController.archiveMyListing,
+);
+router.post(
+  '/listings/:listingId/unarchive',
+  requireKycApproved,
+  validateRequest(listingIdParamsSchema, 'params'),
+  listingController.unarchiveMyListing,
+);
+
+// ---- Venue property listings ----
+router.route('/venue-properties')
+  .get(requireKycApproved, validateRequest(venuePropertyListQuerySchema, 'query'), venuePropertyController.listMine)
+  .post(requireKycApproved, validateRequest(createVenuePropertySchema), venuePropertyController.createMine);
+router.get('/venue-properties/:venuePropertyId', requireKycApproved, validateRequest(venuePropertyIdParamsSchema, 'params'), venuePropertyController.getMine);
+router.patch('/venue-properties/:venuePropertyId', requireKycApproved, validateRequest(venuePropertyIdParamsSchema, 'params'), validateRequest(updateVenuePropertySchema), venuePropertyController.updateMine);
+router.post('/venue-properties/:venuePropertyId/submit', requireKycApproved, validateRequest(venuePropertyIdParamsSchema, 'params'), venuePropertyController.submitMine);
+router.delete('/venue-properties/:venuePropertyId', requireKycApproved, validateRequest(venuePropertyIdParamsSchema, 'params'), venuePropertyController.archiveMine);
+router.post('/venue-properties/:venuePropertyId/unarchive', requireKycApproved, validateRequest(venuePropertyIdParamsSchema, 'params'), venuePropertyController.unarchiveMine);
 
 export default router;

@@ -6,10 +6,15 @@ import {
   publicVendorSlugSchema,
 } from '../../validators/vendorProfile.validator.js';
 import * as listingController from '../../controllers/listing.controller.js';
+import * as venuePropertyController from '../../controllers/venueProperty.controller.js';
 import {
   listingSlugParamsSchema,
   publicListingListQuerySchema,
 } from '../../validators/listing.validator.js';
+import {
+  publicVenuePropertyListQuerySchema,
+  venuePropertySlugParamsSchema,
+} from '../../validators/venueProperty.validator.js';
 
 const router = Router();
 
@@ -30,6 +35,9 @@ router.get(
   validateRequest(listingSlugParamsSchema, 'params'),
   listingController.getPublicListing,
 );
+
+router.get('/venue-properties', validateRequest(publicVenuePropertyListQuerySchema, 'query'), venuePropertyController.listPublic);
+router.get('/venue-properties/:slug', validateRequest(venuePropertySlugParamsSchema, 'params'), venuePropertyController.getPublic);
 
 router.get(
   '/vendors/:slug',

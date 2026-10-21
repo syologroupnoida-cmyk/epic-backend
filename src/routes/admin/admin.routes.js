@@ -3,6 +3,7 @@ import { sendSuccess } from '../../utils/response.js';
 import { validateRequest } from '../../middlewares/validation.middleware.js';
 import * as kycController from '../../controllers/vendorKyc.controller.js';
 import {
+  adminVendorKycParamsSchema,
   listKycQuerySchema,
   rejectKycSchema,
 } from '../../validators/vendorKyc.validator.js';
@@ -12,11 +13,19 @@ import { createCategoryPayloadSchema, updateCategorySchema, createSubcategoryPay
 import * as cityController from '../../controllers/city.controller.js';
 import { createCitySchema, updateCitySchema, listCitiesSchema } from '../../validators/city.validator.js';
 import * as listingController from '../../controllers/listing.controller.js';
+import * as venuePropertyController from '../../controllers/venueProperty.controller.js';
 import {
   adminListingListQuerySchema,
   listingIdParamsSchema,
+  pauseListingSchema,
   rejectListingSchema,
 } from '../../validators/listing.validator.js';
+import {
+  adminVenuePropertyListQuerySchema,
+  pauseVenuePropertySchema,
+  rejectVenuePropertySchema,
+  venuePropertyIdParamsSchema,
+} from '../../validators/venueProperty.validator.js';
 
 const router = Router();
 
@@ -33,11 +42,21 @@ router.get(
   validateRequest(listKycQuerySchema, 'query'),
   kycController.listKycForAdmin,
 );
+router.get(
+  '/vendor-kyc/:userId',
+  validateRequest(adminVendorKycParamsSchema, 'params'),
+  kycController.getKycForAdmin,
+);
 
-router.post('/vendor-kyc/:userId/approve', kycController.approveVendorKyc);
+router.post(
+  '/vendor-kyc/:userId/approve',
+  validateRequest(adminVendorKycParamsSchema, 'params'),
+  kycController.approveVendorKyc,
+);
 
 router.post(
   '/vendor-kyc/:userId/reject',
+  validateRequest(adminVendorKycParamsSchema, 'params'),
   validateRequest(rejectKycSchema),
   kycController.rejectVendorKyc,
 );
@@ -73,6 +92,11 @@ router.get(
   validateRequest(adminListingListQuerySchema, 'query'),
   listingController.listListingsForAdmin,
 );
+router.get(
+  '/listings/:listingId',
+  validateRequest(listingIdParamsSchema, 'params'),
+  listingController.getListingForAdmin,
+);
 router.post(
   '/listings/:listingId/approve',
   validateRequest(listingIdParamsSchema, 'params'),
@@ -84,5 +108,24 @@ router.post(
   validateRequest(rejectListingSchema),
   listingController.rejectListing,
 );
+router.post(
+  '/listings/:listingId/pause',
+  validateRequest(listingIdParamsSchema, 'params'),
+  validateRequest(pauseListingSchema),
+  listingController.pauseListing,
+);
+router.post(
+  '/listings/:listingId/resume',
+  validateRequest(listingIdParamsSchema, 'params'),
+  listingController.resumeListing,
+);
+
+// --- Venue property review ---
+router.get('/venue-properties', validateRequest(adminVenuePropertyListQuerySchema, 'query'), venuePropertyController.listAdmin);
+router.get('/venue-properties/:venuePropertyId', validateRequest(venuePropertyIdParamsSchema, 'params'), venuePropertyController.getAdmin);
+router.post('/venue-properties/:venuePropertyId/approve', validateRequest(venuePropertyIdParamsSchema, 'params'), venuePropertyController.approve);
+router.post('/venue-properties/:venuePropertyId/reject', validateRequest(venuePropertyIdParamsSchema, 'params'), validateRequest(rejectVenuePropertySchema), venuePropertyController.reject);
+router.post('/venue-properties/:venuePropertyId/pause', validateRequest(venuePropertyIdParamsSchema, 'params'), validateRequest(pauseVenuePropertySchema), venuePropertyController.pause);
+router.post('/venue-properties/:venuePropertyId/resume', validateRequest(venuePropertyIdParamsSchema, 'params'), venuePropertyController.resume);
 
 export default router;

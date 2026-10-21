@@ -1,0 +1,4 @@
+ALTER TYPE "ListingStatus" ADD VALUE IF NOT EXISTS 'ARCHIVED';
+
+ALTER TABLE "vendor_listings"
+ADD COLUMN "archivedAt" TIMESTAMP(3);

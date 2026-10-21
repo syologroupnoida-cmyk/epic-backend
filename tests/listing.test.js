@@ -1,9 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  adminListingListQuerySchema,
   createServiceListingSchema,
+  pauseListingSchema,
   publicListingListQuerySchema,
   updateServiceListingSchema,
+  vendorListingListQuerySchema,
 } from '../src/validators/listing.validator.js';
 
 const listing = {
@@ -30,6 +33,8 @@ test('service listing creation accepts a structured multi-service payload', () =
   assert.equal(parsed.startingPrice, 150000);
   assert.equal(parsed.cityId, 'city-delhi');
   assert.equal(parsed.services.length, 2);
+  assert.equal(parsed.submitForReview, false);
+  assert.equal(createServiceListingSchema.parse({ ...listing, submitForReview: true }).submitForReview, true);
 });
 
 test('service listing creation rejects duplicate or missing service components', () => {
@@ -59,4 +64,17 @@ test('public listing query validates pagination and filters', () => {
     cityId: 'city-delhi',
     serviceSubcategoryId: 'sub-planning',
   });
+});
+
+test('vendor and admin listing filters accept archived status', () => {
+  assert.equal(vendorListingListQuerySchema.parse({ status: 'ARCHIVED' }).status, 'ARCHIVED');
+  assert.equal(adminListingListQuerySchema.parse({ status: 'ARCHIVED' }).status, 'ARCHIVED');
+});
+
+test('listing pause requires a clear reason', () => {
+  assert.equal(pauseListingSchema.safeParse({ reason: 'bad' }).success, false);
+  assert.equal(
+    pauseListingSchema.parse({ reason: '  The vendor needs to correct the price information.  ' }).reason,
+    'The vendor needs to correct the price information.',
+  );
 });

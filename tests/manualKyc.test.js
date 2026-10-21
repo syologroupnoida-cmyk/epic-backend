@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { submitKycSchema, documentNumberSchemas } from '../src/validators/vendorKyc.validator.js';
+import {
+  adminVendorKycParamsSchema,
+  submitKycSchema,
+  documentNumberSchemas,
+} from '../src/validators/vendorKyc.validator.js';
 import { buildDocumentValidationResult } from '../src/services/vendorKyc/index.js';
 
 const form = {
@@ -88,6 +92,13 @@ test('KYC form normalizes the supported country code', () => {
   });
 
   assert.equal(parsed.businessAddress.countryCode, 'IN');
+});
+
+test('admin KYC detail route requires a vendor user ID', () => {
+  assert.deepEqual(adminVendorKycParamsSchema.parse({ userId: ' VEND-123456 ' }), {
+    userId: 'VEND-123456',
+  });
+  assert.equal(adminVendorKycParamsSchema.safeParse({ userId: '   ' }).success, false);
 });
 
 test('final KYC submission requires valid PAN and Aadhaar document data', () => {

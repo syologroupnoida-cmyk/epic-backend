@@ -62,6 +62,10 @@ export const updateVendorCapabilitiesSchema = z.object({
   serviceSubcategoryIds: selectedCatalogIds('service subcategory'),
 }).strict();
 
+export const vendorCapabilitiesQuerySchema = z.object({
+  offeringKind: z.enum(['SERVICE', 'VENUE_PROPERTY']).optional(),
+}).strict();
+
 export const publicVendorListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),

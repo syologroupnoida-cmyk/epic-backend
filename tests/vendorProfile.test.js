@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  vendorCapabilitiesQuerySchema,
   publicVendorListQuerySchema,
   publicVendorSlugSchema,
   updateVendorCapabilitiesSchema,
@@ -67,6 +68,12 @@ test('vendor capability update accepts unique category and subcategory selection
     serviceCategoryIds: ['cat-planning'],
     serviceSubcategoryIds: [],
   }).success, false);
+});
+
+test('vendor capability query accepts an optional offering kind', () => {
+  assert.deepEqual(vendorCapabilitiesQuerySchema.parse({}), {});
+  assert.deepEqual(vendorCapabilitiesQuerySchema.parse({ offeringKind: 'SERVICE' }), { offeringKind: 'SERVICE' });
+  assert.equal(vendorCapabilitiesQuerySchema.safeParse({ offeringKind: 'INVALID' }).success, false);
 });
 
 test('public vendor slug validation rejects non-canonical paths', () => {

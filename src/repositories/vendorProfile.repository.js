@@ -129,14 +129,14 @@ export const updateVendorBusinessProfile = (userId, data) =>
     select: SELF_PROFILE_SELECT,
   });
 
-export const listVendorCapabilities = (vendorUserId) =>
+export const listVendorCapabilities = (vendorUserId, offeringKind) =>
   prisma.vendorCapability.findMany({
     where: {
       vendorUserId,
       status: 'APPROVED',
       subcategory: {
         isActive: true,
-        serviceCategory: { isActive: true },
+        serviceCategory: { isActive: true, ...(offeringKind && { offeringKind }) },
       },
     },
     orderBy: { createdAt: 'asc' },

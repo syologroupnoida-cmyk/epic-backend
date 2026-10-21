@@ -22,7 +22,7 @@ export const updateMyProfile = asyncHandler(async (req, res) => {
 });
 
 export const getMyCapabilities = asyncHandler(async (req, res) => {
-  const data = await profileService.getMyCapabilities(req.user.id);
+  const data = await profileService.getMyCapabilities(req.user.id, req.query);
   return sendSuccess(res, {
     message: 'Vendor capabilities retrieved.',
     data,

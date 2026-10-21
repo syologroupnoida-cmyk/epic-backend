@@ -81,6 +81,7 @@ enum ListingStatus {
   ACTIVE
   REJECTED
   PAUSED
+  ARCHIVED
 }
 
 enum ListingPriceType {

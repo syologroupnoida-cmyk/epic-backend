@@ -46,6 +46,15 @@ export const listKycForAdmin = asyncHandler(async (req, res) => {
   });
 });
 
+export const getKycForAdmin = asyncHandler(async (req, res) => {
+  const data = await kycService.getKycForAdmin(req.params.userId);
+  return sendSuccess(res, {
+    statusCode: 200,
+    message: 'Vendor KYC submission retrieved.',
+    data,
+  });
+});
+
 export const approveVendorKyc = asyncHandler(async (req, res) => {
   const data = await kycService.approveVendorKyc({
     vendorUserId: req.params.userId,

@@ -160,10 +160,10 @@ export const updateMyProfile = async ({ vendorUserId, payload }) => {
   return serializeSelfProfile(updated);
 };
 
-export const getMyCapabilities = async (vendorUserId) => {
+export const getMyCapabilities = async (vendorUserId, query = {}) => {
   const profile = await requireProfile(vendorUserId);
   assertApproved(profile);
-  const capabilities = await profileRepo.listVendorCapabilities(vendorUserId);
+  const capabilities = await profileRepo.listVendorCapabilities(vendorUserId, query.offeringKind);
   return {
     capabilities: capabilities.map((capability) => ({
       id: capability.id,
@@ -175,6 +175,7 @@ export const getMyCapabilities = async (vendorUserId) => {
       service: serializeService(capability.subcategory),
     })),
     total: capabilities.length,
+    offeringKind: query.offeringKind ?? null,
   };
 };
 

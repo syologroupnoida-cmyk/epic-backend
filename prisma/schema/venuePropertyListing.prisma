@@ -1,0 +1,68 @@
+model VenuePropertyListing {
+  id                String           @id @default(cuid())
+  vendorUserId      String
+  title             String
+  slug              String           @unique
+  description       String
+  startingPrice     Int
+  priceType         ListingPriceType @default(STARTING_FROM)
+  cityId            String
+  address           Json
+  capacityMin       Int?
+  capacityMax       Int?
+  rooms             Int?
+  parkingCapacity   Int?
+  amenities         String[]         @default([])
+  metadata          Json?
+  status            ListingStatus    @default(DRAFT)
+  submittedAt       DateTime?
+  reviewedAt        DateTime?
+  reviewedByAdminId String?
+  rejectionReason   String?
+  pausedAt          DateTime?
+  pausedByAdminId   String?
+  pauseReason       String?
+  archivedAt        DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  vendor VendorProfile      @relation(fields: [vendorUserId], references: [userId], onDelete: Cascade)
+  city   City               @relation("VenuePropertyListingCity", fields: [cityId], references: [id], onDelete: Restrict)
+  types  VenuePropertyType[]
+  media  VenuePropertyMedia[]
+
+  @@index([vendorUserId, status])
+  @@index([cityId, status])
+  @@index([status])
+  @@map("venue_property_listings")
+}
+
+model VenuePropertyType {
+  id                   String             @id @default(cuid())
+  venuePropertyId      String
+  serviceSubcategoryId String
+  sortOrder            Int                @default(0)
+
+  venueProperty VenuePropertyListing @relation(fields: [venuePropertyId], references: [id], onDelete: Cascade)
+  subcategory   ServiceSubcategory   @relation(fields: [serviceSubcategoryId], references: [id], onDelete: Restrict)
+
+  @@unique([venuePropertyId, serviceSubcategoryId])
+  @@index([serviceSubcategoryId])
+  @@map("venue_property_types")
+}
+
+model VenuePropertyMedia {
+  id              String               @id @default(cuid())
+  venuePropertyId String
+  url             String
+  publicId        String
+  mediaType       ListingMediaType     @default(IMAGE)
+  sortOrder       Int                  @default(0)
+  createdAt       DateTime             @default(now())
+
+  venueProperty VenuePropertyListing @relation(fields: [venuePropertyId], references: [id], onDelete: Cascade)
+
+  @@unique([venuePropertyId, publicId])
+  @@index([venuePropertyId, sortOrder])
+  @@map("venue_property_media")
+}

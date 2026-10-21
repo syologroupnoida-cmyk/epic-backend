@@ -17,6 +17,7 @@ model VendorProfile {
   primaryCity  City?               @relation(fields: [primaryCityId], references: [id], onDelete: SetNull)
   capabilities VendorCapability[]
   listings     VendorListing[]
+  venueProperties VenuePropertyListing[]
 
   @@index([kycStatus])
   @@index([profileStatus])

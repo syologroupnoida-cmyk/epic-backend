@@ -235,6 +235,16 @@ export const listKycForAdmin = async (query) => {
   return { items: cleanItems, total };
 };
 
+export const getKycForAdmin = async (vendorUserId) => {
+  const profile = await kycRepo.findVendorProfile(vendorUserId);
+  if (!profile) throw ApiError.notFound('Vendor KYC submission not found.');
+
+  return {
+    ...profile,
+    documents: stripInternalDocFields(profile.documents),
+  };
+};
+
 // Only a submitted application can be approved after manual document review.
 const APPROVABLE_KYC_STATES = ['SUBMITTED'];
 

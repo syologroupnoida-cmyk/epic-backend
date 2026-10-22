@@ -48,6 +48,10 @@ const VENDOR_SELECT = {
   about: true,
 };
 
+const SERVICE_AREA_SELECT = {
+  city: { select: CITY_SELECT },
+};
+
 const PRIVATE_LISTING_SELECT = {
   id: true,
   vendorUserId: true,
@@ -70,6 +74,7 @@ const PRIVATE_LISTING_SELECT = {
   createdAt: true,
   updatedAt: true,
   city: { select: CITY_SELECT },
+  serviceAreas: { orderBy: { city: { name: 'asc' } }, select: SERVICE_AREA_SELECT },
   components: { orderBy: { sortOrder: 'asc' }, select: COMPONENT_SELECT },
   media: { orderBy: { sortOrder: 'asc' }, select: MEDIA_SELECT },
 };
@@ -85,6 +90,7 @@ const PUBLIC_LISTING_SELECT = {
   metadata: true,
   createdAt: true,
   city: { select: CITY_SELECT },
+  serviceAreas: { orderBy: { city: { name: 'asc' } }, select: SERVICE_AREA_SELECT },
   vendor: { select: VENDOR_SELECT },
   components: {
     where: {
@@ -98,6 +104,11 @@ const PUBLIC_LISTING_SELECT = {
 
 export const findActiveCityById = (id) => prisma.city.findFirst({
   where: { id, isActive: true },
+  select: CITY_SELECT,
+});
+
+export const findActiveCitiesByIds = (ids) => prisma.city.findMany({
+  where: { id: { in: ids }, isActive: true },
   select: CITY_SELECT,
 });
 
@@ -115,11 +126,12 @@ export const findApprovedServiceCapabilities = (vendorUserId, serviceSubcategory
     select: { serviceSubcategoryId: true },
   });
 
-export const createServiceListing = ({ data, components, media }) =>
+export const createServiceListing = ({ data, serviceAreaCityIds, components, media }) =>
   prisma.vendorListing.create({
     data: {
       ...data,
       listingType: 'SERVICE',
+      serviceAreas: { create: serviceAreaCityIds.map((cityId) => ({ cityId })) },
       components: { create: components },
       media: { create: media },
     },
@@ -132,11 +144,17 @@ export const findVendorListingById = (vendorUserId, id) =>
     select: PRIVATE_LISTING_SELECT,
   });
 
-export const updateVendorListing = ({ id, data, components, media }) =>
+export const updateVendorListing = ({ id, data, serviceAreaCityIds, components, media }) =>
   prisma.vendorListing.update({
     where: { id },
     data: {
       ...data,
+      ...(serviceAreaCityIds && {
+        serviceAreas: {
+          deleteMany: {},
+          create: serviceAreaCityIds.map((cityId) => ({ cityId })),
+        },
+      }),
       ...(components && {
         components: {
           deleteMany: {},
@@ -201,7 +219,7 @@ export const listAdminListings = async ({
     ...(status && { status }),
     ...(vendorUserId && { vendorUserId }),
     ...(listingType && { listingType }),
-    ...(cityId && { cityId }),
+    ...(cityId && { serviceAreas: { some: { cityId } } }),
     ...(serviceSubcategoryId && { components: { some: { serviceSubcategoryId } } }),
   };
   const [listings, total] = await Promise.all([
@@ -288,7 +306,7 @@ const publicListingWhere = ({ search, cityId, serviceSubcategoryId } = {}) => ({
     },
   },
   city: { is: { isActive: true } },
-  ...(cityId && { cityId }),
+  ...(cityId && { serviceAreas: { some: { cityId, city: { is: { isActive: true } } } } }),
   ...(search && {
     OR: [
       { title: { contains: search, mode: 'insensitive' } },

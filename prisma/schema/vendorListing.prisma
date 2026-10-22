@@ -23,6 +23,7 @@ model VendorListing {
 
   vendor     VendorProfile            @relation(fields: [vendorUserId], references: [userId], onDelete: Cascade)
   city       City                     @relation("ListingCity", fields: [cityId], references: [id], onDelete: Restrict)
+  serviceAreas ListingServiceArea[]
   components ListingServiceComponent[]
   media      ListingMedia[]
 
@@ -30,6 +31,20 @@ model VendorListing {
   @@index([cityId, status])
   @@index([status, listingType])
   @@map("vendor_listings")
+}
+
+model ListingServiceArea {
+  id        String        @id @default(cuid())
+  listingId String
+  cityId    String
+  createdAt DateTime      @default(now())
+
+  listing VendorListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  city    City          @relation("ListingServiceAreaCity", fields: [cityId], references: [id], onDelete: Restrict)
+
+  @@unique([listingId, cityId])
+  @@index([cityId, listingId])
+  @@map("listing_service_areas")
 }
 
 model ListingServiceComponent {

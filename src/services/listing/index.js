@@ -57,6 +57,7 @@ const serializeVendorListing = (listing) => ({
   startingPrice: listing.startingPrice,
   priceType: listing.priceType,
   city: serializeCity(listing.city),
+  serviceAreas: listing.serviceAreas.map(({ city }) => serializeCity(city)),
   metadata: listing.metadata,
   status: listing.status,
   submittedAt: listing.submittedAt,
@@ -80,6 +81,7 @@ const serializePublicListing = (listing) => ({
   startingPrice: listing.startingPrice,
   priceType: listing.priceType,
   city: serializeCity(listing.city),
+  serviceAreas: listing.serviceAreas.map(({ city }) => serializeCity(city)),
   metadata: listing.metadata,
   services: listing.components.map(serializeComponent),
   media: listing.media.map(serializePublicMedia),
@@ -112,6 +114,17 @@ const assertActiveCity = async (cityId) => {
   const city = await listingRepo.findActiveCityById(cityId);
   if (!city) throw ApiError.badRequest('Select an active listing city.');
   return city;
+};
+
+const assertActiveServiceAreas = async ({ cityIds, primaryCityId }) => {
+  if (!cityIds.includes(primaryCityId)) {
+    throw ApiError.badRequest('Service areas must include the primary city.');
+  }
+  const activeCities = await listingRepo.findActiveCitiesByIds(cityIds);
+  if (activeCities.length !== cityIds.length) {
+    throw ApiError.badRequest('Select only active service area cities.');
+  }
+  return activeCities;
 };
 
 const assertApprovedServiceCapabilities = async (vendorUserId, components) => {
@@ -165,6 +178,8 @@ const assertEditable = (listing) => {
 export const createServiceListing = async ({ vendorUserId, payload }) => {
   await assertApprovedVendor(vendorUserId);
   await assertActiveCity(payload.cityId);
+  const serviceAreaCityIds = payload.serviceAreaCityIds ?? [payload.cityId];
+  await assertActiveServiceAreas({ cityIds: serviceAreaCityIds, primaryCityId: payload.cityId });
   await assertApprovedServiceCapabilities(vendorUserId, payload.services);
   assertOwnedMedia({ vendorUserId, media: payload.media });
 
@@ -181,6 +196,7 @@ export const createServiceListing = async ({ vendorUserId, payload }) => {
       status: payload.submitForReview ? 'PENDING_REVIEW' : 'DRAFT',
       ...(payload.submitForReview && { submittedAt: new Date() }),
     },
+    serviceAreaCityIds,
     components: mapComponents(payload.services),
     media: mapMedia(payload.media),
   });
@@ -207,7 +223,16 @@ export const updateMyListing = async ({ vendorUserId, listingId, payload }) => {
   if (!current) throw ApiError.notFound('Listing not found.');
   assertEditable(current);
 
+  const primaryCityId = payload.cityId ?? current.city.id;
+  const serviceAreaCityIds = payload.serviceAreaCityIds ?? (
+    payload.cityId
+      ? [...new Set([...current.serviceAreas.map(({ city }) => city.id), payload.cityId])]
+      : current.serviceAreas.map(({ city }) => city.id)
+  );
   if (payload.cityId) await assertActiveCity(payload.cityId);
+  if (payload.cityId || payload.serviceAreaCityIds) {
+    await assertActiveServiceAreas({ cityIds: serviceAreaCityIds, primaryCityId });
+  }
   if (payload.services) await assertApprovedServiceCapabilities(vendorUserId, payload.services);
   if (payload.media) assertOwnedMedia({ vendorUserId, media: payload.media });
 
@@ -222,6 +247,7 @@ export const updateMyListing = async ({ vendorUserId, listingId, payload }) => {
       ...(payload.metadata !== undefined && { metadata: payload.metadata }),
       ...(current.status === 'REJECTED' && { rejectionReason: null }),
     },
+    ...(payload.cityId || payload.serviceAreaCityIds ? { serviceAreaCityIds } : {}),
     ...(payload.services && { components: mapComponents(payload.services) }),
     ...(payload.media && { media: mapMedia(payload.media) }),
   });
@@ -234,6 +260,10 @@ export const submitMyListing = async ({ vendorUserId, listingId }) => {
   if (!listing) throw ApiError.notFound('Listing not found.');
   assertEditable(listing);
   await assertActiveCity(listing.city.id);
+  await assertActiveServiceAreas({
+    cityIds: listing.serviceAreas.map(({ city }) => city.id),
+    primaryCityId: listing.city.id,
+  });
   await assertApprovedServiceCapabilities(vendorUserId, listing.components.map((component) => ({
     serviceSubcategoryId: component.subcategory.id,
   })));
@@ -291,6 +321,10 @@ const requirePendingListing = async (listingId) => {
 export const approveListing = async ({ listingId, adminId }) => {
   const listing = await requirePendingListing(listingId);
   await assertActiveCity(listing.city.id);
+  await assertActiveServiceAreas({
+    cityIds: listing.serviceAreas.map(({ city }) => city.id),
+    primaryCityId: listing.city.id,
+  });
   await assertApprovedServiceCapabilities(listing.vendorUserId, listing.components.map((component) => ({
     serviceSubcategoryId: component.subcategory.id,
   })));
@@ -328,6 +362,10 @@ export const resumeListing = async ({ listingId }) => {
   }
 
   await assertActiveCity(listing.city.id);
+  await assertActiveServiceAreas({
+    cityIds: listing.serviceAreas.map(({ city }) => city.id),
+    primaryCityId: listing.city.id,
+  });
   await assertApprovedServiceCapabilities(listing.vendorUserId, listing.components.map((component) => ({
     serviceSubcategoryId: component.subcategory.id,
   })));

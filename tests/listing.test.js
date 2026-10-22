@@ -15,6 +15,7 @@ const listing = {
   startingPrice: '150000',
   priceType: 'STARTING_FROM',
   cityId: ' city-delhi ',
+  serviceAreaCityIds: [' city-delhi ', ' city-noida '],
   metadata: { teamSize: 5 },
   services: [{ serviceSubcategoryId: ' sub-planning ', price: '150000' }],
   media: [],
@@ -32,9 +33,21 @@ test('service listing creation accepts a structured multi-service payload', () =
   assert.equal(parsed.title, 'Complete Wedding Planning Package');
   assert.equal(parsed.startingPrice, 150000);
   assert.equal(parsed.cityId, 'city-delhi');
+  assert.deepEqual(parsed.serviceAreaCityIds, ['city-delhi', 'city-noida']);
   assert.equal(parsed.services.length, 2);
   assert.equal(parsed.submitForReview, false);
   assert.equal(createServiceListingSchema.parse({ ...listing, submitForReview: true }).submitForReview, true);
+});
+
+test('service listing service areas must be unique and include the primary city', () => {
+  assert.equal(createServiceListingSchema.safeParse({
+    ...listing,
+    serviceAreaCityIds: ['city-noida'],
+  }).success, false);
+  assert.equal(createServiceListingSchema.safeParse({
+    ...listing,
+    serviceAreaCityIds: ['city-delhi', 'city-delhi'],
+  }).success, false);
 });
 
 test('service listing creation rejects duplicate or missing service components', () => {

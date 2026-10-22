@@ -1698,10 +1698,10 @@
             "url": "{{baseUrl}}/api/v1/vendor/listings",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Full Wedding Planning Package\",\n  \"description\": \"End-to-end wedding planning, event coordination, and guest management support.\",\n  \"startingPrice\": 150000,\n  \"priceType\": \"STARTING_FROM\",\n  \"cityId\": \"{{cityId}}\",\n  \"metadata\": {\n    \"teamSize\": 5,\n    \"guestCapacity\": 500\n  },\n  \"services\": [\n    {\n      \"serviceSubcategoryId\": \"{{serviceSubcategoryId}}\",\n      \"price\": 150000,\n      \"metadata\": {\n        \"durationDays\": 2\n      }\n    }\n  ],\n  \"media\": [\n    {\n      \"url\": \"{{listingMediaUrl}}\",\n      \"publicId\": \"{{listingMediaPublicId}}\",\n      \"mediaType\": \"IMAGE\"\n    }\n  ],\n  \"submitForReview\": false\n}",
+              "raw": "{\n  \"title\": \"Full Wedding Planning Package\",\n  \"description\": \"End-to-end wedding planning, event coordination, and guest management support.\",\n  \"startingPrice\": 150000,\n  \"priceType\": \"STARTING_FROM\",\n  \"cityId\": \"{{cityId}}\",\n  \"serviceAreaCityIds\": [\n    \"{{cityId}}\",\n    \"{{secondServiceAreaCityId}}\"\n  ],\n  \"metadata\": {\n    \"teamSize\": 5,\n    \"guestCapacity\": 500\n  },\n  \"services\": [\n    {\n      \"serviceSubcategoryId\": \"{{serviceSubcategoryId}}\",\n      \"price\": 150000,\n      \"metadata\": {\n        \"durationDays\": 2\n      }\n    }\n  ],\n  \"media\": [\n    {\n      \"url\": \"{{listingMediaUrl}}\",\n      \"publicId\": \"{{listingMediaPublicId}}\",\n      \"mediaType\": \"IMAGE\"\n    }\n  ],\n  \"submitForReview\": false\n}",
               "options": { "raw": { "language": "json" } }
             },
-            "description": "Single-service listing: services contains exactly one subcategory. Requires APPROVED KYC. The selected subcategory must be an active approved SERVICE capability of this vendor. submitForReview=false creates a DRAFT; change it to true to create directly in PENDING_REVIEW.",
+            "description": "Single-service listing: services contains exactly one subcategory. cityId is the primary city; serviceAreaCityIds are all cities where the vendor offers this service and must include cityId. Requires APPROVED KYC. submitForReview=false creates a DRAFT; change it to true to create directly in PENDING_REVIEW.",
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
           },
           "response": [],
@@ -1725,7 +1725,7 @@
             "url": "{{baseUrl}}/api/v1/vendor/listings",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Complete Wedding Planning and Coordination Package\",\n  \"description\": \"A combined package for planning, wedding-day coordination, and guest management.\",\n  \"startingPrice\": 220000,\n  \"priceType\": \"STARTING_FROM\",\n  \"cityId\": \"{{cityId}}\",\n  \"metadata\": {\n    \"teamSize\": 8,\n    \"guestCapacity\": 800,\n    \"packageType\": \"COMPLETE_WEDDING\"\n  },\n  \"services\": [\n    {\n      \"serviceSubcategoryId\": \"{{serviceSubcategoryId}}\",\n      \"price\": 150000,\n      \"metadata\": {\n        \"durationDays\": 2\n      }\n    },\n    {\n      \"serviceSubcategoryId\": \"{{secondServiceSubcategoryId}}\",\n      \"price\": 45000,\n      \"metadata\": {\n        \"durationDays\": 1\n      }\n    },\n    {\n      \"serviceSubcategoryId\": \"{{thirdServiceSubcategoryId}}\",\n      \"price\": 25000\n    }\n  ],\n  \"media\": [\n    {\n      \"url\": \"{{listingMediaUrl}}\",\n      \"publicId\": \"{{listingMediaPublicId}}\",\n      \"mediaType\": \"IMAGE\"\n    }\n  ],\n  \"submitForReview\": true\n}",
+              "raw": "{\n  \"title\": \"Complete Wedding Planning and Coordination Package\",\n  \"description\": \"A combined package for planning, wedding-day coordination, and guest management.\",\n  \"startingPrice\": 220000,\n  \"priceType\": \"STARTING_FROM\",\n  \"cityId\": \"{{cityId}}\",\n  \"serviceAreaCityIds\": [\n    \"{{cityId}}\",\n    \"{{secondServiceAreaCityId}}\"\n  ],\n  \"metadata\": {\n    \"teamSize\": 8,\n    \"guestCapacity\": 800,\n    \"packageType\": \"COMPLETE_WEDDING\"\n  },\n  \"services\": [\n    {\n      \"serviceSubcategoryId\": \"{{serviceSubcategoryId}}\",\n      \"price\": 150000,\n      \"metadata\": {\n        \"durationDays\": 2\n      }\n    },\n    {\n      \"serviceSubcategoryId\": \"{{secondServiceSubcategoryId}}\",\n      \"price\": 45000,\n      \"metadata\": {\n        \"durationDays\": 1\n      }\n    },\n    {\n      \"serviceSubcategoryId\": \"{{thirdServiceSubcategoryId}}\",\n      \"price\": 25000\n    }\n  ],\n  \"media\": [\n    {\n      \"url\": \"{{listingMediaUrl}}\",\n      \"publicId\": \"{{listingMediaPublicId}}\",\n      \"mediaType\": \"IMAGE\"\n    }\n  ],\n  \"submitForReview\": true\n}",
               "options": { "raw": { "language": "json" } }
             },
             "description": "Multi-service package listing: send two or more unique services. Each selected subcategory can be from the same or different SERVICE categories, but every one must be an active approved capability of this vendor. submitForReview=true creates the listing directly in PENDING_REVIEW. Do not include Venue Property subcategories here.",
@@ -1750,6 +1750,17 @@
             "method": "GET",
             "header": [],
             "url": "{{baseUrl}}/api/v1/vendor/listings?page=1&limit=20",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Get my service listing by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/vendor/listings/{{listingId}}",
+            "description": "Vendor-only full listing detail. Includes the vendor's media public IDs and internal listing status/review information.",
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
           },
           "response": []
@@ -1824,6 +1835,17 @@
         {
           "name": "List my venue properties",
           "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/vendor/venue-properties?page=1&limit=20", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] } },
+          "response": []
+        },
+        {
+          "name": "Get my venue property by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/vendor/venue-properties/{{venuePropertyId}}",
+            "description": "Vendor-only full venue-property detail, including internal status, review information, and media public IDs.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
+          },
           "response": []
         },
         {
@@ -1964,6 +1986,42 @@
             "method": "GET",
             "header": [],
             "url": "{{baseUrl}}/api/v1/marketplace/listings/{{listingSlug}}",
+            "auth": { "type": "noauth" }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Public venue property listings",
+      "description": "Unauthenticated discovery for ACTIVE venue properties only.",
+      "item": [
+        {
+          "name": "List public venue properties",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/marketplace/venue-properties?page=1&limit=20&search=Palace&cityId={{cityId}}&serviceSubcategoryId={{venueBanquetSubcategoryId}}",
+            "auth": { "type": "noauth" }
+          },
+          "response": [],
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "if (pm.response.code >= 200 && pm.response.code < 300) {",
+              "  const slug = pm.response.json().data?.venueProperties?.[0]?.slug;",
+              "  if (slug) pm.environment.name ? pm.environment.set('venuePropertySlug', slug) : pm.collectionVariables.set('venuePropertySlug', slug);",
+              "}"
+            ] }
+          }]
+        },
+        {
+          "name": "Get public venue property by slug",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/marketplace/venue-properties/{{venuePropertySlug}}",
+            "description": "Public-safe venue property detail. It does not return media public IDs, review information, or other internal fields.",
             "auth": { "type": "noauth" }
           },
           "response": []

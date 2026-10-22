@@ -29,6 +29,10 @@ const components = z.array(componentSchema).min(1, 'Select at least one service'
 
 const media = z.array(mediaSchema).max(30, 'You can upload at most 30 media files');
 
+const serviceAreaCityIds = z.array(id('serviceAreaCityIds')).min(1, 'Select at least one service area city')
+  .max(50, 'You can select at most 50 service area cities')
+  .refine((items) => new Set(items).size === items.length, 'A service area city can be selected only once');
+
 export const createServiceListingSchema = z.object({
   title: z.string().trim().min(3, 'title must be at least 3 characters long')
     .max(180, 'title must not exceed 180 characters'),
@@ -38,11 +42,16 @@ export const createServiceListingSchema = z.object({
   priceType: z.enum(['FIXED', 'STARTING_FROM', 'PER_PERSON', 'PER_PLATE', 'PER_DAY', 'CUSTOM'])
     .default('STARTING_FROM'),
   cityId: id('cityId'),
+  serviceAreaCityIds: serviceAreaCityIds.optional(),
   metadata,
   services: components,
   media: media.default([]),
   submitForReview: z.boolean().optional().default(false),
-}).strict();
+}).strict().superRefine((payload, ctx) => {
+  if (payload.serviceAreaCityIds && !payload.serviceAreaCityIds.includes(payload.cityId)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['serviceAreaCityIds'], message: 'serviceAreaCityIds must include the primary cityId' });
+  }
+});
 
 export const updateServiceListingSchema = z.object({
   title: z.string().trim().min(3, 'title must be at least 3 characters long')
@@ -52,12 +61,16 @@ export const updateServiceListingSchema = z.object({
   startingPrice: money('startingPrice').optional(),
   priceType: z.enum(['FIXED', 'STARTING_FROM', 'PER_PERSON', 'PER_PLATE', 'PER_DAY', 'CUSTOM']).optional(),
   cityId: id('cityId').optional(),
+  serviceAreaCityIds: serviceAreaCityIds.optional(),
   metadata: metadata.nullable(),
   services: components.optional(),
   media: media.optional(),
 }).strict().superRefine((payload, ctx) => {
   if (Object.keys(payload).length === 0) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'At least one listing field is required' });
+  }
+  if (payload.cityId && payload.serviceAreaCityIds && !payload.serviceAreaCityIds.includes(payload.cityId)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['serviceAreaCityIds'], message: 'serviceAreaCityIds must include the primary cityId' });
   }
 });
 

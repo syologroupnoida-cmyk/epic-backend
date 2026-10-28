@@ -8,11 +8,12 @@ model City {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  vendorProfiles VendorProfile[]
-  vendorKycs     VendorKyc[]     @relation("VendorKycPrimaryCity")
-  listings       VendorListing[] @relation("ListingCity")
-  listingServiceAreas ListingServiceArea[] @relation("ListingServiceAreaCity")
-  venueProperties VenuePropertyListing[] @relation("VenuePropertyListingCity")
+  vendorProfiles      VendorProfile[]
+  vendorKycs          VendorKyc[]            @relation("VendorKycPrimaryCity")
+  listings            VendorListing[]        @relation("ListingCity")
+  listingServiceAreas ListingServiceArea[]   @relation("ListingServiceAreaCity")
+  venueProperties     VenuePropertyListing[] @relation("VenuePropertyListingCity")
+  leads               Lead[]
 
   @@unique([name, stateName, countryCode])
   @@index([isActive])

@@ -1,0 +1,49 @@
+model Lead {
+  id                     String         @id @default(cuid())
+  leadType               LeadType
+  sourceType             LeadSourceType
+  targetVendorUserId     String?
+  serviceListingId       String?
+  venuePropertyListingId String?
+  serviceCategoryId      String?
+  serviceSubcategoryId   String?
+  cityId                 String
+  customerName           String
+  customerPhone          String
+  customerEmail          String?
+  eventDate              DateTime?
+  guestCount             Int?
+  budgetMin              Int?
+  budgetMax              Int?
+  message                String?
+  basePrice              Int?
+  maxBuyerCount          Int            @default(1)
+  soldCount              Int            @default(0)
+  status                 LeadStatus
+  reviewedAt             DateTime?
+  reviewedByAdminId      String?
+  rejectionReason        String?
+  closedAt               DateTime?
+  closedByAdminId        String?
+  closureReason          String?
+  expiresAt              DateTime?
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+
+  targetVendor       VendorProfile?        @relation(fields: [targetVendorUserId], references: [userId], onDelete: SetNull)
+  serviceListing     VendorListing?        @relation(fields: [serviceListingId], references: [id], onDelete: SetNull)
+  venueProperty      VenuePropertyListing? @relation(fields: [venuePropertyListingId], references: [id], onDelete: SetNull)
+  city               City                  @relation(fields: [cityId], references: [id], onDelete: Restrict)
+  serviceCategory    ServiceCategory?      @relation(fields: [serviceCategoryId], references: [id], onDelete: SetNull)
+  serviceSubcategory ServiceSubcategory?   @relation(fields: [serviceSubcategoryId], references: [id], onDelete: SetNull)
+  purchases          LeadPurchase[]
+
+  @@index([targetVendorUserId, status])
+  @@index([status, leadType])
+  @@index([cityId, status])
+  @@index([serviceCategoryId, status])
+  @@index([serviceSubcategoryId, status])
+  @@index([serviceListingId])
+  @@index([venuePropertyListingId])
+  @@map("leads")
+}

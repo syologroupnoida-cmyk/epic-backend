@@ -1,0 +1,29 @@
+model VendorWallet {
+  vendorUserId String   @id
+  balance      Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  vendor       VendorProfile       @relation(fields: [vendorUserId], references: [userId], onDelete: Cascade)
+  transactions WalletTransaction[]
+
+  @@map("vendor_wallets")
+}
+
+model WalletTransaction {
+  id            String                @id @default(cuid())
+  vendorUserId  String
+  amount        Int
+  balanceAfter  Int
+  type          WalletTransactionType
+  description   String
+  referenceType String?
+  referenceId   String?
+  createdAt     DateTime              @default(now())
+
+  wallet VendorWallet @relation(fields: [vendorUserId], references: [vendorUserId], onDelete: Cascade)
+
+  @@index([vendorUserId, createdAt])
+  @@index([referenceType, referenceId])
+  @@map("wallet_transactions")
+}

@@ -42,6 +42,9 @@ const envSchema = z
 
     CORS_ORIGIN: z.string().default("*"),
 
+    PAYMENTS_MODE: z.enum(["TEST", "LIVE"]).default("TEST"),
+    SIGNUP_WALLET_BONUS: z.coerce.number().int().min(0).max(100000).default(100),
+
     // ---- Frontend URL ----
     // Base URL of the public Epic Wedplanner frontend. Used inside transactional emails
     // to build "Login Now" / "Resubmit" buttons that link the user back into
@@ -119,6 +122,10 @@ const envSchema = z
   .refine((data) => data.JWT_RESET_SECRET !== data.JWT_REFRESH_SECRET, {
     message: "JWT_RESET_SECRET must differ from JWT_REFRESH_SECRET",
     path: ["JWT_RESET_SECRET"],
+  })
+  .refine((data) => data.NODE_ENV !== "production" || data.PAYMENTS_MODE === "LIVE", {
+    message: "PAYMENTS_MODE must be LIVE in production",
+    path: ["PAYMENTS_MODE"],
   });
 
 const parsed = envSchema.safeParse(process.env);

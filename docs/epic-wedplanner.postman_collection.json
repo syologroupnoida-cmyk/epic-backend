@@ -1687,6 +1687,136 @@
       ]
     },
     {
+      "name": "Vendor subscription cards",
+      "description": "Requires approved KYC. The backend returns only active admin-created cards, the vendor's effective plan, and a safe cardAction. A vendor without an active paid subscription automatically uses the active default Free plan.",
+      "item": [
+        {
+          "name": "Get my effective subscription",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/vendor/subscription",
+            "description": "Returns the active paid subscription when one exists; otherwise returns the default Free plan with source DEFAULT_FREE_PLAN.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "List available subscription plan cards",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/vendor/subscription-plans",
+            "description": "Use plan.theme for fixed UI styling and cardAction for button state: CURRENT_PLAN, UPGRADE, or DOWNGRADE_UNAVAILABLE. In TEST mode use the test-purchase request; production needs a verified payment gateway checkout.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Test purchase or upgrade subscription",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/vendor/subscriptions/test-purchase",
+            "body": { "mode": "raw", "raw": "{\n  \"planId\": \"{{basicPlanId}}\"\n}", "options": { "raw": { "language": "json" } } },
+            "description": "Development/testing only. Works only when PAYMENTS_MODE=TEST. It activates the selected paid plan for 30 days, cancels any previous active plan, and credits walletCreditPerBillingCycle to the vendor wallet. Replace this route with verified gateway checkout in production.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Get my wallet balance",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/vendor/wallet",
+            "description": "New vendors receive the configured signup credit once their KYC is approved. Existing approved vendors without a wallet start at ₹0 unless an administrator credits them later.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "List my wallet transactions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/vendor/wallet/transactions?page=1&limit=20",
+            "description": "Shows immutable signup bonus, subscription credit, and LEAD_PURCHASE debit entries. Gateway top-up, refund, and admin adjustment are later payment/wallet features.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Vendor lead inbox",
+      "description": "Direct and shared leads remain masked until this vendor purchases/unlocks them. Direct lead price comes from the vendor's effective subscription; shared lead price and buyer slots are set by admin when the Get Quotes lead is activated.",
+      "item": [
+        {
+          "name": "List my direct lead previews",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/vendor/leads?page=1&limit=20",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
+          },
+          "response": [],
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "if (pm.response.code >= 200 && pm.response.code < 300) {",
+              "  const leadId = pm.response.json().data?.leads?.[0]?.id;",
+              "  if (leadId) pm.environment.name ? pm.environment.set('leadId', leadId) : pm.collectionVariables.set('leadId', leadId);",
+              "}"
+            ] }
+          }]
+        },
+        {
+          "name": "Get my direct lead preview by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/vendor/leads/{{leadId}}",
+            "description": "Only the vendor targeted by this direct lead can retrieve it. The response remains masked; it does not include the customer's full name, mobile number, email, or message.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+    },
+    {
+      "name": "List matching shared lead previews",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/vendor/leads/shared?page=1&limit=20",
+        "description": "Returns ACTIVE shared leads only when the vendor has an approved matching subcategory capability and the lead city matches the vendor primary operating city. Customer contact remains masked.",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
+      },
+      "response": [],
+      "event": [{
+        "listen": "test",
+        "script": { "type": "text/javascript", "exec": [
+          "if (pm.response.code >= 200 && pm.response.code < 300) {",
+          "  const leadId = pm.response.json().data?.leads?.[0]?.id;",
+          "  if (leadId) pm.environment.name ? pm.environment.set('sharedLeadId', leadId) : pm.collectionVariables.set('sharedLeadId', leadId);",
+          "}"
+        ] }
+      }]
+    },
+    {
+      "name": "Purchase and unlock a lead",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/v1/vendor/leads/{{sharedLeadId}}/purchase",
+        "description": "Empty body. Deducts the wallet balance atomically, records an immutable lead purchase, reserves one buyer slot, and returns unmasked customer contact details. Use {{leadId}} instead for a direct lead.",
+        "body": { "mode": "raw", "raw": "{}", "options": { "raw": { "language": "json" } } },
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
+      },
+      "response": []
+        }
+      ]
+    },
+    {
       "name": "Vendor service listings",
       "description": "Service-only listing workflow. The vendor can select only active approved capabilities. Create or edit a DRAFT/REJECTED listing, then submit it for admin review.",
       "item": [
@@ -1782,6 +1912,70 @@
           "response": []
         },
         {
+          "name": "Create or open active listing revision",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/vendor/listings/{{listingId}}/revision",
+            "description": "Creates a private revision snapshot for an ACTIVE service listing. If an open revision already exists, it is returned. The current listing remains public.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
+          },
+          "response": [],
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "if (pm.response.code >= 200 && pm.response.code < 300) {",
+              "  const revisionId = pm.response.json().data?.id;",
+              "  if (revisionId) pm.environment.name ? pm.environment.set('listingRevisionId', revisionId) : pm.collectionVariables.set('listingRevisionId', revisionId);",
+              "}"
+            ] }
+          }]
+        },
+        {
+          "name": "Get my open listing revision",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/vendor/listings/{{listingId}}/revision",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Edit my listing revision",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/vendor/listings/{{listingId}}/revision",
+            "body": { "mode": "raw", "raw": "{\n  \"startingPrice\": 185000,\n  \"description\": \"Updated wedding planning package with expanded coordination and guest support.\"\n}", "options": { "raw": { "language": "json" } } },
+            "description": "Updates a DRAFT or REJECTED revision. The live ACTIVE listing is not changed until admin approval.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Submit my listing revision",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/vendor/listings/{{listingId}}/revision/submit",
+            "description": "Revalidates the complete proposed snapshot and submits it for admin review. The live listing remains public.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel my listing revision",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/vendor/listings/{{listingId}}/revision",
+            "description": "Cancels a DRAFT or REJECTED revision. A revision pending review cannot be cancelled.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
           "name": "Submit service listing for review",
           "request": {
             "method": "POST",
@@ -1849,6 +2043,18 @@
           "response": []
         },
         {
+          "name": "Update my venue property",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/vendor/venue-properties/{{venuePropertyId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"startingPrice\": 275000,\n  \"capacityMax\": 1300,\n  \"amenities\": [\"Parking\", \"Bridal room\", \"In-house catering\", \"Valet parking\"]\n}", "options": { "raw": { "language": "json" } } },
+            "description": "Only DRAFT or REJECTED venue properties can be edited. Sending venueTypes replaces all selected venue types; sending media replaces all media.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
           "name": "Submit venue property for review",
           "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/api/v1/vendor/venue-properties/{{venuePropertyId}}/submit", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] } },
           "response": []
@@ -1861,6 +2067,160 @@
         {
           "name": "Restore my archived venue property as draft",
           "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/api/v1/vendor/venue-properties/{{venuePropertyId}}/unarchive", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] } },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin subscription plan cards",
+      "description": "Admin creates the card content and commercial limits. Create one active default Free plan (not purchasable), then active paid Basic/Premium plans. Raw CSS is not stored; theme is one of BLUE, PURPLE, GOLD, or DARK and the frontend maps it to its fixed design.",
+      "item": [
+        {
+          "name": "Create Free default plan card",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/admin/subscription-plans",
+            "body": { "mode": "raw", "raw": "{\n  \"code\": \"FREE\",\n  \"kind\": \"FREE\",\n  \"displayName\": \"Free\",\n  \"shortDescription\": \"For vendors starting their marketplace journey.\",\n  \"monthlyPrice\": 0,\n  \"directLeadPrice\": 100,\n  \"maxActiveServiceListings\": 1,\n  \"maxActiveVenueProperties\": 0,\n  \"maxDirectLeadPurchasesPerMonth\": 5,\n  \"maxSharedLeadPurchasesPerMonth\": 2,\n  \"maxMediaPerListing\": 5,\n  \"featuredListingSlots\": 0,\n  \"benefits\": [\n    \"1 active service listing\",\n    \"Direct leads at standard price\",\n    \"5 images per listing\"\n  ],\n  \"badgeText\": null,\n  \"theme\": \"BLUE\",\n  \"ctaText\": \"Current Plan\",\n  \"sortOrder\": 1,\n  \"isFeatured\": false,\n  \"isActive\": true,\n  \"isDefault\": true,\n  \"isPurchasable\": false\n}", "options": { "raw": { "language": "json" } } },
+            "description": "Create this once. It is the fallback plan for vendors without an active paid subscription. A default Free plan cannot be deactivated or deleted.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
+          "response": [],
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "if (pm.response.code >= 200 && pm.response.code < 300) {",
+              "  const planId = pm.response.json().data?.id;",
+              "  if (planId) pm.environment.name ? pm.environment.set('subscriptionPlanId', planId) : pm.collectionVariables.set('subscriptionPlanId', planId);",
+              "}"
+            ] }
+          }]
+        },
+        {
+          "name": "Create Basic paid plan card",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/admin/subscription-plans",
+            "body": { "mode": "raw", "raw": "{\n  \"code\": \"BASIC\",\n  \"kind\": \"PAID\",\n  \"displayName\": \"Basic Growth\",\n  \"shortDescription\": \"For growing wedding businesses that want more listings and lower direct lead prices.\",\n  \"monthlyPrice\": 999,\n  \"directLeadPrice\": 10,\n  \"maxActiveServiceListings\": 5,\n  \"maxActiveVenueProperties\": 1,\n  \"maxDirectLeadPurchasesPerMonth\": 25,\n  \"maxSharedLeadPurchasesPerMonth\": 10,\n  \"maxMediaPerListing\": 15,\n  \"featuredListingSlots\": 0,\n  \"benefits\": [\n    \"5 active service listings\",\n    \"1 active venue property\",\n    \"Direct leads at ₹10\",\n    \"15 images per listing\"\n  ],\n  \"badgeText\": \"Most Popular\",\n  \"theme\": \"PURPLE\",\n  \"ctaText\": \"Upgrade to Basic\",\n  \"sortOrder\": 2,\n  \"isFeatured\": true,\n  \"isActive\": true,\n  \"isDefault\": false,\n  \"isPurchasable\": true\n}", "options": { "raw": { "language": "json" } } },
+            "description": "Example paid card. Add Premium in the same way with its own limits and directLeadPrice.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "List subscription plan cards",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/admin/subscription-plans?isActive=true",
+            "description": "Optional filters: isActive=true|false and kind=FREE|PAID.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Update subscription plan card",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/admin/subscription-plans/{{subscriptionPlanId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"badgeText\": \"Best Value\",\n  \"theme\": \"GOLD\",\n  \"ctaText\": \"Upgrade Now\",\n  \"sortOrder\": 2\n}", "options": { "raw": { "language": "json" } } },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Activate subscription plan",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/admin/subscription-plans/{{subscriptionPlanId}}/activate",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Deactivate subscription plan",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/admin/subscription-plans/{{subscriptionPlanId}}/deactivate",
+            "description": "Cannot deactivate the current default Free plan.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin lead management",
+      "description": "Admins can inspect every lead. Only SHARED Get Quotes leads in PENDING_REVIEW can be activated or rejected. Activation stores the platform base price and maximum number of vendors who may buy it. Direct leads are automatically ACTIVE and never use this activation endpoint.",
+      "item": [
+        {
+          "name": "List leads pending review",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/admin/leads?page=1&limit=20&status=PENDING_REVIEW&leadType=SHARED",
+            "description": "Optional filters: status, leadType, sourceType, targetVendorUserId, cityId, and serviceSubcategoryId.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
+          "response": [],
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "if (pm.response.code >= 200 && pm.response.code < 300) {",
+              "  const leadId = pm.response.json().data?.leads?.[0]?.id;",
+              "  if (leadId) pm.environment.name ? pm.environment.set('leadId', leadId) : pm.collectionVariables.set('leadId', leadId);",
+              "}"
+            ] }
+          }]
+        },
+        {
+          "name": "Get lead by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/admin/leads/{{leadId}}",
+            "description": "Admin-only full lead details, including customer contact data, requirement, source, target vendor, and review state.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Activate shared lead",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/admin/leads/{{leadId}}/activate",
+            "body": { "mode": "raw", "raw": "{\n  \"basePrice\": 100,\n  \"maxBuyerCount\": 5\n}", "options": { "raw": { "language": "json" } } },
+            "description": "Only activates a SHARED PENDING_REVIEW lead. basePrice is the exact wallet price each matching vendor pays; maxBuyerCount is the maximum number of vendors who can unlock it.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Reject shared lead",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/admin/leads/{{leadId}}/reject",
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"The requirement does not contain enough valid information to match vendors.\"\n}", "options": { "raw": { "language": "json" } } },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Close active lead",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/admin/leads/{{leadId}}/close",
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Customer cancelled the requirement.\"\n}", "options": { "raw": { "language": "json" } } },
+            "description": "Works for ACTIVE, SOLD_OUT, or EXPIRED leads. A closed lead cannot be purchased later.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
           "response": []
         }
       ]
@@ -1881,6 +2241,101 @@
         {
           "name": "Approve venue property",
           "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/api/v1/admin/venue-properties/{{venuePropertyId}}/approve", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] } },
+          "response": []
+        },
+        {
+          "name": "Reject venue property",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/admin/venue-properties/{{venuePropertyId}}/reject",
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Please correct the property details and upload clearer venue images.\"\n}", "options": { "raw": { "language": "json" } } },
+            "description": "Rejects only a PENDING_REVIEW venue property. The vendor can edit the rejected property and submit it again.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Pause active venue property",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/admin/venue-properties/{{venuePropertyId}}/pause",
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Please correct the venue price and property information before it is published again.\"\n}", "options": { "raw": { "language": "json" } } },
+            "description": "Changes only an ACTIVE venue property to PAUSED and removes it from the public marketplace.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Resume paused venue property",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/admin/venue-properties/{{venuePropertyId}}/resume",
+            "description": "Changes only a PAUSED venue property back to ACTIVE after rechecking its city and the vendor's current venue capabilities.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin service listing revision review",
+      "description": "Review proposed edits to ACTIVE service listings. The original listing remains public until a revision is approved.",
+      "item": [
+        {
+          "name": "List listing revisions pending review",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/admin/listing-revisions?page=1&limit=20&status=PENDING_REVIEW",
+            "description": "Optional filters: status, vendorUserId, and listingId.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
+          "response": [],
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "if (pm.response.code >= 200 && pm.response.code < 300) {",
+              "  const revisionId = pm.response.json().data?.revisions?.[0]?.id;",
+              "  if (revisionId) pm.environment.name ? pm.environment.set('listingRevisionId', revisionId) : pm.collectionVariables.set('listingRevisionId', revisionId);",
+              "}"
+            ] }
+          }]
+        },
+        {
+          "name": "Get listing revision for review",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/admin/listing-revisions/{{listingRevisionId}}",
+            "description": "Returns the proposed snapshot together with the current live listing for comparison.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Approve listing revision",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/admin/listing-revisions/{{listingRevisionId}}/approve",
+            "description": "Atomically applies the proposed snapshot to the original listing and keeps the same listing ID, slug, and lead relationships.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Reject listing revision",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/admin/listing-revisions/{{listingRevisionId}}/reject",
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Please clarify the updated package inclusions and pricing.\"\n}", "options": { "raw": { "language": "json" } } },
+            "description": "Returns the revision to the vendor for correction without changing the live listing.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
           "response": []
         }
       ]
@@ -2073,6 +2528,60 @@
             "auth": {
               "type": "noauth"
             }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Public lead generation",
+      "description": "No authentication is required. Direct enquiries go immediately to the owner of the active public profile/listing/property. Get Quotes creates a shared requirement for admin review. Vendors unlock customer contact from the vendor lead inbox using their wallet.",
+      "item": [
+        {
+          "name": "Send enquiry to vendor profile",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/marketplace/vendors/{{vendorSlug}}/enquiries",
+            "body": { "mode": "raw", "raw": "{\n  \"customerName\": \"Rahul Sharma\",\n  \"customerPhone\": \"9876543210\",\n  \"customerEmail\": \"rahul@example.com\",\n  \"eventDate\": \"2027-02-10\",\n  \"guestCount\": 250,\n  \"message\": \"Need complete wedding planning support.\"\n}", "options": { "raw": { "language": "json" } } },
+            "description": "Creates an ACTIVE DIRECT lead for this public vendor only. The server derives the vendor and city from vendorSlug.",
+            "auth": { "type": "noauth" }
+          },
+          "response": []
+        },
+        {
+          "name": "Send enquiry to service listing",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/marketplace/listings/{{listingSlug}}/enquiries",
+            "body": { "mode": "raw", "raw": "{\n  \"customerName\": \"Rahul Sharma\",\n  \"customerPhone\": \"9876543210\",\n  \"eventDate\": \"2027-02-10\",\n  \"guestCount\": 250,\n  \"message\": \"Please share your package details.\"\n}", "options": { "raw": { "language": "json" } } },
+            "description": "Creates an ACTIVE DIRECT lead for the owner of this active service listing only.",
+            "auth": { "type": "noauth" }
+          },
+          "response": []
+        },
+        {
+          "name": "Send enquiry to venue property",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/marketplace/venue-properties/{{venuePropertySlug}}/enquiries",
+            "body": { "mode": "raw", "raw": "{\n  \"customerName\": \"Rahul Sharma\",\n  \"customerPhone\": \"9876543210\",\n  \"eventDate\": \"2027-02-10\",\n  \"guestCount\": 400,\n  \"message\": \"Is this venue available for our wedding?\"\n}", "options": { "raw": { "language": "json" } } },
+            "description": "Creates an ACTIVE DIRECT lead for the owner of this active venue property only.",
+            "auth": { "type": "noauth" }
+          },
+          "response": []
+        },
+        {
+          "name": "Submit Get Quotes requirement",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/marketplace/leads/get-quotes",
+            "body": { "mode": "raw", "raw": "{\n  \"customerName\": \"Rahul Sharma\",\n  \"customerPhone\": \"9876543210\",\n  \"customerEmail\": \"rahul@example.com\",\n  \"cityId\": \"{{cityId}}\",\n  \"serviceSubcategoryId\": \"{{serviceSubcategoryId}}\",\n  \"eventDate\": \"2027-02-10\",\n  \"guestCount\": 250,\n  \"budgetMin\": 100000,\n  \"budgetMax\": 500000,\n  \"message\": \"Looking for suitable vendors and quotations.\"\n}", "options": { "raw": { "language": "json" } } },
+            "description": "Creates a SHARED lead with PENDING_REVIEW status. Admin price, buyer count, and matching come in the next lead-management step.",
+            "auth": { "type": "noauth" }
           },
           "response": []
         }
@@ -2557,6 +3066,11 @@
     },
     {
       "key": "listingId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "listingRevisionId",
       "value": "",
       "type": "string"
     },

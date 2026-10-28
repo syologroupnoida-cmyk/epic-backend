@@ -1,5 +1,6 @@
 import prisma from '../config/db.js';
 import { ApiError } from '../utils/ApiError.js';
+import { env } from '../config/env.js';
 
 const KYC_SELECT = {
   vendorUserId: true,
@@ -314,6 +315,28 @@ export const approveKyc = async ({
         profileStatus: true,
         updatedAt: true,
       },
+    });
+    // The wallet is created only once. A KYC resubmission/re-approval never
+    // grants the signup promotion a second time.
+    await tx.vendorWallet.upsert({
+      where: { vendorUserId },
+      create: {
+        vendorUserId,
+        balance: env.SIGNUP_WALLET_BONUS,
+        transactions: env.SIGNUP_WALLET_BONUS > 0
+          ? {
+            create: {
+              amount: env.SIGNUP_WALLET_BONUS,
+              balanceAfter: env.SIGNUP_WALLET_BONUS,
+              type: 'SIGNUP_BONUS',
+              description: 'Vendor KYC approval signup wallet credit.',
+              referenceType: 'KYC_APPROVAL',
+              referenceId: vendorUserId,
+            },
+          }
+          : undefined,
+      },
+      update: {},
     });
     const user = await tx.user.update({
       where: { id: vendorUserId },

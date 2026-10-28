@@ -15,8 +15,10 @@ import { createCitySchema, updateCitySchema, listCitiesSchema } from '../../vali
 import * as listingController from '../../controllers/listing.controller.js';
 import * as venuePropertyController from '../../controllers/venueProperty.controller.js';
 import {
+  adminListingRevisionListQuerySchema,
   adminListingListQuerySchema,
   listingIdParamsSchema,
+  listingRevisionIdParamsSchema,
   pauseListingSchema,
   rejectListingSchema,
 } from '../../validators/listing.validator.js';
@@ -26,6 +28,21 @@ import {
   rejectVenuePropertySchema,
   venuePropertyIdParamsSchema,
 } from '../../validators/venueProperty.validator.js';
+import * as adminLeadController from '../../controllers/adminLead.controller.js';
+import {
+  activateSharedLeadSchema,
+  adminLeadListQuerySchema,
+  closeLeadSchema,
+  leadIdParamsSchema,
+  rejectLeadSchema,
+} from '../../validators/lead.validator.js';
+import * as subscriptionPlanController from '../../controllers/subscriptionPlan.controller.js';
+import {
+  adminSubscriptionPlanListQuerySchema,
+  createSubscriptionPlanSchema,
+  subscriptionPlanIdParamsSchema,
+  updateSubscriptionPlanSchema,
+} from '../../validators/subscriptionPlan.validator.js';
 
 const router = Router();
 
@@ -88,6 +105,27 @@ router.route('/cities/:id')
 
 // --- Service listing review ---
 router.get(
+  '/listing-revisions',
+  validateRequest(adminListingRevisionListQuerySchema, 'query'),
+  listingController.listListingRevisionsForAdmin,
+);
+router.get(
+  '/listing-revisions/:revisionId',
+  validateRequest(listingRevisionIdParamsSchema, 'params'),
+  listingController.getListingRevisionForAdmin,
+);
+router.post(
+  '/listing-revisions/:revisionId/approve',
+  validateRequest(listingRevisionIdParamsSchema, 'params'),
+  listingController.approveListingRevision,
+);
+router.post(
+  '/listing-revisions/:revisionId/reject',
+  validateRequest(listingRevisionIdParamsSchema, 'params'),
+  validateRequest(rejectListingSchema),
+  listingController.rejectListingRevision,
+);
+router.get(
   '/listings',
   validateRequest(adminListingListQuerySchema, 'query'),
   listingController.listListingsForAdmin,
@@ -127,5 +165,23 @@ router.post('/venue-properties/:venuePropertyId/approve', validateRequest(venueP
 router.post('/venue-properties/:venuePropertyId/reject', validateRequest(venuePropertyIdParamsSchema, 'params'), validateRequest(rejectVenuePropertySchema), venuePropertyController.reject);
 router.post('/venue-properties/:venuePropertyId/pause', validateRequest(venuePropertyIdParamsSchema, 'params'), validateRequest(pauseVenuePropertySchema), venuePropertyController.pause);
 router.post('/venue-properties/:venuePropertyId/resume', validateRequest(venuePropertyIdParamsSchema, 'params'), venuePropertyController.resume);
+
+// --- Lead management ---
+router.get('/leads', validateRequest(adminLeadListQuerySchema, 'query'), adminLeadController.listLeads);
+router.get('/leads/:leadId', validateRequest(leadIdParamsSchema, 'params'), adminLeadController.getLead);
+router.post('/leads/:leadId/activate', validateRequest(leadIdParamsSchema, 'params'), validateRequest(activateSharedLeadSchema), adminLeadController.activateSharedLead);
+router.post('/leads/:leadId/reject', validateRequest(leadIdParamsSchema, 'params'), validateRequest(rejectLeadSchema), adminLeadController.rejectSharedLead);
+router.post('/leads/:leadId/close', validateRequest(leadIdParamsSchema, 'params'), validateRequest(closeLeadSchema), adminLeadController.closeLead);
+
+// --- Subscription plan cards ---
+router.route('/subscription-plans')
+  .get(validateRequest(adminSubscriptionPlanListQuerySchema, 'query'), subscriptionPlanController.listPlans)
+  .post(validateRequest(createSubscriptionPlanSchema), subscriptionPlanController.createPlan);
+router.route('/subscription-plans/:planId')
+  .get(validateRequest(subscriptionPlanIdParamsSchema, 'params'), subscriptionPlanController.getPlan)
+  .patch(validateRequest(subscriptionPlanIdParamsSchema, 'params'), validateRequest(updateSubscriptionPlanSchema), subscriptionPlanController.updatePlan)
+  .delete(validateRequest(subscriptionPlanIdParamsSchema, 'params'), subscriptionPlanController.deletePlan);
+router.post('/subscription-plans/:planId/activate', validateRequest(subscriptionPlanIdParamsSchema, 'params'), subscriptionPlanController.activatePlan);
+router.post('/subscription-plans/:planId/deactivate', validateRequest(subscriptionPlanIdParamsSchema, 'params'), subscriptionPlanController.deactivatePlan);
 
 export default router;

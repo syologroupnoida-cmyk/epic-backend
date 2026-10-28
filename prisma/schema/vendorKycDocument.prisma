@@ -1,10 +1,10 @@
 // Submitted documents belong to the vendor and are reviewed manually by an admin.
 model VendorKycDocument {
-  id             String          @id @default(uuid())
-  vendorUserId   String
-  type           KycDocumentType
-  documentNumber String?
-  documentUrl    String?
+  id               String          @id @default(uuid())
+  vendorUserId     String
+  type             KycDocumentType
+  documentNumber   String?
+  documentUrl      String?
   documentPublicId String?
 
   // Admin verification (manual review during KYC approval).

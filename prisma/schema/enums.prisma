@@ -84,6 +84,14 @@ enum ListingStatus {
   ARCHIVED
 }
 
+enum ListingRevisionStatus {
+  DRAFT
+  PENDING_REVIEW
+  REJECTED
+  APPROVED
+  CANCELLED
+}
+
 enum ListingPriceType {
   FIXED
   STARTING_FROM
@@ -96,4 +104,58 @@ enum ListingPriceType {
 enum ListingMediaType {
   IMAGE
   VIDEO
+}
+
+enum LeadType {
+  DIRECT
+  SHARED
+}
+
+enum LeadSourceType {
+  VENDOR_PROFILE
+  SERVICE_LISTING
+  VENUE_PROPERTY
+  GET_QUOTES
+}
+
+enum LeadStatus {
+  PENDING_REVIEW
+  ACTIVE
+  REJECTED
+  SOLD_OUT
+  EXPIRED
+  CLOSED
+}
+
+enum SubscriptionPlanKind {
+  FREE
+  PAID
+}
+
+enum SubscriptionPlanTheme {
+  BLUE
+  PURPLE
+  GOLD
+  DARK
+}
+
+enum VendorSubscriptionStatus {
+  PENDING_PAYMENT
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+enum WalletTransactionType {
+  SIGNUP_BONUS
+  SUBSCRIPTION_CREDIT
+  WALLET_TOPUP
+  LEAD_PURCHASE
+  REFUND
+  ADMIN_ADJUSTMENT
+}
+
+enum LeadPurchaseStatus {
+  PAID
+  REFUNDED
 }

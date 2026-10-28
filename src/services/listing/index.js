@@ -72,6 +72,24 @@ const serializeVendorListing = (listing) => ({
   updatedAt: listing.updatedAt,
 });
 
+const serializeRevision = (revision, includeCurrentListing = false) => ({
+  id: revision.id,
+  listingId: revision.listingId,
+  status: revision.status,
+  proposed: revision.payload,
+  submittedAt: revision.submittedAt,
+  reviewedAt: revision.reviewedAt,
+  rejectionReason: revision.rejectionReason,
+  createdAt: revision.createdAt,
+  updatedAt: revision.updatedAt,
+  ...(includeCurrentListing && revision.listing && {
+    currentListing: {
+      ...serializeVendorListing(revision.listing),
+      vendor: revision.listing.vendor,
+    },
+  }),
+});
+
 const serializePublicListing = (listing) => ({
   id: listing.id,
   listingType: listing.listingType,
@@ -169,6 +187,36 @@ const mapMedia = (media) => media.map((asset, sortOrder) => ({
   sortOrder,
 }));
 
+const listingSnapshot = (listing) => ({
+  title: listing.title,
+  description: listing.description,
+  startingPrice: listing.startingPrice,
+  priceType: listing.priceType,
+  cityId: listing.city.id,
+  serviceAreaCityIds: listing.serviceAreas.map(({ city }) => city.id),
+  metadata: listing.metadata,
+  services: listing.components.map((component) => ({
+    serviceSubcategoryId: component.subcategory.id,
+    price: component.price,
+    metadata: component.metadata,
+  })),
+  media: listing.media.map((asset) => ({
+    url: asset.url,
+    publicId: asset.publicId,
+    mediaType: asset.mediaType,
+  })),
+});
+
+const validateRevisionSnapshot = async ({ vendorUserId, payload }) => {
+  await assertActiveCity(payload.cityId);
+  await assertActiveServiceAreas({
+    cityIds: payload.serviceAreaCityIds,
+    primaryCityId: payload.cityId,
+  });
+  await assertApprovedServiceCapabilities(vendorUserId, payload.services);
+  assertOwnedMedia({ vendorUserId, media: payload.media });
+};
+
 const assertEditable = (listing) => {
   if (!['DRAFT', 'REJECTED'].includes(listing.status)) {
     throw ApiError.conflict('Only draft or rejected listings can be edited.');
@@ -254,6 +302,80 @@ export const updateMyListing = async ({ vendorUserId, listingId, payload }) => {
   return serializeVendorListing(listing);
 };
 
+export const createMyListingRevision = async ({ vendorUserId, listingId }) => {
+  await assertApprovedVendor(vendorUserId);
+  const listing = await listingRepo.findVendorListingById(vendorUserId, listingId);
+  if (!listing) throw ApiError.notFound('Listing not found.');
+  if (listing.status !== 'ACTIVE') {
+    throw ApiError.conflict('Only active listings use the revision workflow. Edit draft or rejected listings directly.');
+  }
+
+  const existing = await listingRepo.findOpenVendorRevision(vendorUserId, listingId);
+  if (existing) return serializeRevision(existing);
+
+  const revision = await listingRepo.createVendorRevision({
+    listingId,
+    vendorUserId,
+    payload: listingSnapshot(listing),
+  });
+  return serializeRevision(revision);
+};
+
+export const getMyListingRevision = async ({ vendorUserId, listingId }) => {
+  const revision = await listingRepo.findOpenVendorRevision(vendorUserId, listingId);
+  if (!revision) throw ApiError.notFound('Open listing revision not found.');
+  return serializeRevision(revision);
+};
+
+export const updateMyListingRevision = async ({ vendorUserId, listingId, payload }) => {
+  await assertApprovedVendor(vendorUserId);
+  const listing = await listingRepo.findVendorListingById(vendorUserId, listingId);
+  if (!listing) throw ApiError.notFound('Listing not found.');
+  if (listing.status !== 'ACTIVE') {
+    throw ApiError.conflict('The live listing must be active while its revision is edited.');
+  }
+  const revision = await listingRepo.findOpenVendorRevision(vendorUserId, listingId);
+  if (!revision) throw ApiError.notFound('Open listing revision not found.');
+  if (!['DRAFT', 'REJECTED'].includes(revision.status)) {
+    throw ApiError.conflict('A revision pending review cannot be edited.');
+  }
+
+  const proposed = {
+    ...revision.payload,
+    ...payload,
+    ...(payload.cityId && !payload.serviceAreaCityIds && {
+      serviceAreaCityIds: [...new Set([...revision.payload.serviceAreaCityIds, payload.cityId])],
+    }),
+  };
+  await validateRevisionSnapshot({ vendorUserId, payload: proposed });
+  return serializeRevision(await listingRepo.updateVendorRevision({ id: revision.id, payload: proposed }));
+};
+
+export const submitMyListingRevision = async ({ vendorUserId, listingId }) => {
+  await assertApprovedVendor(vendorUserId);
+  const listing = await listingRepo.findVendorListingById(vendorUserId, listingId);
+  if (!listing) throw ApiError.notFound('Listing not found.');
+  if (listing.status !== 'ACTIVE') {
+    throw ApiError.conflict('The live listing must be active before its revision can be submitted.');
+  }
+  const revision = await listingRepo.findOpenVendorRevision(vendorUserId, listingId);
+  if (!revision) throw ApiError.notFound('Open listing revision not found.');
+  if (!['DRAFT', 'REJECTED'].includes(revision.status)) {
+    throw ApiError.conflict('Only draft or rejected revisions can be submitted.');
+  }
+  await validateRevisionSnapshot({ vendorUserId, payload: revision.payload });
+  return serializeRevision(await listingRepo.submitVendorRevision(revision.id));
+};
+
+export const cancelMyListingRevision = async ({ vendorUserId, listingId }) => {
+  const revision = await listingRepo.findOpenVendorRevision(vendorUserId, listingId);
+  if (!revision) throw ApiError.notFound('Open listing revision not found.');
+  if (!['DRAFT', 'REJECTED'].includes(revision.status)) {
+    throw ApiError.conflict('A revision pending review cannot be cancelled.');
+  }
+  return serializeRevision(await listingRepo.cancelVendorRevision(revision.id));
+};
+
 export const submitMyListing = async ({ vendorUserId, listingId }) => {
   await assertApprovedVendor(vendorUserId);
   const listing = await listingRepo.findVendorListingById(vendorUserId, listingId);
@@ -307,6 +429,64 @@ export const getListingForAdmin = async (listingId) => {
     ...serializeVendorListing(listing),
     vendor: listing.vendor,
   };
+};
+
+export const listListingRevisionsForAdmin = async (query) => {
+  const { revisions, total } = await listingRepo.listRevisionsForAdmin(query);
+  return {
+    revisions: revisions.map((revision) => serializeRevision(revision, true)),
+    pagination: pageInfo(total, query.page, query.limit),
+  };
+};
+
+export const getListingRevisionForAdmin = async (revisionId) => {
+  const revision = await listingRepo.findRevisionForAdmin(revisionId);
+  if (!revision) throw ApiError.notFound('Listing revision not found.');
+  return serializeRevision(revision, true);
+};
+
+const requirePendingRevision = async (revisionId, { requireActiveListing = false } = {}) => {
+  const revision = await listingRepo.findRevisionForAdmin(revisionId);
+  if (!revision) throw ApiError.notFound('Listing revision not found.');
+  if (revision.status !== 'PENDING_REVIEW') {
+    throw ApiError.conflict('Only listing revisions pending review can be reviewed.');
+  }
+  if (requireActiveListing && revision.listing.status !== 'ACTIVE') {
+    throw ApiError.conflict('The original listing must be active before its revision can be reviewed.');
+  }
+  return revision;
+};
+
+export const approveListingRevision = async ({ revisionId, adminId }) => {
+  const revision = await requirePendingRevision(revisionId, { requireActiveListing: true });
+  const proposed = revision.payload;
+  await validateRevisionSnapshot({ vendorUserId: revision.vendorUserId, payload: proposed });
+  const approved = await listingRepo.approveRevision({
+    revisionId,
+    adminId,
+    listingId: revision.listingId,
+    data: {
+      title: proposed.title,
+      description: proposed.description,
+      startingPrice: proposed.startingPrice,
+      priceType: proposed.priceType,
+      cityId: proposed.cityId,
+      metadata: proposed.metadata,
+    },
+    serviceAreaCityIds: proposed.serviceAreaCityIds,
+    components: mapComponents(proposed.services),
+    media: mapMedia(proposed.media),
+  });
+  return serializeRevision(approved, true);
+};
+
+export const rejectListingRevision = async ({ revisionId, adminId, reason }) => {
+  await requirePendingRevision(revisionId);
+  return serializeRevision(await listingRepo.rejectRevision({
+    id: revisionId,
+    adminId,
+    reason,
+  }), true);
 };
 
 const requirePendingListing = async (listingId) => {

@@ -1,0 +1,18 @@
+model VendorSubscription {
+  id           String                   @id @default(cuid())
+  vendorUserId String
+  planId       String
+  status       VendorSubscriptionStatus @default(PENDING_PAYMENT)
+  amount       Int
+  startedAt    DateTime?
+  endsAt       DateTime?
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
+
+  vendor VendorProfile    @relation(fields: [vendorUserId], references: [userId], onDelete: Cascade)
+  plan   SubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  @@index([vendorUserId, status, endsAt])
+  @@index([planId, status])
+  @@map("vendor_subscriptions")
+}

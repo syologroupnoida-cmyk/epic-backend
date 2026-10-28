@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   adminListingListQuerySchema,
+  adminListingRevisionListQuerySchema,
   createServiceListingSchema,
   pauseListingSchema,
   publicListingListQuerySchema,
@@ -82,6 +83,20 @@ test('public listing query validates pagination and filters', () => {
 test('vendor and admin listing filters accept archived status', () => {
   assert.equal(vendorListingListQuerySchema.parse({ status: 'ARCHIVED' }).status, 'ARCHIVED');
   assert.equal(adminListingListQuerySchema.parse({ status: 'ARCHIVED' }).status, 'ARCHIVED');
+});
+
+test('admin listing revision filters parse status and identifiers', () => {
+  assert.deepEqual(adminListingRevisionListQuerySchema.parse({
+    status: 'PENDING_REVIEW',
+    listingId: ' listing-1 ',
+    vendorUserId: ' vendor-1 ',
+  }), {
+    page: 1,
+    limit: 20,
+    status: 'PENDING_REVIEW',
+    listingId: 'listing-1',
+    vendorUserId: 'vendor-1',
+  });
 });
 
 test('listing pause requires a clear reason', () => {

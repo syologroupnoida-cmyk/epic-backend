@@ -78,6 +78,10 @@ export const listingIdParamsSchema = z.object({
   listingId: id('listingId'),
 }).strict();
 
+export const listingRevisionIdParamsSchema = z.object({
+  revisionId: id('revisionId'),
+}).strict();
+
 export const listingSlugParamsSchema = z.object({
   slug: z.string().trim().min(1, 'Listing slug is required').max(220)
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Listing slug is invalid'),
@@ -100,6 +104,13 @@ export const adminListingListQuerySchema = z.object({
   listingType: z.enum(['SERVICE', 'VENUE_PROPERTY']).optional(),
   cityId: id('cityId').optional(),
   serviceSubcategoryId: id('serviceSubcategoryId').optional(),
+}).strict();
+
+export const adminListingRevisionListQuerySchema = z.object({
+  ...pageQuery,
+  status: z.enum(['DRAFT', 'PENDING_REVIEW', 'REJECTED', 'APPROVED', 'CANCELLED']).optional(),
+  vendorUserId: id('vendorUserId').optional(),
+  listingId: id('listingId').optional(),
 }).strict();
 
 export const publicListingListQuerySchema = z.object({

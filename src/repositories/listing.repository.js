@@ -79,6 +79,20 @@ const PRIVATE_LISTING_SELECT = {
   media: { orderBy: { sortOrder: 'asc' }, select: MEDIA_SELECT },
 };
 
+const REVISION_SELECT = {
+  id: true,
+  listingId: true,
+  vendorUserId: true,
+  payload: true,
+  status: true,
+  submittedAt: true,
+  reviewedAt: true,
+  reviewedByAdminId: true,
+  rejectionReason: true,
+  createdAt: true,
+  updatedAt: true,
+};
+
 const PUBLIC_LISTING_SELECT = {
   id: true,
   listingType: true,
@@ -169,6 +183,129 @@ export const updateVendorListing = ({ id, data, serviceAreaCityIds, components, 
       }),
     },
     select: PRIVATE_LISTING_SELECT,
+  });
+
+export const findOpenVendorRevision = (vendorUserId, listingId) =>
+  prisma.vendorListingRevision.findFirst({
+    where: {
+      listingId,
+      vendorUserId,
+      status: { in: ['DRAFT', 'PENDING_REVIEW', 'REJECTED'] },
+    },
+    select: REVISION_SELECT,
+  });
+
+export const createVendorRevision = ({ listingId, vendorUserId, payload }) =>
+  prisma.vendorListingRevision.create({
+    data: { listingId, vendorUserId, payload },
+    select: REVISION_SELECT,
+  });
+
+export const updateVendorRevision = ({ id, payload }) =>
+  prisma.vendorListingRevision.update({
+    where: { id },
+    data: { payload, rejectionReason: null },
+    select: REVISION_SELECT,
+  });
+
+export const submitVendorRevision = (id) => prisma.vendorListingRevision.update({
+  where: { id },
+  data: {
+    status: 'PENDING_REVIEW',
+    submittedAt: new Date(),
+    reviewedAt: null,
+    reviewedByAdminId: null,
+    rejectionReason: null,
+  },
+  select: REVISION_SELECT,
+});
+
+export const cancelVendorRevision = (id) => prisma.vendorListingRevision.update({
+  where: { id },
+  data: { status: 'CANCELLED' },
+  select: REVISION_SELECT,
+});
+
+export const findRevisionForAdmin = (id) => prisma.vendorListingRevision.findUnique({
+  where: { id },
+  select: {
+    ...REVISION_SELECT,
+    listing: {
+      select: { ...PRIVATE_LISTING_SELECT, vendor: { select: VENDOR_SELECT } },
+    },
+  },
+});
+
+export const listRevisionsForAdmin = async ({ page, limit, status, vendorUserId, listingId }) => {
+  const where = {
+    ...(status && { status }),
+    ...(vendorUserId && { vendorUserId }),
+    ...(listingId && { listingId }),
+  };
+  const [revisions, total] = await Promise.all([
+    prisma.vendorListingRevision.findMany({
+      where,
+      skip: (page - 1) * limit,
+      take: limit,
+      orderBy: [{ submittedAt: 'asc' }, { createdAt: 'asc' }],
+      select: {
+        ...REVISION_SELECT,
+        listing: {
+          select: { ...PRIVATE_LISTING_SELECT, vendor: { select: VENDOR_SELECT } },
+        },
+      },
+    }),
+    prisma.vendorListingRevision.count({ where }),
+  ]);
+  return { revisions, total };
+};
+
+export const rejectRevision = ({ id, adminId, reason }) =>
+  prisma.vendorListingRevision.update({
+    where: { id },
+    data: {
+      status: 'REJECTED',
+      reviewedAt: new Date(),
+      reviewedByAdminId: adminId,
+      rejectionReason: reason,
+    },
+    select: {
+      ...REVISION_SELECT,
+      listing: {
+        select: { ...PRIVATE_LISTING_SELECT, vendor: { select: VENDOR_SELECT } },
+      },
+    },
+  });
+
+export const approveRevision = ({ revisionId, adminId, listingId, data, serviceAreaCityIds, components, media }) =>
+  prisma.$transaction(async (tx) => {
+    await tx.vendorListing.update({
+      where: { id: listingId },
+      data: {
+        ...data,
+        serviceAreas: {
+          deleteMany: {},
+          create: serviceAreaCityIds.map((cityId) => ({ cityId })),
+        },
+        components: { deleteMany: {}, create: components },
+        media: { deleteMany: {}, create: media },
+      },
+    });
+    return tx.vendorListingRevision.update({
+      where: { id: revisionId },
+      data: {
+        status: 'APPROVED',
+        reviewedAt: new Date(),
+        reviewedByAdminId: adminId,
+        rejectionReason: null,
+      },
+      select: {
+        ...REVISION_SELECT,
+        listing: {
+          select: { ...PRIVATE_LISTING_SELECT, vendor: { select: VENDOR_SELECT } },
+        },
+      },
+    });
   });
 
 export const listVendorListings = async ({ vendorUserId, page, limit, status }) => {

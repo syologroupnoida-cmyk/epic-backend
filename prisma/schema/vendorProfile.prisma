@@ -11,13 +11,17 @@ model VendorProfile {
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
 
-  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  kyc          VendorKyc?
-  documents    VendorKycDocument[]
-  primaryCity  City?               @relation(fields: [primaryCityId], references: [id], onDelete: SetNull)
-  capabilities VendorCapability[]
-  listings     VendorListing[]
+  user            User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kyc             VendorKyc?
+  documents       VendorKycDocument[]
+  primaryCity     City?                  @relation(fields: [primaryCityId], references: [id], onDelete: SetNull)
+  capabilities    VendorCapability[]
+  listings        VendorListing[]
   venueProperties VenuePropertyListing[]
+  directLeads     Lead[]
+  subscriptions   VendorSubscription[]
+  wallet          VendorWallet?
+  leadPurchases   LeadPurchase[]
 
   @@index([kycStatus])
   @@index([profileStatus])

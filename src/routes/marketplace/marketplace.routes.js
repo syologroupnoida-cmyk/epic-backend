@@ -15,6 +15,8 @@ import {
   publicVenuePropertyListQuerySchema,
   venuePropertySlugParamsSchema,
 } from '../../validators/venueProperty.validator.js';
+import * as leadController from '../../controllers/lead.controller.js';
+import { directEnquirySchema, sharedLeadSchema } from '../../validators/lead.validator.js';
 
 const router = Router();
 
@@ -36,13 +38,30 @@ router.get(
   listingController.getPublicListing,
 );
 
+router.post(
+  '/listings/:slug/enquiries',
+  validateRequest(listingSlugParamsSchema, 'params'),
+  validateRequest(directEnquirySchema),
+  leadController.createServiceListingEnquiry,
+);
+
 router.get('/venue-properties', validateRequest(publicVenuePropertyListQuerySchema, 'query'), venuePropertyController.listPublic);
 router.get('/venue-properties/:slug', validateRequest(venuePropertySlugParamsSchema, 'params'), venuePropertyController.getPublic);
+router.post('/venue-properties/:slug/enquiries', validateRequest(venuePropertySlugParamsSchema, 'params'), validateRequest(directEnquirySchema), leadController.createVenuePropertyEnquiry);
+
+router.post('/leads/get-quotes', validateRequest(sharedLeadSchema), leadController.createSharedLead);
 
 router.get(
   '/vendors/:slug',
   validateRequest(publicVendorSlugSchema, 'params'),
   profileController.getPublicVendorProfile,
+);
+
+router.post(
+  '/vendors/:slug/enquiries',
+  validateRequest(publicVendorSlugSchema, 'params'),
+  validateRequest(directEnquirySchema),
+  leadController.createVendorProfileEnquiry,
 );
 
 export default router;

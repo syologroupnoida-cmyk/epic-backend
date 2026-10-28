@@ -1,0 +1,20 @@
+model LeadPurchase {
+  id                   String             @id @default(cuid())
+  leadId               String
+  vendorUserId         String
+  subscriptionPlanId   String?
+  amount               Int
+  status               LeadPurchaseStatus @default(PAID)
+  purchasedAt          DateTime           @default(now())
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  lead             Lead              @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  vendor           VendorProfile     @relation(fields: [vendorUserId], references: [userId], onDelete: Cascade)
+  subscriptionPlan SubscriptionPlan? @relation(fields: [subscriptionPlanId], references: [id], onDelete: SetNull)
+
+  @@unique([leadId, vendorUserId])
+  @@index([vendorUserId, purchasedAt])
+  @@index([leadId, status])
+  @@map("lead_purchases")
+}

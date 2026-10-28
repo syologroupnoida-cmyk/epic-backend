@@ -193,6 +193,7 @@ test('KYC approval initializes public profile fields and approved capabilities',
       updateMany: asyncSpy({ count: 0 }),
       findMany: asyncSpy([]),
     },
+    vendorWallet: { upsert: asyncSpy(null) },
     vendorProfile: {
       updateMany: asyncSpy({ count: 1 }),
       update: updateProfile,
@@ -333,6 +334,7 @@ test('KYC approval resolves a legacy city-name snapshot when no primary city ID 
       updateMany: asyncSpy({ count: 0 }),
       findMany: asyncSpy([]),
     },
+    vendorWallet: { upsert: asyncSpy(null) },
     user: { update: asyncSpy({ id: vendorUserId, isActive: true }) },
   };
 

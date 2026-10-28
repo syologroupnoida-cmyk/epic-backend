@@ -26,10 +26,11 @@ model VenuePropertyListing {
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
 
-  vendor VendorProfile      @relation(fields: [vendorUserId], references: [userId], onDelete: Cascade)
-  city   City               @relation("VenuePropertyListingCity", fields: [cityId], references: [id], onDelete: Restrict)
+  vendor VendorProfile        @relation(fields: [vendorUserId], references: [userId], onDelete: Cascade)
+  city   City                 @relation("VenuePropertyListingCity", fields: [cityId], references: [id], onDelete: Restrict)
   types  VenuePropertyType[]
   media  VenuePropertyMedia[]
+  leads  Lead[]
 
   @@index([vendorUserId, status])
   @@index([cityId, status])
@@ -38,10 +39,10 @@ model VenuePropertyListing {
 }
 
 model VenuePropertyType {
-  id                   String             @id @default(cuid())
+  id                   String @id @default(cuid())
   venuePropertyId      String
   serviceSubcategoryId String
-  sortOrder            Int                @default(0)
+  sortOrder            Int    @default(0)
 
   venueProperty VenuePropertyListing @relation(fields: [venuePropertyId], references: [id], onDelete: Cascade)
   subcategory   ServiceSubcategory   @relation(fields: [serviceSubcategoryId], references: [id], onDelete: Restrict)
@@ -52,13 +53,13 @@ model VenuePropertyType {
 }
 
 model VenuePropertyMedia {
-  id              String               @id @default(cuid())
+  id              String           @id @default(cuid())
   venuePropertyId String
   url             String
   publicId        String
-  mediaType       ListingMediaType     @default(IMAGE)
-  sortOrder       Int                  @default(0)
-  createdAt       DateTime             @default(now())
+  mediaType       ListingMediaType @default(IMAGE)
+  sortOrder       Int              @default(0)
+  createdAt       DateTime         @default(now())
 
   venueProperty VenuePropertyListing @relation(fields: [venuePropertyId], references: [id], onDelete: Cascade)
 

@@ -1,0 +1,34 @@
+model SubscriptionPlan {
+  id                             String                @id @default(cuid())
+  code                           String                @unique
+  kind                           SubscriptionPlanKind
+  displayName                    String
+  shortDescription               String
+  monthlyPrice                   Int
+  directLeadPrice                Int
+  walletCreditPerBillingCycle    Int                   @default(0)
+  maxActiveServiceListings       Int
+  maxActiveVenueProperties       Int
+  maxDirectLeadPurchasesPerMonth Int
+  maxSharedLeadPurchasesPerMonth Int
+  maxMediaPerListing             Int
+  featuredListingSlots           Int
+  benefits                       String[]              @default([])
+  badgeText                      String?
+  theme                          SubscriptionPlanTheme @default(BLUE)
+  ctaText                        String
+  sortOrder                      Int                   @default(0)
+  isFeatured                     Boolean               @default(false)
+  isActive                       Boolean               @default(false)
+  isDefault                      Boolean               @default(false)
+  isPurchasable                  Boolean               @default(true)
+  createdAt                      DateTime              @default(now())
+  updatedAt                      DateTime              @updatedAt
+
+  vendorSubscriptions VendorSubscription[]
+  leadPurchases       LeadPurchase[]
+
+  @@index([isActive, sortOrder])
+  @@index([kind, isActive])
+  @@map("subscription_plans")
+}

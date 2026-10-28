@@ -1,31 +1,33 @@
 model VendorListing {
-  id              String           @id @default(cuid())
-  vendorUserId    String
-  listingType     OfferingKind     @default(SERVICE)
-  title           String
-  slug            String           @unique
-  description     String
-  startingPrice   Int
-  priceType       ListingPriceType @default(STARTING_FROM)
-  cityId          String
-  metadata        Json?
-  status          ListingStatus    @default(DRAFT)
-  submittedAt     DateTime?
-  reviewedAt      DateTime?
+  id                String           @id @default(cuid())
+  vendorUserId      String
+  listingType       OfferingKind     @default(SERVICE)
+  title             String
+  slug              String           @unique
+  description       String
+  startingPrice     Int
+  priceType         ListingPriceType @default(STARTING_FROM)
+  cityId            String
+  metadata          Json?
+  status            ListingStatus    @default(DRAFT)
+  submittedAt       DateTime?
+  reviewedAt        DateTime?
   reviewedByAdminId String?
-  rejectionReason String?
-  pausedAt        DateTime?
-  pausedByAdminId String?
-  pauseReason     String?
-  archivedAt      DateTime?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  rejectionReason   String?
+  pausedAt          DateTime?
+  pausedByAdminId   String?
+  pauseReason       String?
+  archivedAt        DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 
-  vendor     VendorProfile            @relation(fields: [vendorUserId], references: [userId], onDelete: Cascade)
-  city       City                     @relation("ListingCity", fields: [cityId], references: [id], onDelete: Restrict)
+  vendor       VendorProfile             @relation(fields: [vendorUserId], references: [userId], onDelete: Cascade)
+  city         City                      @relation("ListingCity", fields: [cityId], references: [id], onDelete: Restrict)
   serviceAreas ListingServiceArea[]
-  components ListingServiceComponent[]
-  media      ListingMedia[]
+  components   ListingServiceComponent[]
+  media        ListingMedia[]
+  leads        Lead[]
+  revisions    VendorListingRevision[]
 
   @@index([vendorUserId, status])
   @@index([cityId, status])
@@ -33,11 +35,32 @@ model VendorListing {
   @@map("vendor_listings")
 }
 
+model VendorListingRevision {
+  id                String                @id @default(cuid())
+  listingId         String
+  vendorUserId      String
+  payload           Json
+  status            ListingRevisionStatus @default(DRAFT)
+  submittedAt       DateTime?
+  reviewedAt        DateTime?
+  reviewedByAdminId String?
+  rejectionReason   String?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  listing VendorListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId, status])
+  @@index([vendorUserId, status])
+  @@index([status, submittedAt])
+  @@map("vendor_listing_revisions")
+}
+
 model ListingServiceArea {
-  id        String        @id @default(cuid())
+  id        String   @id @default(cuid())
   listingId String
   cityId    String
-  createdAt DateTime      @default(now())
+  createdAt DateTime @default(now())
 
   listing VendorListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
   city    City          @relation("ListingServiceAreaCity", fields: [cityId], references: [id], onDelete: Restrict)
@@ -48,14 +71,14 @@ model ListingServiceArea {
 }
 
 model ListingServiceComponent {
-  id                   String        @id @default(cuid())
+  id                   String   @id @default(cuid())
   listingId            String
   serviceSubcategoryId String
   price                Int?
   metadata             Json?
-  sortOrder            Int           @default(0)
-  createdAt            DateTime      @default(now())
-  updatedAt            DateTime      @updatedAt
+  sortOrder            Int      @default(0)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   listing     VendorListing      @relation(fields: [listingId], references: [id], onDelete: Cascade)
   subcategory ServiceSubcategory @relation(fields: [serviceSubcategoryId], references: [id], onDelete: Restrict)

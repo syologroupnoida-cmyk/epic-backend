@@ -43,6 +43,12 @@ import {
   subscriptionPlanIdParamsSchema,
   updateSubscriptionPlanSchema,
 } from '../../validators/subscriptionPlan.validator.js';
+import * as contactMessageController from '../../controllers/contactMessage.controller.js';
+import {
+  adminContactMessageListQuerySchema,
+  contactMessageIdParamsSchema,
+  updateContactMessageSchema,
+} from '../../validators/contactMessage.validator.js';
 
 const router = Router();
 
@@ -183,5 +189,10 @@ router.route('/subscription-plans/:planId')
   .delete(validateRequest(subscriptionPlanIdParamsSchema, 'params'), subscriptionPlanController.deletePlan);
 router.post('/subscription-plans/:planId/activate', validateRequest(subscriptionPlanIdParamsSchema, 'params'), subscriptionPlanController.activatePlan);
 router.post('/subscription-plans/:planId/deactivate', validateRequest(subscriptionPlanIdParamsSchema, 'params'), subscriptionPlanController.deactivatePlan);
+
+// --- Public Contact Us inbox ---
+router.get('/contact-messages', validateRequest(adminContactMessageListQuerySchema, 'query'), contactMessageController.listForAdmin);
+router.get('/contact-messages/:messageId', validateRequest(contactMessageIdParamsSchema, 'params'), contactMessageController.getForAdmin);
+router.patch('/contact-messages/:messageId', validateRequest(contactMessageIdParamsSchema, 'params'), validateRequest(updateContactMessageSchema), contactMessageController.updateForAdmin);
 
 export default router;

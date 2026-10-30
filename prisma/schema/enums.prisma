@@ -159,3 +159,16 @@ enum LeadPurchaseStatus {
   PAID
   REFUNDED
 }
+
+enum ContactUserType {
+  CLIENT
+  VENDOR
+  GENERAL
+}
+
+enum ContactMessageStatus {
+  NEW
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}

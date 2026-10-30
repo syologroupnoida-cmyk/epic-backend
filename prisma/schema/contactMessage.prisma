@@ -1,0 +1,20 @@
+model ContactMessage {
+  id               String               @id @default(cuid())
+  name             String
+  email            String?
+  phone            String?
+  userType         ContactUserType      @default(GENERAL)
+  subject          String
+  message          String
+  status           ContactMessageStatus @default(NEW)
+  adminNote        String?
+  handledByAdminId String?
+  handledAt        DateTime?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  @@index([status, createdAt])
+  @@index([userType, createdAt])
+  @@index([handledByAdminId])
+  @@map("contact_messages")
+}

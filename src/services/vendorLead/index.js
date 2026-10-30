@@ -123,7 +123,7 @@ export const purchaseLead = async ({ vendorUserId, leadId }) => {
     NOT_FOUND: 'Lead not found or is no longer available.',
     SOLD_OUT: 'This lead has no remaining buyer slots.',
     ALREADY_PURCHASED: 'You have already purchased this lead.',
-    NOT_ELIGIBLE: 'This lead does not match your approved city and capability.',
+    NOT_ELIGIBLE: 'This lead does not match your approved capability and primary city or active listing service area.',
     PRICE_UNAVAILABLE: 'This lead does not have a purchase price yet.',
     PLAN_LIMIT_REACHED: 'Your subscription monthly lead-purchase limit has been reached.',
     INSUFFICIENT_BALANCE: 'Your wallet balance is insufficient to unlock this lead.',

@@ -1788,7 +1788,7 @@
         "method": "GET",
         "header": [],
         "url": "{{baseUrl}}/api/v1/vendor/leads/shared?page=1&limit=20",
-        "description": "Returns ACTIVE shared leads only when the vendor has an approved matching subcategory capability and the lead city matches the vendor primary operating city. Customer contact remains masked.",
+        "description": "Returns ACTIVE shared leads when the vendor has an approved matching subcategory capability and the lead city matches either the vendor primary operating city or an ACTIVE matching service listing's service area. Customer contact remains masked.",
         "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
       },
       "response": [],
@@ -2582,6 +2582,86 @@
             "body": { "mode": "raw", "raw": "{\n  \"customerName\": \"Rahul Sharma\",\n  \"customerPhone\": \"9876543210\",\n  \"customerEmail\": \"rahul@example.com\",\n  \"cityId\": \"{{cityId}}\",\n  \"serviceSubcategoryId\": \"{{serviceSubcategoryId}}\",\n  \"eventDate\": \"2027-02-10\",\n  \"guestCount\": 250,\n  \"budgetMin\": 100000,\n  \"budgetMax\": 500000,\n  \"message\": \"Looking for suitable vendors and quotations.\"\n}", "options": { "raw": { "language": "json" } } },
             "description": "Creates a SHARED lead with PENDING_REVIEW status. Admin price, buyer count, and matching come in the next lead-management step.",
             "auth": { "type": "noauth" }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Public Subscription Plans",
+      "description": "Public pricing cards for visitors or unregistered vendors. Only active admin-created plans are returned. This endpoint has no current-plan state and does not allow purchase; purchase requires vendor registration, approved KYC, and a payment flow.",
+      "item": [
+        {
+          "name": "List public subscription plan cards",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/subscription-plans",
+            "description": "No authentication required. Shows plan name, description, monthly price, direct-lead price, wallet credit, limits, benefits, theme, and CTA text for active plans.",
+            "auth": { "type": "noauth" }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Public Contact Us",
+      "description": "Public support/contact form. No token is required. It is separate from leads and is visible only to admins after submission. The server limits repeated submissions from one IP and rejects a filled website honeypot field.",
+      "item": [
+        {
+          "name": "Submit Contact Us message",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/contact-us",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Rahul Sharma\",\n  \"email\": \"rahul@example.com\",\n  \"phone\": \"9876543210\",\n  \"userType\": \"CLIENT\",\n  \"subject\": \"Need help with an enquiry\",\n  \"message\": \"I need help finding a wedding planning vendor.\",\n  \"website\": \"\"\n}", "options": { "raw": { "language": "json" } } },
+            "description": "Requires name, subject, message, and at least one of email or phone. userType is CLIENT, VENDOR, or GENERAL. Keep website empty; it is an invisible anti-spam field.",
+            "auth": { "type": "noauth" }
+          },
+          "response": [],
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (pm.response.code >= 200 && pm.response.code < 300) {",
+            "  const messageId = pm.response.json().data?.id;",
+            "  if (messageId) pm.environment.name ? pm.environment.set('contactMessageId', messageId) : pm.collectionVariables.set('contactMessageId', messageId);",
+            "}"
+          ] } }]
+        }
+      ]
+    },
+    {
+      "name": "Admin Contact Messages",
+      "description": "Admin-only inbox for public Contact Us messages. Admin can list/filter, view full details, add an internal note, and change handling status.",
+      "item": [
+        {
+          "name": "List new contact messages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/admin/contact-messages?page=1&limit=20&status=NEW",
+            "description": "Optional filters: status=NEW|IN_PROGRESS|RESOLVED|CLOSED, userType=CLIENT|VENDOR|GENERAL, search, page, limit.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Get contact message by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/admin/contact-messages/{{contactMessageId}}",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Update contact message status and admin note",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/admin/contact-messages/{{contactMessageId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"IN_PROGRESS\",\n  \"adminNote\": \"Called customer; following up with the wedding-planning team.\"\n}", "options": { "raw": { "language": "json" } } },
+            "description": "Send status, adminNote, or both. This records the handling admin and time internally.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
           },
           "response": []
         }

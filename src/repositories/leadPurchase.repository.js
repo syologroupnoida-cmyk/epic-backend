@@ -13,6 +13,49 @@ const leadSelect = {
   venueProperty: { select: { id: true, title: true, slug: true } },
 };
 
+const VENDOR_SHARED_LEAD_MATCH_SELECT = {
+  primaryCityId: true,
+  capabilities: {
+    where: { status: 'APPROVED' },
+    select: { serviceSubcategoryId: true },
+  },
+  listings: {
+    where: { status: 'ACTIVE', listingType: 'SERVICE' },
+    select: {
+      cityId: true,
+      components: { select: { serviceSubcategoryId: true } },
+      serviceAreas: { select: { cityId: true } },
+    },
+  },
+};
+
+// A vendor can receive a shared service lead in its primary city for any
+// approved capability. Outside the primary city, it must have an active
+// matching service listing whose service areas include the lead city.
+const buildSharedLeadMatchPairs = (vendor) => {
+  const approvedSubcategoryIds = new Set(vendor?.capabilities.map((item) => item.serviceSubcategoryId) || []);
+  const pairs = new Map();
+  const addPair = (cityId, serviceSubcategoryId) => {
+    if (!cityId || !approvedSubcategoryIds.has(serviceSubcategoryId)) return;
+    pairs.set(`${cityId}:${serviceSubcategoryId}`, { cityId, serviceSubcategoryId });
+  };
+
+  if (vendor?.primaryCityId) {
+    for (const serviceSubcategoryId of approvedSubcategoryIds) addPair(vendor.primaryCityId, serviceSubcategoryId);
+  }
+
+  for (const listing of vendor?.listings || []) {
+    const cityIds = new Set([listing.cityId, ...listing.serviceAreas.map((area) => area.cityId)]);
+    for (const cityId of cityIds) {
+      for (const component of listing.components) addPair(cityId, component.serviceSubcategoryId);
+    }
+  }
+  return [...pairs.values()];
+};
+
+const canVendorMatchSharedLead = (vendor, lead) => buildSharedLeadMatchPairs(vendor)
+  .some((pair) => pair.cityId === lead.cityId && pair.serviceSubcategoryId === lead.serviceSubcategoryId);
+
 export const findLeadForVendor = (leadId, vendorUserId) => prisma.lead.findFirst({
   where: {
     id: leadId,
@@ -28,13 +71,12 @@ export const findLeadForVendor = (leadId, vendorUserId) => prisma.lead.findFirst
 export const listSharedLeadsForVendor = async ({ vendorUserId, page, limit }) => {
   const vendor = await prisma.vendorProfile.findUnique({
     where: { userId: vendorUserId },
-    select: { primaryCityId: true, capabilities: { where: { status: 'APPROVED' }, select: { serviceSubcategoryId: true } } },
+    select: VENDOR_SHARED_LEAD_MATCH_SELECT,
   });
-  const subcategoryIds = vendor?.capabilities.map((item) => item.serviceSubcategoryId) || [];
-  if (!vendor?.primaryCityId || !subcategoryIds.length) return { leads: [], total: 0 };
+  const matchingPairs = buildSharedLeadMatchPairs(vendor);
+  if (!matchingPairs.length) return { leads: [], total: 0 };
   const where = {
-    leadType: 'SHARED', status: 'ACTIVE', cityId: vendor.primaryCityId,
-    serviceSubcategoryId: { in: subcategoryIds },
+    leadType: 'SHARED', status: 'ACTIVE', OR: matchingPairs,
     purchases: { none: { vendorUserId, status: 'PAID' } },
   };
   const [all, total] = await Promise.all([
@@ -60,9 +102,9 @@ export const purchaseLead = async ({ leadId, vendorUserId, plan }) => prisma.$tr
   } else {
     const vendor = await tx.vendorProfile.findUnique({
       where: { userId: vendorUserId },
-      select: { primaryCityId: true, capabilities: { where: { status: 'APPROVED', serviceSubcategoryId: lead.serviceSubcategoryId }, select: { id: true } } },
+      select: VENDOR_SHARED_LEAD_MATCH_SELECT,
     });
-    if (!vendor || vendor.primaryCityId !== lead.cityId || !vendor.capabilities.length) return { error: 'NOT_ELIGIBLE' };
+    if (!vendor || !canVendorMatchSharedLead(vendor, lead)) return { error: 'NOT_ELIGIBLE' };
     amount = lead.basePrice;
   }
   if (amount === null || amount === undefined) return { error: 'PRICE_UNAVAILABLE' };

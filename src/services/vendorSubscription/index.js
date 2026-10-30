@@ -2,7 +2,7 @@ import { ApiError } from '../../utils/ApiError.js';
 import { env } from '../../config/env.js';
 import * as subscriptionRepo from '../../repositories/vendorSubscription.repository.js';
 
-const serializePlan = (plan) => ({
+export const serializePlan = (plan) => ({
   id: plan.id,
   code: plan.code,
   kind: plan.kind,
@@ -85,6 +85,13 @@ export const listAvailablePlans = async (vendorUserId) => {
     })),
   };
 };
+
+// Public plan cards let a non-registered vendor compare membership pricing.
+// They deliberately contain no current-plan state, subscription record, or
+// vendor-specific action because there is no authenticated vendor yet.
+export const listPublicPlans = async () => ({
+  plans: (await subscriptionRepo.listActivePlans()).map(serializePlan),
+});
 
 export const testPurchasePlan = async ({ vendorUserId, planId }) => {
   if (env.PAYMENTS_MODE !== 'TEST') {

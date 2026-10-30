@@ -24,7 +24,7 @@ Set these collection or environment variables:
 | `serviceSubcategoryId` | Approved service subcategory ID |
 | `basicPlanId` | Active purchasable PAID subscription plan ID |
 
-The vendor used to purchase a shared lead must have approved KYC, an approved capability for `serviceSubcategoryId`, the same primary city as `cityId`, and enough wallet balance.
+The vendor used to purchase a shared lead must have approved KYC, an approved capability for `serviceSubcategoryId`, and enough wallet balance. The city must match either the vendor's primary city or an active matching service listing's service area.
 
 For local testing set `PAYMENTS_MODE=TEST`. A vendor receives `SIGNUP_WALLET_BONUS` once KYC is approved. You can also use a paid plan with `walletCreditPerBillingCycle` greater than zero.
 
@@ -82,7 +82,7 @@ Direct lead price is always `directLeadPrice` from the vendor's effective subscr
 7. Check wallet balance and wallet transactions.
 8. Run `Get my direct lead preview by ID` using `sharedLeadId`; the same route returns full details after this vendor has purchased the shared lead.
 
-The system checks duplicate purchase, matching approved capability/city, plan monthly purchase limits, wallet funds, and remaining buyer slots. Purchase, wallet debit, and buyer slot reservation run together in one database transaction.
+The system checks duplicate purchase, approved capability, primary-city or active-listing service-area match, plan monthly purchase limits, wallet funds, and remaining buyer slots. Purchase, wallet debit, and buyer slot reservation run together in one database transaction.
 
 ## API purpose reference
 
@@ -110,7 +110,7 @@ The system checks duplicate purchase, matching approved capability/city, plan mo
 | Route | Purpose |
 | --- | --- |
 | `GET /api/v1/vendor/leads` | Active direct-lead previews for that vendor. |
-| `GET /api/v1/vendor/leads/shared` | Available shared-lead previews matching vendor city/capability. |
+| `GET /api/v1/vendor/leads/shared` | Available shared-lead previews matching approved capability and either primary city or active service-listing service area. |
 | `GET /api/v1/vendor/leads/:leadId` | Preview; full contact/message only after purchase. |
 | `POST /api/v1/vendor/leads/:leadId/purchase` | Empty body `{}`; debits wallet and unlocks lead. |
 | `GET /api/v1/vendor/wallet` | Current wallet balance. |
@@ -134,6 +134,6 @@ The system checks duplicate purchase, matching approved capability/city, plan mo
 | `409 monthly lead-purchase limit` | Plan limit reached. |
 | `409 no remaining buyer slots` | Shared lead sold out. |
 | `409 already purchased` | Same vendor cannot purchase same lead twice. |
-| `409 does not match approved city and capability` | Vendor does not match shared lead eligibility. |
+| `409 does not match approved city and capability` | Vendor does not have the capability and either primary-city or active-listing service-area match. |
 
 Real payment checkout, wallet top-up payment, verified webhooks, refund flow, and admin wallet adjustment remain the later payment-gateway phase.

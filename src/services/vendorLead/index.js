@@ -110,6 +110,17 @@ export const listSharedLeads = async ({ vendorUserId, query }) => {
   };
 };
 
+export const listPurchasedLeads = async ({ vendorUserId, query }) => {
+  const { purchases, total } = await leadPurchaseRepo.listPurchasedLeadsForVendor({ vendorUserId, ...query });
+  return {
+    leads: purchases.map((purchase) => serializeUnlockedLead({
+      ...purchase.lead,
+      purchases: [purchase],
+    })),
+    pagination: pageInfo(total, query.page, query.limit),
+  };
+};
+
 export const purchaseLead = async ({ vendorUserId, leadId }) => {
   const effective = await getEffectiveSubscription(vendorUserId);
   let result;

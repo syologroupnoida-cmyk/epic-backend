@@ -87,6 +87,30 @@ export const listSharedLeadsForVendor = async ({ vendorUserId, page, limit }) =>
   return { leads: available.slice((page - 1) * limit, page * limit), total: available.length };
 };
 
+// The purchased inbox is the vendor's permanent record of unlocked leads.
+// It is intentionally based on LeadPurchase, rather than active Lead status,
+// so a vendor retains access after a lead becomes SOLD_OUT or CLOSED.
+export const listPurchasedLeadsForVendor = async ({ vendorUserId, page, limit }) => {
+  const where = { vendorUserId, status: 'PAID' };
+  const [purchases, total] = await Promise.all([
+    prisma.leadPurchase.findMany({
+      where,
+      skip: (page - 1) * limit,
+      take: limit,
+      orderBy: { purchasedAt: 'desc' },
+      select: {
+        id: true,
+        amount: true,
+        status: true,
+        purchasedAt: true,
+        lead: { select: leadSelect },
+      },
+    }),
+    prisma.leadPurchase.count({ where }),
+  ]);
+  return { purchases, total };
+};
+
 export const purchaseLead = async ({ leadId, vendorUserId, plan }) => prisma.$transaction(async (tx) => {
   const lead = await tx.lead.findUnique({ where: { id: leadId }, select: leadSelect });
   if (!lead || !['ACTIVE', 'SOLD_OUT'].includes(lead.status)) return { error: 'NOT_FOUND' };

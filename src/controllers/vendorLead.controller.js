@@ -17,6 +17,11 @@ export const listSharedLeads = asyncHandler(async (req, res) => {
   return sendSuccess(res, { message: 'Matching shared leads retrieved.', data });
 });
 
+export const listPurchasedLeads = asyncHandler(async (req, res) => {
+  const data = await vendorLeadService.listPurchasedLeads({ vendorUserId: req.user.id, query: req.query });
+  return sendSuccess(res, { message: 'Purchased leads retrieved.', data });
+});
+
 export const purchaseLead = asyncHandler(async (req, res) => {
   const data = await vendorLeadService.purchaseLead({ vendorUserId: req.user.id, leadId: req.params.leadId });
   return sendSuccess(res, { message: 'Lead unlocked successfully.', data });

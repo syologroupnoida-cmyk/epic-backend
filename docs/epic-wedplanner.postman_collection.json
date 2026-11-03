@@ -1803,6 +1803,20 @@
       }]
     },
     {
+      "name": "List purchased / unlocked leads",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/vendor/leads/purchased?page=1&limit=20",
+        "description": "Returns every lead this vendor has successfully purchased, including DIRECT and SHARED leads. Customer name, mobile, email, message, amount paid, and purchasedAt are visible. Closed or sold-out leads remain here for vendor history.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }]
+        }
+      },
+      "response": []
+    },
+    {
       "name": "Purchase and unlock a lead",
       "request": {
         "method": "POST",

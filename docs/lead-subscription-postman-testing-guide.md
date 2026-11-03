@@ -82,6 +82,8 @@ Direct lead price is always `directLeadPrice` from the vendor's effective subscr
 7. Check wallet balance and wallet transactions.
 8. Run `Get my direct lead preview by ID` using `sharedLeadId`; the same route returns full details after this vendor has purchased the shared lead.
 
+9. Run `List purchased / unlocked leads` to see the vendor's permanent paid-lead history. It includes full customer details for both direct and shared leads, even after a lead is closed or sold out.
+
 The system checks duplicate purchase, approved capability, primary-city or active-listing service-area match, plan monthly purchase limits, wallet funds, and remaining buyer slots. Purchase, wallet debit, and buyer slot reservation run together in one database transaction.
 
 ## API purpose reference
@@ -111,6 +113,7 @@ The system checks duplicate purchase, approved capability, primary-city or activ
 | --- | --- |
 | `GET /api/v1/vendor/leads` | Active direct-lead previews for that vendor. |
 | `GET /api/v1/vendor/leads/shared` | Available shared-lead previews matching approved capability and either primary city or active service-listing service area. |
+| `GET /api/v1/vendor/leads/purchased` | All leads the vendor purchased/unlocked, with full customer details and purchase amount/date. |
 | `GET /api/v1/vendor/leads/:leadId` | Preview; full contact/message only after purchase. |
 | `POST /api/v1/vendor/leads/:leadId/purchase` | Empty body `{}`; debits wallet and unlocks lead. |
 | `GET /api/v1/vendor/wallet` | Current wallet balance. |

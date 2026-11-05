@@ -1,0 +1,50 @@
+model ImportedBusiness {
+  id                     String                 @id @default(cuid())
+  slug                   String                 @unique
+  keyword                String?
+  location               String?
+  businessName           String
+  category               String?
+  website                String?
+  phone                  String?
+  emails                 String[]
+  address                String?
+  city                   String?
+  state                  String?
+  pincode                String?
+  rating                 Decimal?               @db.Decimal(2, 1)
+  reviewCount            Int?
+  googleCid              String?                @unique
+  source                 String                 @default("CSV_IMPORT")
+  status                 ImportedBusinessStatus @default(NEW)
+  isPublished            Boolean                @default(true)
+  salesNote              String?
+  lastContactedAt        DateTime?
+  registeredVendorUserId String?                @unique
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+
+  registeredVendor VendorProfile? @relation(fields: [registeredVendorUserId], references: [userId], onDelete: SetNull)
+
+  @@index([isPublished, createdAt])
+  @@index([status, createdAt])
+  @@index([businessName])
+  @@index([city])
+  @@map("imported_businesses")
+}
+
+model BusinessImportBatch {
+  id            String   @id @default(cuid())
+  fileName      String
+  totalRows     Int
+  importedRows  Int
+  duplicateRows Int
+  failedRows    Int
+  errorSummary  Json?
+  uploadedById  String
+  createdAt     DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([uploadedById])
+  @@map("business_import_batches")
+}

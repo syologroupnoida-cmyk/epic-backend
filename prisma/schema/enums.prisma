@@ -172,3 +172,12 @@ enum ContactMessageStatus {
   RESOLVED
   CLOSED
 }
+
+enum ImportedBusinessStatus {
+  NEW
+  CONTACTED
+  INTERESTED
+  REGISTERED
+  NOT_INTERESTED
+  INVALID
+}

@@ -8,6 +8,7 @@ import {
   closeLeadSchema,
   rejectLeadSchema,
   sharedLeadSchema,
+  purchasedLeadListQuerySchema,
   vendorLeadListQuerySchema,
 } from '../src/validators/lead.validator.js';
 
@@ -50,6 +51,15 @@ test('vendor lead inbox query and lead ID validation use safe pagination', () =>
   assert.deepEqual(vendorLeadListQuerySchema.parse({ page: '2', limit: '10' }), { page: 2, limit: 10 });
   assert.equal(vendorLeadListQuerySchema.safeParse({ limit: 101 }).success, false);
   assert.equal(leadIdParamsSchema.parse({ leadId: ' lead-123 ' }).leadId, 'lead-123');
+});
+
+test('purchased lead query accepts optional database lead type filter', () => {
+  assert.deepEqual(purchasedLeadListQuerySchema.parse({ leadType: 'DIRECT' }), {
+    page: 1,
+    limit: 20,
+    leadType: 'DIRECT',
+  });
+  assert.equal(purchasedLeadListQuerySchema.safeParse({ leadType: 'INVALID' }).success, false);
 });
 
 test('admin lead review validates price, buyer slots, filters, and reasons', () => {

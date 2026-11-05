@@ -90,8 +90,12 @@ export const listSharedLeadsForVendor = async ({ vendorUserId, page, limit }) =>
 // The purchased inbox is the vendor's permanent record of unlocked leads.
 // It is intentionally based on LeadPurchase, rather than active Lead status,
 // so a vendor retains access after a lead becomes SOLD_OUT or CLOSED.
-export const listPurchasedLeadsForVendor = async ({ vendorUserId, page, limit }) => {
-  const where = { vendorUserId, status: 'PAID' };
+export const listPurchasedLeadsForVendor = async ({ vendorUserId, page, limit, leadType }) => {
+  const where = {
+    vendorUserId,
+    status: 'PAID',
+    ...(leadType && { lead: { is: { leadType } } }),
+  };
   const [purchases, total] = await Promise.all([
     prisma.leadPurchase.findMany({
       where,

@@ -62,6 +62,13 @@ export const leadIdParamsSchema = z.object({
 
 export const vendorLeadListQuerySchema = z.object(pageQuery).strict();
 
+// Used only by the purchased inbox. The database filters before pagination,
+// so dashboard tabs do not need to fetch every purchased lead in the browser.
+export const purchasedLeadListQuerySchema = z.object({
+  ...pageQuery,
+  leadType: z.enum(['DIRECT', 'SHARED']).optional(),
+}).strict();
+
 export const emptyLeadPurchaseSchema = z.object({}).strict();
 
 export const adminLeadListQuerySchema = z.object({

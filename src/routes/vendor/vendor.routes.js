@@ -30,7 +30,12 @@ import {
   venuePropertyListQuerySchema,
   updateVenuePropertySchema,
 } from '../../validators/venueProperty.validator.js';
-import { emptyLeadPurchaseSchema, leadIdParamsSchema, vendorLeadListQuerySchema } from '../../validators/lead.validator.js';
+import {
+  emptyLeadPurchaseSchema,
+  leadIdParamsSchema,
+  purchasedLeadListQuerySchema,
+  vendorLeadListQuerySchema,
+} from '../../validators/lead.validator.js';
 import { testPurchaseSubscriptionSchema } from '../../validators/subscriptionPlan.validator.js';
 import { walletTransactionListQuerySchema } from '../../validators/wallet.validator.js';
 
@@ -171,7 +176,7 @@ router.post('/venue-properties/:venuePropertyId/unarchive', requireKycApproved, 
 // ---- Lead inbox and wallet-based lead unlocks ----
 router.get('/leads', requireKycApproved, validateRequest(vendorLeadListQuerySchema, 'query'), vendorLeadController.listMyLeads);
 router.get('/leads/shared', requireKycApproved, validateRequest(vendorLeadListQuerySchema, 'query'), vendorLeadController.listSharedLeads);
-router.get('/leads/purchased', requireKycApproved, validateRequest(vendorLeadListQuerySchema, 'query'), vendorLeadController.listPurchasedLeads);
+router.get('/leads/purchased', requireKycApproved, validateRequest(purchasedLeadListQuerySchema, 'query'), vendorLeadController.listPurchasedLeads);
 router.get('/leads/:leadId', requireKycApproved, validateRequest(leadIdParamsSchema, 'params'), vendorLeadController.getMyLead);
 router.post('/leads/:leadId/purchase', requireKycApproved, validateRequest(leadIdParamsSchema, 'params'), validateRequest(emptyLeadPurchaseSchema), vendorLeadController.purchaseLead);
 

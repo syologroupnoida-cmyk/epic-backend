@@ -17,6 +17,11 @@ import {
 } from '../../validators/venueProperty.validator.js';
 import * as leadController from '../../controllers/lead.controller.js';
 import { directEnquirySchema, sharedLeadSchema } from '../../validators/lead.validator.js';
+import * as importedBusinessController from '../../controllers/importedBusiness.controller.js';
+import {
+  importedBusinessSlugParamsSchema,
+  publicImportedBusinessListQuerySchema,
+} from '../../validators/importedBusiness.validator.js';
 
 const router = Router();
 
@@ -50,6 +55,9 @@ router.get('/venue-properties/:slug', validateRequest(venuePropertySlugParamsSch
 router.post('/venue-properties/:slug/enquiries', validateRequest(venuePropertySlugParamsSchema, 'params'), validateRequest(directEnquirySchema), leadController.createVenuePropertyEnquiry);
 
 router.post('/leads/get-quotes', validateRequest(sharedLeadSchema), leadController.createSharedLead);
+
+router.get('/businesses', validateRequest(publicImportedBusinessListQuerySchema, 'query'), importedBusinessController.listPublic);
+router.get('/businesses/:slug', validateRequest(importedBusinessSlugParamsSchema, 'params'), importedBusinessController.getPublic);
 
 router.get(
   '/vendors/:slug',

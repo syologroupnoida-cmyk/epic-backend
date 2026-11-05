@@ -1808,7 +1808,35 @@
         "method": "GET",
         "header": [],
         "url": "{{baseUrl}}/api/v1/vendor/leads/purchased?page=1&limit=20",
-        "description": "Returns every lead this vendor has successfully purchased, including DIRECT and SHARED leads. Customer name, mobile, email, message, amount paid, and purchasedAt are visible. Closed or sold-out leads remain here for vendor history.",
+        "description": "Returns every lead this vendor has successfully purchased, including DIRECT and SHARED leads. Optional leadType=DIRECT or leadType=SHARED filters before pagination. Customer name, mobile, email, message, amount paid, and purchasedAt are visible. Closed or sold-out leads remain here for vendor history.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "List purchased direct leads only",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/vendor/leads/purchased?leadType=DIRECT&page=1&limit=20",
+        "description": "Same purchased-leads endpoint, filtered by leadType=DIRECT before pagination.",
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "List purchased shared leads only",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/vendor/leads/purchased?leadType=SHARED&page=1&limit=20",
+        "description": "Same purchased-leads endpoint, filtered by leadType=SHARED before pagination.",
         "auth": {
           "type": "bearer",
           "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }]
@@ -2915,6 +2943,73 @@
       ]
     },
     {
+      "name": "Admin imported businesses",
+      "description": "Admin-only CSV import and sales outreach management. Phone numbers, emails, notes, and linked vendor IDs are available only here.",
+      "item": [
+        {
+          "name": "Upload business CSV",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/admin/imported-businesses/import",
+            "body": { "mode": "formdata", "formdata": [{ "key": "file", "type": "file", "src": "{{businessCsvPath}}" }] },
+            "description": "Select a CSV file in the file field. Maximum 5 MB and 10,000 data rows. Returns imported, duplicate, and failed row counts with validation errors.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "List imported businesses for admin",
+          "request": {
+            "method": "GET", "header": [],
+            "url": "{{baseUrl}}/api/v1/admin/imported-businesses?page=1&limit=20&status=NEW",
+            "description": "Includes private phone, email, sales status, notes, and registered vendor link. Optional filters: search, category, city, status, isPublished, page, limit.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
+          "response": [],
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["if (pm.response.code >= 200 && pm.response.code < 300) {", "  const item = pm.response.json().data?.businesses?.[0];", "  if (item) {", "    pm.collectionVariables.set('importedBusinessId', item.id);", "    pm.collectionVariables.set('importedBusinessSlug', item.slug);", "  }", "}"] } }]
+        },
+        {
+          "name": "Get imported business for admin",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/admin/imported-businesses/{{importedBusinessId}}", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] } },
+          "response": []
+        },
+        {
+          "name": "Update sales status and note",
+          "request": {
+            "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/admin/imported-businesses/{{importedBusinessId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"CONTACTED\",\n  \"salesNote\": \"Sales team called the business.\"\n}", "options": { "raw": { "language": "json" } } },
+            "description": "Can update status, isPublished, salesNote, or registeredVendorUserId. Linking a registered vendor automatically sets status to REGISTERED.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "List CSV import batches",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/admin/business-import-batches?page=1&limit=20", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] } },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Public imported businesses",
+      "description": "Public read-only business directory. Phone, email, sales notes, status, and registered vendor IDs are deliberately excluded by the API.",
+      "item": [
+        {
+          "name": "List public imported businesses",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/marketplace/businesses?page=1&limit=20&city=Noida", "description": "Optional filters: search, category, city, page, limit.", "auth": { "type": "noauth" } },
+          "response": [],
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["if (pm.response.code >= 200 && pm.response.code < 300) {", "  const slug = pm.response.json().data?.businesses?.[0]?.slug;", "  if (slug) pm.collectionVariables.set('importedBusinessSlug', slug);", "}"] } }]
+        },
+        {
+          "name": "Get public imported business by slug",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/marketplace/businesses/{{importedBusinessSlug}}", "auth": { "type": "noauth" } },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "Super admin",      "item": [
         {
           "name": "Super admin panel ping",
@@ -3190,6 +3285,21 @@
     },
     {
       "key": "companyLogoPublicId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "businessCsvPath",
+      "value": "C:/Users/rahul/Downloads/Google_Maps_Data (10).csv",
+      "type": "string"
+    },
+    {
+      "key": "importedBusinessId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "importedBusinessSlug",
       "value": "",
       "type": "string"
     }

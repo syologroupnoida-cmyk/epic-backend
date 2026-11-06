@@ -2,7 +2,7 @@ import { sendMail } from './mailer.js';
 import { passwordChangedNoticeTemplate } from './templates/passwordChangedNotice.template.js';
 import { vendorApprovedNoticeTemplate } from './templates/vendorApprovedNotice.template.js';
 import { vendorRejectedNoticeTemplate } from './templates/vendorRejectedNotice.template.js';
-import { enqueueOtpEmail } from './otpQueue.js';
+import { enqueueOtpEmail, enqueueTransactionalEmail } from './otpQueue.js';
 
 export { verifyMailTransport } from './mailer.js';
 export { startOtpEmailConsumer, closeOtpEmailQueue } from './otpQueue.js';
@@ -29,4 +29,27 @@ export const sendVendorRejectedNotice = async ({ to, firstName, reason, loginUrl
   const { subject, html, text } = vendorRejectedNoticeTemplate({ firstName, reason, loginUrl });
   return sendMail({ to, subject, html, text });
 };
+
+export const sendVendorSalesMeetingNotice = async ({
+  to,
+  firstName,
+  status,
+  requestedStartAt,
+  requestedEndAt,
+  scheduledStartAt,
+  scheduledEndAt,
+  vendorMessage,
+  meetingUrl,
+}) => enqueueTransactionalEmail({
+  type: 'VENDOR_SALES_MEETING',
+  to,
+  firstName,
+  status,
+  requestedStartAt,
+  requestedEndAt,
+  scheduledStartAt,
+  scheduledEndAt,
+  vendorMessage,
+  meetingUrl,
+});
 

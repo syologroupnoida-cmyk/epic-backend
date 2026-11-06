@@ -38,6 +38,12 @@ import {
 } from '../../validators/lead.validator.js';
 import { testPurchaseSubscriptionSchema } from '../../validators/subscriptionPlan.validator.js';
 import { walletTransactionListQuerySchema } from '../../validators/wallet.validator.js';
+import * as vendorSalesMeetingController from '../../controllers/vendorSalesMeeting.controller.js';
+import {
+  createVendorSalesMeetingSchema,
+  vendorSalesMeetingIdParamsSchema,
+  vendorSalesMeetingListQuerySchema,
+} from '../../validators/vendorSalesMeeting.validator.js';
 
 const router = Router();
 
@@ -90,6 +96,12 @@ router.post('/subscriptions/test-purchase', requireKycApproved, validateRequest(
 // ---- Wallet balance and immutable ledger ----
 router.get('/wallet', requireKycApproved, walletController.getMyWallet);
 router.get('/wallet/transactions', requireKycApproved, validateRequest(walletTransactionListQuerySchema, 'query'), walletController.listMyWalletTransactions);
+
+// ---- Sales meeting request (admin reviews before sharing Google Meet link) ----
+router.route('/sales-meetings')
+  .get(requireKycApproved, validateRequest(vendorSalesMeetingListQuerySchema, 'query'), vendorSalesMeetingController.listMyMeetings)
+  .post(requireKycApproved, validateRequest(createVendorSalesMeetingSchema), vendorSalesMeetingController.requestMyMeeting);
+router.get('/sales-meetings/:meetingId', requireKycApproved, validateRequest(vendorSalesMeetingIdParamsSchema, 'params'), vendorSalesMeetingController.getMyMeeting);
 
 // ---- Service listings ----
 router.route('/listings')

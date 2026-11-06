@@ -93,6 +93,16 @@ const envSchema = z
       .string({ required_error: "GOOGLE_CLIENT_ID is required" })
       .min(10, "GOOGLE_CLIENT_ID looks invalid"),
 
+    // ---- Google Calendar / Google Meet for vendor sales meetings ----
+    // These belong to the dedicated Epic Wedplanner Google Workspace account,
+    // not to an individual admin's Google Sign-In account. They are optional
+    // until the sales-meeting integration is enabled.
+    GOOGLE_CALENDAR_CLIENT_ID: z.string().min(10, "GOOGLE_CALENDAR_CLIENT_ID looks invalid").optional(),
+    GOOGLE_CALENDAR_CLIENT_SECRET: z.string().min(1, "GOOGLE_CALENDAR_CLIENT_SECRET is required when Calendar is enabled").optional(),
+    GOOGLE_CALENDAR_REDIRECT_URI: z.string().url("GOOGLE_CALENDAR_REDIRECT_URI must be a valid URL").optional(),
+    GOOGLE_CALENDAR_REFRESH_TOKEN: z.string().min(20, "GOOGLE_CALENDAR_REFRESH_TOKEN looks invalid").optional(),
+    GOOGLE_CALENDAR_ID: z.string().min(1, "GOOGLE_CALENDAR_ID is required when Calendar is enabled").optional(),
+
     // ---- Cloudinary (file uploads) ----
     CLOUDINARY_CLOUD_NAME: z
       .string({ required_error: "CLOUDINARY_CLOUD_NAME is required" })

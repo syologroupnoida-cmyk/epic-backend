@@ -68,6 +68,12 @@ import {
   importedBusinessIdParamsSchema,
   updateImportedBusinessSchema,
 } from "../../validators/importedBusiness.validator.js";
+import * as vendorSalesMeetingController from "../../controllers/vendorSalesMeeting.controller.js";
+import {
+  adminSalesMeetingListQuerySchema,
+  reviewVendorSalesMeetingSchema,
+  vendorSalesMeetingIdParamsSchema,
+} from "../../validators/vendorSalesMeeting.validator.js";
 
 const router = Router();
 
@@ -364,6 +370,24 @@ router.patch(
   validateRequest(importedBusinessIdParamsSchema, "params"),
   validateRequest(updateImportedBusinessSchema),
   importedBusinessController.updateAdmin,
+);
+
+// --- Vendor sales meeting requests ---
+router.get(
+  "/sales-meetings",
+  validateRequest(adminSalesMeetingListQuerySchema, "query"),
+  vendorSalesMeetingController.listForAdmin,
+);
+router.get(
+  "/sales-meetings/:meetingId",
+  validateRequest(vendorSalesMeetingIdParamsSchema, "params"),
+  vendorSalesMeetingController.getForAdmin,
+);
+router.patch(
+  "/sales-meetings/:meetingId",
+  validateRequest(vendorSalesMeetingIdParamsSchema, "params"),
+  validateRequest(reviewVendorSalesMeetingSchema),
+  vendorSalesMeetingController.reviewForAdmin,
 );
 
 export default router;

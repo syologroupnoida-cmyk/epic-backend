@@ -173,6 +173,15 @@ enum ContactMessageStatus {
   CLOSED
 }
 
+enum VendorSalesMeetingStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
 enum ImportedBusinessStatus {
   NEW
   CONTACTED

@@ -23,6 +23,7 @@ model VendorProfile {
   wallet           VendorWallet?
   leadPurchases    LeadPurchase[]
   importedBusiness ImportedBusiness?
+  salesMeetings    VendorSalesMeeting[]
 
   @@index([kycStatus])
   @@index([profileStatus])

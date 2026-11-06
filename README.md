@@ -15,6 +15,11 @@ The public marketplace currently exposes paginated, filterable vendor-profile an
 
 The migrations create users, customer profiles, vendor profiles, KYC submissions and documents, cities, normalized vendor capabilities, service categories and subcategories, refresh tokens, and email OTPs. `prisma:seed` creates the initial super admin. Public registration allows `CLIENT` and `VENDOR` only; the super admin creates admins. All vendors use the single `VENDOR` role. What a vendor offers is represented by approved capabilities and, later, marketplace listings rather than by an account type.
 
+Approved vendor sales meetings can create a Google Meet link automatically from
+one dedicated company Google Calendar account. See
+[Google Calendar sales-meeting setup](docs/google-calendar-sales-meetings.md)
+before enabling it in an environment.
+
 ### Applying the marketplace migrations
 
 The checked-in marketplace migrations add cities, vendor capabilities, business-profile fields, and service listing tables. Apply all migrations before calling the new endpoints:

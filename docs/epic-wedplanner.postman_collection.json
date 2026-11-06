@@ -1749,6 +1749,52 @@
       ]
     },
     {
+      "name": "Vendor sales meetings",
+      "description": "Vendor requests a preferred meeting time. The request is PENDING until an admin confirms it. Only a CONFIRMED meeting exposes the Google Meet URL to the vendor.",
+      "item": [
+        {
+          "name": "Request sales meeting",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/vendor/sales-meetings",
+            "body": { "mode": "raw", "raw": "{\n  \"requestedStartAt\": \"2027-02-10T10:00:00+05:30\",\n  \"requestedEndAt\": \"2027-02-10T10:30:00+05:30\",\n  \"vendorNote\": \"Please explain subscription plans and lead pricing.\"\n}", "options": { "raw": { "language": "json" } } },
+            "description": "KYC-approved vendor only. Creates a PENDING request; no meeting link is returned until admin confirms it.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
+          },
+          "response": [],
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "if (pm.response.code >= 200 && pm.response.code < 300) {",
+            "  const meetingId = pm.response.json().data?.id;",
+            "  if (meetingId) pm.environment.name ? pm.environment.set('salesMeetingId', meetingId) : pm.collectionVariables.set('salesMeetingId', meetingId);",
+            "}"
+          ] } }]
+        },
+        {
+          "name": "List my sales meeting requests",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/vendor/sales-meetings?page=1&limit=20",
+            "description": "Optional status filter: PENDING, CONFIRMED, REJECTED, CANCELLED, COMPLETED, or NO_SHOW.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Get my sales meeting request",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/vendor/sales-meetings/{{salesMeetingId}}",
+            "description": "Vendor gets meetingUrl and canJoin=true only after admin changes status to CONFIRMED.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendorAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "Vendor lead inbox",
       "description": "Direct and shared leads remain masked until this vendor purchases/unlocks them. Direct lead price comes from the vendor's effective subscription; shared lead price and buyer slots are set by admin when the Get Quotes lead is activated.",
       "item": [
@@ -2189,6 +2235,56 @@
             "header": [],
             "url": "{{baseUrl}}/api/v1/admin/subscription-plans/{{subscriptionPlanId}}/deactivate",
             "description": "Cannot deactivate the current default Free plan.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin sales meetings",
+      "description": "Admin reviews vendor meeting requests. Confirmation requires final scheduled time and a Google Meet/other HTTPS join link. Only one confirmed meeting may occupy the same time range.",
+      "item": [
+        {
+          "name": "List pending sales meeting requests",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/admin/sales-meetings?page=1&limit=20&status=PENDING",
+            "description": "Optional filters: status, vendorUserId, page, limit.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Get sales meeting request by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/admin/sales-meetings/{{salesMeetingId}}",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Confirm meeting and create Google Meet link",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/admin/sales-meetings/{{salesMeetingId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"CONFIRMED\",\n  \"scheduledStartAt\": \"2027-02-10T10:00:00+05:30\",\n  \"scheduledEndAt\": \"2027-02-10T10:30:00+05:30\",\n  \"vendorMessage\": \"Our sales specialist will explain plans and lead pricing.\",\n  \"adminNote\": \"Internal assignment: sales team A.\"\n}", "options": { "raw": { "language": "json" } } },
+            "description": "Only PENDING request can be confirmed. The server creates the Google Calendar event and Meet link; the vendor sees meetingUrl after this succeeds.",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Reject sales meeting request",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/admin/sales-meetings/{{salesMeetingId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"REJECTED\",\n  \"vendorMessage\": \"This requested time is unavailable. Please submit another preferred time.\",\n  \"adminNote\": \"Internal note only.\"\n}", "options": { "raw": { "language": "json" } } },
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
           },
           "response": []

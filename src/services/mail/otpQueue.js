@@ -3,6 +3,7 @@ import { env } from '../../config/env.js';
 import { sendMail } from './mailer.js';
 import { verificationOtpTemplate } from './templates/verificationOtp.template.js';
 import { passwordResetOtpTemplate } from './templates/passwordResetOtp.template.js';
+import { vendorSalesMeetingNoticeTemplate } from './templates/vendorSalesMeetingNotice.template.js';
 
 const queueName = env.RABBITMQ_OTP_QUEUE;
 const retryQueueName = queueName + '.retry';
@@ -36,11 +37,22 @@ const assertQueues = async (channel) => {
   await channel.assertQueue(failedQueueName, { durable: true });
 };
 
-const renderOtpEmail = ({ type, firstName, code }) => {
+const renderEmail = (job) => {
+  const { type, firstName, code } = job;
   const args = { firstName, code, ttlMinutes: env.OTP_TTL_MINUTES };
   if (type === 'EMAIL_VERIFICATION') return verificationOtpTemplate(args);
   if (type === 'PASSWORD_RESET') return passwordResetOtpTemplate(args);
-  throw new Error('Unsupported OTP email type: ' + type);
+  if (type === 'VENDOR_SALES_MEETING') return vendorSalesMeetingNoticeTemplate(job);
+  throw new Error('Unsupported email type: ' + type);
+};
+
+const hasRequiredFields = (job) => {
+  if (!job?.to || !job?.type) return false;
+  if (job.type === 'EMAIL_VERIFICATION' || job.type === 'PASSWORD_RESET') {
+    return Boolean(job.firstName && job.code);
+  }
+  if (job.type === 'VENDOR_SALES_MEETING') return Boolean(job.firstName && job.status);
+  return false;
 };
 
 const handleMessage = async (message) => {
@@ -49,12 +61,12 @@ const handleMessage = async (message) => {
 
   try {
     job = JSON.parse(message.content.toString('utf8'));
-    if (!job?.to || !job?.firstName || !job?.code || !job?.type) {
-      throw new Error('OTP email job is missing required fields');
+    if (!hasRequiredFields(job)) {
+      throw new Error('Email job is missing required fields');
     }
-    await sendMail({ to: job.to, ...renderOtpEmail(job) });
+    await sendMail({ to: job.to, ...renderEmail(job) });
     consumer.ack(message);
-    console.log('[mail] OTP email delivered (' + job.type + ') to ' + job.to + '.');
+    console.log('[mail] Email delivered (' + job.type + ') to ' + job.to + '.');
   } catch (error) {
     const retries = Number(message.properties.headers?.['x-retry-count'] ?? 0);
     const targetQueue = retries < env.RABBITMQ_MAX_RETRIES ? retryQueueName : failedQueueName;
@@ -69,11 +81,11 @@ const handleMessage = async (message) => {
       );
       consumer.ack(message);
       console.error(
-        '[mail] OTP email failed; moved to ' + targetQueue + ' (attempt ' + nextRetries + '):',
+        '[mail] Email failed; moved to ' + targetQueue + ' (attempt ' + nextRetries + '):',
         error.message,
       );
     } catch (publishError) {
-      console.error('[mail] Could not schedule failed OTP email for retry:', publishError.message);
+      console.error('[mail] Could not schedule failed email for retry:', publishError.message);
       consumer.nack(message, false, true);
     }
   }
@@ -89,7 +101,7 @@ const start = async () => {
   await assertQueues(consumer);
   await consumer.prefetch(env.RABBITMQ_PREFETCH);
   await consumer.consume(queueName, handleMessage, { noAck: false });
-  console.log('[rabbitmq] Consuming OTP emails from ' + queueName + '.');
+  console.log('[rabbitmq] Consuming transactional emails from ' + queueName + '.');
 };
 
 export const startOtpEmailConsumer = async () => {
@@ -106,6 +118,8 @@ export const enqueueOtpEmail = async (job) => {
   await startOtpEmailConsumer();
   await publishConfirmed(publisher, queueName, job);
 };
+
+export const enqueueTransactionalEmail = enqueueOtpEmail;
 
 export const closeOtpEmailQueue = async () => {
   const activeConnection = connection;

@@ -6,6 +6,8 @@ import serviceCatalogRoutes from './serviceCatalog.routes.js';
 import cityRoutes from './city.routes.js';
 import contactMessageRoutes from './contactMessage.routes.js';
 import { listPublicPlans } from '../../controllers/vendorSubscription.controller.js';
+import shopRoutes from './shop.routes.js';
+import shopCustomerRoutes from './shopCustomer.routes.js';
 
 const router = Router();
 router.use('/auth', authRoutes);
@@ -15,4 +17,6 @@ router.use('/', serviceCatalogRoutes);
 router.use('/', cityRoutes);
 router.use('/', contactMessageRoutes);
 router.get('/subscription-plans', listPublicPlans);
+router.use('/', shopRoutes);
+router.use('/', shopCustomerRoutes);
 export default router;

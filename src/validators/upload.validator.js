@@ -8,6 +8,7 @@ export const UPLOAD_PURPOSES = [
   'company-logo',
   'listing-media',
   'venue-property-media',
+  'ecommerce-product-media',
   'avatar',
   'favicon_icon',
   'header_logo',

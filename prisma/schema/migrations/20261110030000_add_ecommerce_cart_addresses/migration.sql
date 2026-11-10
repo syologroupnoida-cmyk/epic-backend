@@ -1,0 +1,10 @@
+CREATE TABLE "ecommerce_addresses" ("id" TEXT NOT NULL,"userId" TEXT NOT NULL,"fullName" TEXT NOT NULL,"phone" TEXT NOT NULL,"line1" TEXT NOT NULL,"line2" TEXT,"locality" TEXT,"city" TEXT NOT NULL,"state" TEXT NOT NULL,"pincode" TEXT NOT NULL,"countryCode" TEXT NOT NULL DEFAULT 'IN',"isDefault" BOOLEAN NOT NULL DEFAULT false,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" TIMESTAMP(3) NOT NULL,CONSTRAINT "ecommerce_addresses_pkey" PRIMARY KEY ("id"));
+CREATE INDEX "ecommerce_addresses_userId_isDefault_idx" ON "ecommerce_addresses"("userId","isDefault");
+CREATE TABLE "ecommerce_carts" ("id" TEXT NOT NULL,"userId" TEXT NOT NULL,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" TIMESTAMP(3) NOT NULL,CONSTRAINT "ecommerce_carts_pkey" PRIMARY KEY ("id"));
+CREATE UNIQUE INDEX "ecommerce_carts_userId_key" ON "ecommerce_carts"("userId");
+CREATE TABLE "ecommerce_cart_items" ("id" TEXT NOT NULL,"cartId" TEXT NOT NULL,"variantId" TEXT NOT NULL,"quantity" INTEGER NOT NULL,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" TIMESTAMP(3) NOT NULL,CONSTRAINT "ecommerce_cart_items_pkey" PRIMARY KEY ("id"));
+CREATE UNIQUE INDEX "ecommerce_cart_items_cartId_variantId_key" ON "ecommerce_cart_items"("cartId","variantId");
+ALTER TABLE "ecommerce_addresses" ADD CONSTRAINT "ecommerce_addresses_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ecommerce_carts" ADD CONSTRAINT "ecommerce_carts_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ecommerce_cart_items" ADD CONSTRAINT "ecommerce_cart_items_cartId_fkey" FOREIGN KEY ("cartId") REFERENCES "ecommerce_carts"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ecommerce_cart_items" ADD CONSTRAINT "ecommerce_cart_items_variantId_fkey" FOREIGN KEY ("variantId") REFERENCES "ecommerce_product_variants"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

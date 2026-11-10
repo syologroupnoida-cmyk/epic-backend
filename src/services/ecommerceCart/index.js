@@ -1,0 +1,12 @@
+import {ApiError} from '../../utils/ApiError.js'; import * as repo from '../../repositories/ecommerceCart.repository.js';
+const cart=(value)=>value?{...value,items:value.items.map(i=>({...i,availableQuantity:i.variant.onHandQuantity-i.variant.reservedQuantity}))}:{items:[]};
+export const listAddresses=({userId})=>repo.listAddresses(userId); export const createAddress=({userId,body})=>repo.createAddress(userId,body);
+export const updateAddress=async({userId,id,body})=>{if(!await repo.findAddress(id,userId))throw ApiError.notFound('Address not found.');return repo.updateAddress(id,userId,body)};
+export const deleteAddress=async({userId,id})=>{if(!await repo.findAddress(id,userId))throw ApiError.notFound('Address not found.');return repo.deleteAddress(id)};
+export const getCart=async({userId})=>cart(await repo.getCart(userId));
+export const addItem=async({userId,body})=>{const v=await repo.findVariant(body.variantId);if(!v)throw ApiError.notFound('Active product variant not found.');if(v.onHandQuantity-v.reservedQuantity<body.quantity)throw ApiError.conflict('Requested quantity is not available.');try{return cart(await repo.addItem({userId,...body}))}catch(error){if(error.message==='CART_STOCK_UNAVAILABLE')throw ApiError.conflict('Requested total cart quantity is not available.');throw error}};
+export const updateItem=async({userId,id,body})=>{const c=await repo.updateItem(id,userId,body.quantity);if(!c)throw ApiError.notFound('Cart item not found.');return cart(c)}; export const removeItem=async({userId,id})=>{const c=await repo.removeItem(id,userId);if(!c)throw ApiError.notFound('Cart item not found.');return cart(c)};
+const wishlistItem=(item)=>({...item,product:{...item.product,variants:item.product.variants.map(({onHandQuantity,reservedQuantity,...variant})=>({...variant,availableQuantity:Math.max(0,onHandQuantity-reservedQuantity),inStock:onHandQuantity-reservedQuantity>0}))}});
+export const addWishlist=async({userId,productId})=>{if(!await repo.findPublicProduct(productId))throw ApiError.notFound('Active product not found.');return wishlistItem(await repo.addWishlistItem(userId,productId))};
+export const listWishlist=async({userId})=>(await repo.listWishlist(userId)).map(wishlistItem);
+export const removeWishlist=async({userId,productId})=>{if(!await repo.removeWishlistItem(userId,productId))throw ApiError.notFound('Wishlist product not found.');return {productId}};

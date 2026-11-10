@@ -3161,8 +3161,130 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "E-commerce — Phase 1 Catalogue",
+      "description": "Admin-only catalogue. Prices are paise: 1299000 means INR 12,999.00. Upload images first using purpose=ecommerce-product-media.",
+      "item": [
+        { "name": "Create e-commerce category", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/api/v1/admin/ecommerce/categories", "body": { "mode": "raw", "raw": "{\n  \"name\": \"Bridal Wear\",\n  \"description\": \"Wedding clothing and bridal fashion.\",\n  \"sortOrder\": 1\n}", "options": { "raw": { "language": "json" } } }, "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] } }, "response": [], "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["if (pm.response.code >= 200 && pm.response.code < 300) {", " const id=pm.response.json().data?.id; if(id) pm.environment.name ? pm.environment.set('ecommerceCategoryId',id) : pm.collectionVariables.set('ecommerceCategoryId',id);", "}"] } }] },
+        { "name": "List admin e-commerce categories", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/admin/ecommerce/categories?page=1&limit=20", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] } }, "response": [] },
+        { "name": "Get admin e-commerce category by ID", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/admin/ecommerce/categories/{{ecommerceCategoryId}}", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] } }, "response": [] },
+        { "name": "Create Bridal Lehenga subcategory", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/api/v1/admin/ecommerce/subcategories", "body": { "mode": "raw", "raw": "{\n  \"categoryId\": \"{{ecommerceCategoryId}}\",\n  \"name\": \"Bridal Lehenga\",\n  \"specificationTemplate\": { \"fields\": [\n    { \"key\": \"fabric\", \"label\": \"Fabric\", \"type\": \"SELECT\", \"required\": true, \"options\": [\"Silk\", \"Velvet\"] },\n    { \"key\": \"blouseIncluded\", \"label\": \"Blouse Included\", \"type\": \"BOOLEAN\", \"required\": true }\n  ] }\n}", "options": { "raw": { "language": "json" } } }, "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] } }, "response": [], "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["if (pm.response.code >= 200 && pm.response.code < 300) {", " const id=pm.response.json().data?.id; if(id) pm.environment.name ? pm.environment.set('ecommerceSubcategoryId',id) : pm.collectionVariables.set('ecommerceSubcategoryId',id);", "}"] } }] },
+        { "name": "List e-commerce subcategories", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/admin/ecommerce/subcategories?categoryId={{ecommerceCategoryId}}", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] } }, "response": [] },
+        { "name": "Create product with variants", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/api/v1/admin/ecommerce/products", "body": { "mode": "raw", "raw": "{\n  \"categoryId\": \"{{ecommerceCategoryId}}\",\n  \"subcategoryId\": \"{{ecommerceSubcategoryId}}\",\n  \"title\": \"Royal Bridal Lehenga\",\n  \"description\": \"A detailed product description for the royal bridal lehenga.\",\n  \"brandName\": \"Epic Collection\",\n  \"gstPercentage\": 5,\n  \"specifications\": { \"fabric\": \"Silk\", \"blouseIncluded\": true },\n  \"optionDefinitions\": [{ \"name\": \"Color\", \"values\": [\"Red\", \"Maroon\"] }, { \"name\": \"Size\", \"values\": [\"M\", \"L\"] }],\n  \"images\": [],\n  \"variants\": [{ \"sku\": \"LEH-RED-M\", \"optionValues\": { \"Color\": \"Red\", \"Size\": \"M\" }, \"mrpAmountPaise\": 1599000, \"saleAmountPaise\": 1299000, \"initialStock\": 5, \"isDefault\": true }]\n}", "options": { "raw": { "language": "json" } } }, "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] } }, "response": [], "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["if (pm.response.code >= 200 && pm.response.code < 300) {", " const p=pm.response.json().data; const set=(k,v)=>pm.environment.name?pm.environment.set(k,v):pm.collectionVariables.set(k,v); if(p?.id)set('ecommerceProductId',p.id); if(p?.slug)set('ecommerceProductSlug',p.slug); if(p?.variants?.[0]?.id)set('ecommerceVariantId',p.variants[0].id);", "}"] } }] },
+        { "name": "List admin products", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/admin/ecommerce/products?page=1&limit=20&status=DRAFT", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] } }, "response": [] },
+        { "name": "Get admin product", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/admin/ecommerce/products/{{ecommerceProductId}}", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] } }, "response": [] },
+        { "name": "Adjust variant stock", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/api/v1/admin/ecommerce/variants/{{ecommerceVariantId}}/inventory-adjustments", "body": { "mode": "raw", "raw": "{\n  \"quantity\": 10,\n  \"type\": \"STOCK_RECEIVED\",\n  \"note\": \"Warehouse stock received.\"\n}", "options": { "raw": { "language": "json" } } }, "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] } }, "response": [] },
+        { "name": "Publish product", "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/api/v1/admin/ecommerce/products/{{ecommerceProductId}}/publish", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] } }, "response": [] },
+        { "name": "Public shop categories", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/shop/categories?page=1&limit=20", "auth": { "type": "noauth" } }, "response": [] },
+        { "name": "Public shop products", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/shop/products?page=1&limit=20", "auth": { "type": "noauth" } }, "response": [] },
+        { "name": "Public subcategories for selected category", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/shop/subcategories?categoryId={{ecommerceCategoryId}}", "auth": { "type": "noauth" } }, "response": [] },
+        { "name": "Public products — category, subcategory and price range", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/shop/products?categorySlug=bridal-wear&subcategoryId={{ecommerceSubcategoryId}}&minPrice=50000&maxPrice=200000&page=1&limit=20", "description": "All prices are paise: 50000 = INR 500. Product matches when at least one active variant has saleAmountPaise within the range.", "auth": { "type": "noauth" } }, "response": [] },
+        { "name": "Public shop product by slug", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/shop/products/{{ecommerceProductSlug}}", "auth": { "type": "noauth" } }, "response": [] },
+        { "name": "Add product image", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/api/v1/admin/ecommerce/products/{{ecommerceProductId}}/images", "body": { "mode": "raw", "raw": "{\n  \"url\": \"{{uploadedImageUrl}}\",\n  \"publicId\": \"{{uploadedImagePublicId}}\",\n  \"altText\": \"Lehenga side view\",\n  \"sortOrder\": 1\n}", "options": { "raw": { "language": "json" } } }, "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] } }, "response": [] },
+        { "name": "Add live product variant", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/api/v1/admin/ecommerce/products/{{ecommerceProductId}}/variants", "body": { "mode": "raw", "raw": "{\n  \"sku\": \"LEH-MAR-L\",\n  \"optionValues\": { \"Color\": \"Maroon\", \"Size\": \"L\" },\n  \"mrpAmountPaise\": 1649000,\n  \"saleAmountPaise\": 1349000,\n  \"initialStock\": 3\n}", "options": { "raw": { "language": "json" } } }, "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] } }, "response": [] },
+        { "name": "Edit live variant", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/api/v1/admin/ecommerce/variants/{{ecommerceVariantId}}", "body": { "mode": "raw", "raw": "{\n  \"saleAmountPaise\": 1249000,\n  \"isActive\": true\n}", "options": { "raw": { "language": "json" } } }, "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] } }, "response": [] },
+        { "name": "Public shop subcategories", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/shop/subcategories?categoryId={{ecommerceCategoryId}}", "auth": { "type": "noauth" } }, "response": [] }
+      ]
+    },
+    {
+      "name": "E-commerce — Phase 2 Inventory",
+      "description": "Admin-only inventory. availableQuantity is on-hand stock minus reserved stock. Checkout will use reserved stock in a later phase.",
+      "item": [
+        {
+          "name": "List inventory",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/admin/ecommerce/inventory?page=1&limit=20",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "List low-stock variants",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/admin/ecommerce/inventory?lowStockOnly=true&page=1&limit=20",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Set low-stock threshold",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/admin/ecommerce/variants/{{ecommerceVariantId}}/inventory-settings",
+            "body": { "mode": "raw", "raw": "{\n  \"lowStockThreshold\": 3\n}", "options": { "raw": { "language": "json" } } },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        },
+        {
+          "name": "Inventory movement history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/admin/ecommerce/inventory-movements?variantId={{ecommerceVariantId}}&page=1&limit=20",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }] }
+          },
+          "response": []
+        }
+      ]
     }
-  ],
+  ,{
+    "name":"E-commerce — Phase 3 Cart and Addresses",
+    "item":[
+      {"name":"Add delivery address","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"url":"{{baseUrl}}/api/v1/shop/addresses","body":{"mode":"raw","raw":"{\n  \"fullName\": \"Ravi Sharma\",\n  \"phone\": \"9876543210\",\n  \"line1\": \"123 Main Street\",\n  \"city\": \"Noida\",\n  \"state\": \"Uttar Pradesh\",\n  \"pincode\": \"201301\",\n  \"isDefault\": true\n}","options":{"raw":{"language":"json"}}},"auth":{"type":"bearer","bearer":[{"key":"token","value":"{{clientAccessToken}}","type":"string"}]}},"response":[],"event":[{"listen":"test","script":{"type":"text/javascript","exec":["const id=pm.response.json().data?.id; if(id) pm.environment.name?pm.environment.set('ecommerceAddressId',id):pm.collectionVariables.set('ecommerceAddressId',id);"]}}]},
+      {"name":"Get my addresses","request":{"method":"GET","header":[],"url":"{{baseUrl}}/api/v1/shop/addresses","auth":{"type":"bearer","bearer":[{"key":"token","value":"{{clientAccessToken}}","type":"string"}]}},"response":[]},
+      {"name":"Add variant to cart","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"url":"{{baseUrl}}/api/v1/shop/cart/items","body":{"mode":"raw","raw":"{\n  \"variantId\": \"{{ecommerceVariantId}}\",\n  \"quantity\": 1\n}","options":{"raw":{"language":"json"}}},"auth":{"type":"bearer","bearer":[{"key":"token","value":"{{clientAccessToken}}","type":"string"}]}},"response":[],"event":[{"listen":"test","script":{"type":"text/javascript","exec":["const item=pm.response.json().data?.items?.find(i=>i.variantId==='{{ecommerceVariantId}}'); if(item?.id) pm.environment.name?pm.environment.set('ecommerceCartItemId',item.id):pm.collectionVariables.set('ecommerceCartItemId',item.id);"]}}]},
+      {"name":"Get my cart","request":{"method":"GET","header":[],"url":"{{baseUrl}}/api/v1/shop/cart","auth":{"type":"bearer","bearer":[{"key":"token","value":"{{clientAccessToken}}","type":"string"}]}},"response":[]}
+    ]
+  },
+  {
+    "name": "E-commerce — Phase 4 Checkout and Orders",
+    "description": "Run after cart/address. Checkout reserves stock for 15 minutes. Mark paid is test-only until the payment gateway is integrated.",
+    "item": [
+      {"name":"Add wishlist item","request":{"method":"POST","header":[],"url":"{{baseUrl}}/api/v1/shop/wishlist/products/{{ecommerceProductId}}","auth":{"type":"bearer","bearer":[{"key":"token","value":"{{clientAccessToken}}","type":"string"}]}},"response":[]},
+      {"name":"Get wishlist","request":{"method":"GET","header":[],"url":"{{baseUrl}}/api/v1/shop/wishlist","auth":{"type":"bearer","bearer":[{"key":"token","value":"{{clientAccessToken}}","type":"string"}]}},"response":[]},
+      {"name":"Remove wishlist item","request":{"method":"DELETE","header":[],"url":"{{baseUrl}}/api/v1/shop/wishlist/products/{{ecommerceProductId}}","auth":{"type":"bearer","bearer":[{"key":"token","value":"{{clientAccessToken}}","type":"string"}]}},"response":[]},
+      {"name":"Checkout — reserve stock","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"url":"{{baseUrl}}/api/v1/shop/checkout","body":{"mode":"raw","raw":"{\n  \"addressId\": \"{{ecommerceAddressId}}\"\n}","options":{"raw":{"language":"json"}}},"auth":{"type":"bearer","bearer":[{"key":"token","value":"{{clientAccessToken}}","type":"string"}]}},"response":[]},
+      {"name":"My order history","request":{"method":"GET","header":[],"url":"{{baseUrl}}/api/v1/shop/orders?page=1&limit=20","auth":{"type":"bearer","bearer":[{"key":"token","value":"{{clientAccessToken}}","type":"string"}]}},"response":[]},
+      {"name":"My order detail","request":{"method":"GET","header":[],"url":"{{baseUrl}}/api/v1/shop/orders/{{ecommerceOrderId}}","auth":{"type":"bearer","bearer":[{"key":"token","value":"{{clientAccessToken}}","type":"string"}]}},"response":[]},
+      {"name":"Cancel payment-pending order","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"url":"{{baseUrl}}/api/v1/shop/orders/{{ecommerceOrderId}}/cancel","body":{"mode":"raw","raw":"{\n  \"reason\": \"Changed my mind\"\n}","options":{"raw":{"language":"json"}}},"auth":{"type":"bearer","bearer":[{"key":"token","value":"{{clientAccessToken}}","type":"string"}]}},"response":[]},
+      {"name":"Request return","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"url":"{{baseUrl}}/api/v1/shop/orders/{{ecommerceOrderId}}/return-request","body":{"mode":"raw","raw":"{\n  \"reason\": \"Product arrived damaged\"\n}","options":{"raw":{"language":"json"}}},"auth":{"type":"bearer","bearer":[{"key":"token","value":"{{clientAccessToken}}","type":"string"}]}},"response":[]},
+      {"name":"Admin list orders","request":{"method":"GET","header":[],"url":"{{baseUrl}}/api/v1/admin/ecommerce/orders?page=1&limit=20","auth":{"type":"bearer","bearer":[{"key":"token","value":"{{adminAccessToken}}","type":"string"}]}},"response":[]},
+      {"name":"Admin order detail","request":{"method":"GET","header":[],"url":"{{baseUrl}}/api/v1/admin/ecommerce/orders/{{ecommerceOrderId}}","auth":{"type":"bearer","bearer":[{"key":"token","value":"{{adminAccessToken}}","type":"string"}]}},"response":[]},
+      {"name":"Admin mark paid — TEST only","request":{"method":"POST","header":[],"url":"{{baseUrl}}/api/v1/admin/ecommerce/orders/{{ecommerceOrderId}}/mark-paid-for-test","auth":{"type":"bearer","bearer":[{"key":"token","value":"{{adminAccessToken}}","type":"string"}]}},"response":[]},
+      {"name":"Admin cancel payment-pending order","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"url":"{{baseUrl}}/api/v1/admin/ecommerce/orders/{{ecommerceOrderId}}/cancel","body":{"mode":"raw","raw":"{\n  \"reason\": \"Customer requested cancellation\"\n}","options":{"raw":{"language":"json"}}},"auth":{"type":"bearer","bearer":[{"key":"token","value":"{{adminAccessToken}}","type":"string"}]}},"response":[]},
+      {"name":"Admin start processing","request":{"method":"PATCH","header":[{"key":"Content-Type","value":"application/json"}],"url":"{{baseUrl}}/api/v1/admin/ecommerce/orders/{{ecommerceOrderId}}/fulfilment","body":{"mode":"raw","raw":"{\n  \"status\": \"PROCESSING\"\n}","options":{"raw":{"language":"json"}}},"auth":{"type":"bearer","bearer":[{"key":"token","value":"{{adminAccessToken}}","type":"string"}]}},"response":[]},
+      {"name":"Admin pack order","request":{"method":"PATCH","header":[{"key":"Content-Type","value":"application/json"}],"url":"{{baseUrl}}/api/v1/admin/ecommerce/orders/{{ecommerceOrderId}}/fulfilment","body":{"mode":"raw","raw":"{\n  \"status\": \"PACKED\"\n}","options":{"raw":{"language":"json"}}},"auth":{"type":"bearer","bearer":[{"key":"token","value":"{{adminAccessToken}}","type":"string"}]}},"response":[]},
+      {"name":"Admin fulfilment example","request":{"method":"PATCH","header":[{"key":"Content-Type","value":"application/json"}],"url":"{{baseUrl}}/api/v1/admin/ecommerce/orders/{{ecommerceOrderId}}/fulfilment","body":{"mode":"raw","raw":"{\n  \"status\": \"SHIPPED\",\n  \"courierName\": \"Delhivery\",\n  \"trackingNumber\": \"TEST123456\",\n  \"trackingUrl\": \"https://example.com/track/TEST123456\"\n}","options":{"raw":{"language":"json"}}},"auth":{"type":"bearer","bearer":[{"key":"token","value":"{{adminAccessToken}}","type":"string"}]}},"response":[]},
+      {"name":"Admin mark delivered","request":{"method":"PATCH","header":[{"key":"Content-Type","value":"application/json"}],"url":"{{baseUrl}}/api/v1/admin/ecommerce/orders/{{ecommerceOrderId}}/fulfilment","body":{"mode":"raw","raw":"{\n  \"status\": \"DELIVERED\"\n}","options":{"raw":{"language":"json"}}},"auth":{"type":"bearer","bearer":[{"key":"token","value":"{{adminAccessToken}}","type":"string"}]}},"response":[]},
+      {"name":"Admin accept return and restock","request":{"method":"PATCH","header":[{"key":"Content-Type","value":"application/json"}],"url":"{{baseUrl}}/api/v1/admin/ecommerce/orders/{{ecommerceOrderId}}/fulfilment","body":{"mode":"raw","raw":"{\n  \"status\": \"RETURNED\"\n}","options":{"raw":{"language":"json"}}},"auth":{"type":"bearer","bearer":[{"key":"token","value":"{{adminAccessToken}}","type":"string"}]}},"response":[]},
+      {"name":"Admin record refund","request":{"method":"PATCH","header":[{"key":"Content-Type","value":"application/json"}],"url":"{{baseUrl}}/api/v1/admin/ecommerce/orders/{{ecommerceOrderId}}/fulfilment","body":{"mode":"raw","raw":"{\n  \"status\": \"REFUNDED\"\n}","options":{"raw":{"language":"json"}}},"auth":{"type":"bearer","bearer":[{"key":"token","value":"{{adminAccessToken}}","type":"string"}]}},"response":[]},
+      {"name":"Admin release expired reservations","request":{"method":"POST","header":[],"url":"{{baseUrl}}/api/v1/admin/ecommerce/orders/release-expired-reservations","auth":{"type":"bearer","bearer":[{"key":"token","value":"{{adminAccessToken}}","type":"string"}]}},"response":[]}
+    ]
+  },
+  {
+    "name": "E-commerce — Remaining Management Routes",
+    "description": "Completeness folder: every remaining implemented e-commerce route. These are not separate features; use them when editing or deleting data created in earlier folders.",
+    "item": [
+      {"name":"Update category","request":{"method":"PATCH","header":[{"key":"Content-Type","value":"application/json"}],"url":"{{baseUrl}}/api/v1/admin/ecommerce/categories/{{ecommerceCategoryId}}","body":{"mode":"raw","raw":"{\n  \"description\": \"Updated category description\",\n  \"sortOrder\": 2\n}","options":{"raw":{"language":"json"}}},"auth":{"type":"bearer","bearer":[{"key":"token","value":"{{adminAccessToken}}","type":"string"}]}},"response":[]},
+      {"name":"Delete empty category","request":{"method":"DELETE","header":[],"url":"{{baseUrl}}/api/v1/admin/ecommerce/categories/{{ecommerceCategoryId}}","description":"Only works when no products remain in the category.","auth":{"type":"bearer","bearer":[{"key":"token","value":"{{adminAccessToken}}","type":"string"}]}},"response":[]},
+      {"name":"Get subcategory","request":{"method":"GET","header":[],"url":"{{baseUrl}}/api/v1/admin/ecommerce/subcategories/{{ecommerceSubcategoryId}}","auth":{"type":"bearer","bearer":[{"key":"token","value":"{{adminAccessToken}}","type":"string"}]}},"response":[]},
+      {"name":"Update subcategory","request":{"method":"PATCH","header":[{"key":"Content-Type","value":"application/json"}],"url":"{{baseUrl}}/api/v1/admin/ecommerce/subcategories/{{ecommerceSubcategoryId}}","body":{"mode":"raw","raw":"{\n  \"description\": \"Updated bridal lehenga information\",\n  \"sortOrder\": 2\n}","options":{"raw":{"language":"json"}}},"auth":{"type":"bearer","bearer":[{"key":"token","value":"{{adminAccessToken}}","type":"string"}]}},"response":[]},
+      {"name":"Update product","request":{"method":"PATCH","header":[{"key":"Content-Type","value":"application/json"}],"url":"{{baseUrl}}/api/v1/admin/ecommerce/products/{{ecommerceProductId}}","body":{"mode":"raw","raw":"{\n  \"shortDescription\": \"Updated short description\",\n  \"isFeatured\": true\n}","options":{"raw":{"language":"json"}}},"auth":{"type":"bearer","bearer":[{"key":"token","value":"{{adminAccessToken}}","type":"string"}]}},"response":[]},
+      {"name":"Archive product","request":{"method":"POST","header":[],"url":"{{baseUrl}}/api/v1/admin/ecommerce/products/{{ecommerceProductId}}/archive","auth":{"type":"bearer","bearer":[{"key":"token","value":"{{adminAccessToken}}","type":"string"}]}},"response":[]},
+      {"name":"Delete product image","request":{"method":"DELETE","header":[],"url":"{{baseUrl}}/api/v1/admin/ecommerce/products/{{ecommerceProductId}}/images/{{ecommerceImageId}}","auth":{"type":"bearer","bearer":[{"key":"token","value":"{{adminAccessToken}}","type":"string"}]}},"response":[]},
+      {"name":"Update delivery address","request":{"method":"PATCH","header":[{"key":"Content-Type","value":"application/json"}],"url":"{{baseUrl}}/api/v1/shop/addresses/{{ecommerceAddressId}}","body":{"mode":"raw","raw":"{\n  \"line1\": \"456 Updated Street\",\n  \"isDefault\": true\n}","options":{"raw":{"language":"json"}}},"auth":{"type":"bearer","bearer":[{"key":"token","value":"{{clientAccessToken}}","type":"string"}]}},"response":[]},
+      {"name":"Delete delivery address","request":{"method":"DELETE","header":[],"url":"{{baseUrl}}/api/v1/shop/addresses/{{ecommerceAddressId}}","auth":{"type":"bearer","bearer":[{"key":"token","value":"{{clientAccessToken}}","type":"string"}]}},"response":[]},
+      {"name":"Update cart item quantity","request":{"method":"PATCH","header":[{"key":"Content-Type","value":"application/json"}],"url":"{{baseUrl}}/api/v1/shop/cart/items/{{ecommerceCartItemId}}","body":{"mode":"raw","raw":"{\n  \"quantity\": 2\n}","options":{"raw":{"language":"json"}}},"auth":{"type":"bearer","bearer":[{"key":"token","value":"{{clientAccessToken}}","type":"string"}]}},"response":[]},
+      {"name":"Remove cart item","request":{"method":"DELETE","header":[],"url":"{{baseUrl}}/api/v1/shop/cart/items/{{ecommerceCartItemId}}","auth":{"type":"bearer","bearer":[{"key":"token","value":"{{clientAccessToken}}","type":"string"}]}},"response":[]}
+    ]
+  }],
   "variable": [
     {
       "key": "baseUrl",
@@ -3398,6 +3520,15 @@
       "key": "importedBusinessSlug",
       "value": "",
       "type": "string"
-    }
+    },
+    { "key": "ecommerceCategoryId", "value": "", "type": "string" },
+    { "key": "ecommerceSubcategoryId", "value": "", "type": "string" },
+    { "key": "ecommerceProductId", "value": "", "type": "string" },
+    { "key": "ecommerceProductSlug", "value": "", "type": "string" },
+    { "key": "ecommerceVariantId", "value": "", "type": "string" },
+    { "key": "ecommerceAddressId", "value": "", "type": "string" },
+    { "key": "ecommerceOrderId", "value": "", "type": "string" },
+    { "key": "ecommerceImageId", "value": "", "type": "string" },
+    { "key": "ecommerceCartItemId", "value": "", "type": "string" }
   ]
 }

@@ -74,6 +74,30 @@ import {
   reviewVendorSalesMeetingSchema,
   vendorSalesMeetingIdParamsSchema,
 } from "../../validators/vendorSalesMeeting.validator.js";
+import * as ecommerceController from "../../controllers/ecommerce.controller.js";
+import * as ecommerceOrderController from "../../controllers/ecommerceOrder.controller.js";
+import { cancelOrderSchema, fulfilmentSchema, orderIdParamsSchema, orderListQuerySchema } from "../../validators/ecommerceOrder.validator.js";
+import {
+  adjustEcommerceInventorySchema,
+  ecommerceInventoryListQuerySchema,
+  ecommerceInventoryMovementQuerySchema,
+  createEcommerceCategorySchema,
+  createEcommerceProductImageSchema,
+  createEcommerceVariantSchema,
+  createEcommerceProductSchema,
+  ecommerceCategoryIdParamsSchema,
+  ecommerceSubcategoryIdParamsSchema,
+  ecommerceProductIdParamsSchema,
+  ecommerceImageIdParamsSchema,
+  ecommerceProductListQuerySchema,
+  ecommerceVariantIdParamsSchema,
+  updateEcommerceCategorySchema,
+  createEcommerceSubcategorySchema,
+  updateEcommerceSubcategorySchema,
+  updateEcommerceProductSchema,
+  updateEcommerceInventorySettingsSchema,
+  updateEcommerceVariantSchema,
+} from "../../validators/ecommerce.validator.js";
 
 const router = Router();
 
@@ -389,5 +413,38 @@ router.patch(
   validateRequest(reviewVendorSalesMeetingSchema),
   vendorSalesMeetingController.reviewForAdmin,
 );
+
+// --- Admin-owned e-commerce catalogue ---
+router.post('/ecommerce/categories', validateRequest(createEcommerceCategorySchema), ecommerceController.createCategory);
+router.get('/ecommerce/categories', ecommerceController.listCategories);
+router.get('/ecommerce/categories/:categoryId', validateRequest(ecommerceCategoryIdParamsSchema, 'params'), ecommerceController.getCategory);
+router.patch('/ecommerce/categories/:categoryId', validateRequest(ecommerceCategoryIdParamsSchema, 'params'), validateRequest(updateEcommerceCategorySchema), ecommerceController.updateCategory);
+router.delete('/ecommerce/categories/:categoryId', validateRequest(ecommerceCategoryIdParamsSchema, 'params'), ecommerceController.deleteCategory);
+router.post('/ecommerce/subcategories', validateRequest(createEcommerceSubcategorySchema), ecommerceController.createSubcategory);
+router.get('/ecommerce/subcategories', ecommerceController.listSubcategories);
+router.get('/ecommerce/subcategories/:subcategoryId', validateRequest(ecommerceSubcategoryIdParamsSchema, 'params'), ecommerceController.getSubcategory);
+router.patch('/ecommerce/subcategories/:subcategoryId', validateRequest(ecommerceSubcategoryIdParamsSchema, 'params'), validateRequest(updateEcommerceSubcategorySchema), ecommerceController.updateSubcategory);
+router.post('/ecommerce/products', validateRequest(createEcommerceProductSchema), ecommerceController.createProduct);
+router.get('/ecommerce/products', validateRequest(ecommerceProductListQuerySchema, 'query'), ecommerceController.listProducts);
+router.get('/ecommerce/products/:productId', validateRequest(ecommerceProductIdParamsSchema, 'params'), ecommerceController.getProduct);
+router.patch('/ecommerce/products/:productId', validateRequest(ecommerceProductIdParamsSchema, 'params'), validateRequest(updateEcommerceProductSchema), ecommerceController.updateProduct);
+router.post('/ecommerce/products/:productId/publish', validateRequest(ecommerceProductIdParamsSchema, 'params'), ecommerceController.publishProduct);
+router.post('/ecommerce/products/:productId/archive', validateRequest(ecommerceProductIdParamsSchema, 'params'), ecommerceController.archiveProduct);
+router.post('/ecommerce/products/:productId/images', validateRequest(ecommerceProductIdParamsSchema, 'params'), validateRequest(createEcommerceProductImageSchema), ecommerceController.addProductImage);
+router.delete('/ecommerce/products/:productId/images/:imageId', validateRequest(ecommerceImageIdParamsSchema, 'params'), ecommerceController.removeProductImage);
+router.post('/ecommerce/products/:productId/variants', validateRequest(ecommerceProductIdParamsSchema, 'params'), validateRequest(createEcommerceVariantSchema), ecommerceController.addVariant);
+router.patch('/ecommerce/variants/:variantId', validateRequest(ecommerceVariantIdParamsSchema, 'params'), validateRequest(updateEcommerceVariantSchema), ecommerceController.updateVariant);
+router.post('/ecommerce/variants/:variantId/inventory-adjustments', validateRequest(ecommerceVariantIdParamsSchema, 'params'), validateRequest(adjustEcommerceInventorySchema), ecommerceController.adjustInventory);
+router.patch('/ecommerce/variants/:variantId/inventory-settings', validateRequest(ecommerceVariantIdParamsSchema, 'params'), validateRequest(updateEcommerceInventorySettingsSchema), ecommerceController.updateInventorySettings);
+router.get('/ecommerce/inventory', validateRequest(ecommerceInventoryListQuerySchema, 'query'), ecommerceController.listInventory);
+router.get('/ecommerce/inventory-movements', validateRequest(ecommerceInventoryMovementQuerySchema, 'query'), ecommerceController.listInventoryMovements);
+
+// --- E-commerce orders and fulfilment ---
+router.get('/ecommerce/orders', validateRequest(orderListQuerySchema, 'query'), ecommerceOrderController.listAdmin);
+router.post('/ecommerce/orders/release-expired-reservations', ecommerceOrderController.expireReservations);
+router.get('/ecommerce/orders/:orderId', validateRequest(orderIdParamsSchema, 'params'), ecommerceOrderController.getAdmin);
+router.post('/ecommerce/orders/:orderId/cancel', validateRequest(orderIdParamsSchema, 'params'), validateRequest(cancelOrderSchema), ecommerceOrderController.cancelAdmin);
+router.patch('/ecommerce/orders/:orderId/fulfilment', validateRequest(orderIdParamsSchema, 'params'), validateRequest(fulfilmentSchema), ecommerceOrderController.fulfil);
+router.post('/ecommerce/orders/:orderId/mark-paid-for-test', validateRequest(orderIdParamsSchema, 'params'), ecommerceOrderController.markPaidForTest);
 
 export default router;

@@ -1,0 +1,224 @@
+model EcommerceCategory {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  imageUrl    String?
+  imagePublicId String?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  products EcommerceProduct[]
+  subcategories EcommerceSubcategory[]
+
+  @@index([isActive, sortOrder])
+  @@map("ecommerce_categories")
+}
+
+model EcommerceSubcategory {
+  id                    String   @id @default(cuid())
+  categoryId            String
+  name                  String
+  slug                  String   @unique
+  description           String?
+  specificationTemplate Json?
+  isActive              Boolean  @default(true)
+  sortOrder             Int      @default(0)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  category EcommerceCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  products EcommerceProduct[]
+
+  @@unique([categoryId, name])
+  @@index([categoryId, isActive, sortOrder])
+  @@map("ecommerce_subcategories")
+}
+
+model EcommerceProduct {
+  id             String                  @id @default(cuid())
+  categoryId     String
+  subcategoryId  String?
+  title          String
+  slug           String                  @unique
+  shortDescription String?
+  description    String
+  brandName      String?
+  specifications Json?
+  optionDefinitions Json?
+  status         EcommerceProductStatus @default(DRAFT)
+  isFeatured     Boolean                 @default(false)
+  gstPercentage  Int                     @default(0)
+  createdByAdminId String
+  publishedAt    DateTime?
+  archivedAt     DateTime?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+
+  category EcommerceCategory          @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  subcategory EcommerceSubcategory?   @relation(fields: [subcategoryId], references: [id], onDelete: Restrict)
+  images   EcommerceProductImage[]
+  variants EcommerceProductVariant[]
+  wishlistItems EcommerceWishlistItem[]
+
+  @@index([categoryId, status])
+  @@index([subcategoryId, status])
+  @@index([status, isFeatured, publishedAt])
+  @@map("ecommerce_products")
+}
+
+model EcommerceProductImage {
+  id        String   @id @default(cuid())
+  productId String
+  url       String
+  publicId  String?
+  altText   String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  product EcommerceProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, sortOrder])
+  @@unique([productId, url])
+  @@map("ecommerce_product_images")
+}
+
+model EcommerceProductVariant {
+  id              String   @id @default(cuid())
+  productId       String
+  sku             String   @unique
+  barcode         String?  @unique
+  optionValues    Json?
+  mrpAmountPaise  Int
+  saleAmountPaise Int
+  costAmountPaise Int?
+  weightGrams     Int?
+  imageUrl        String?
+  isActive        Boolean  @default(true)
+  isDefault       Boolean  @default(false)
+  onHandQuantity  Int      @default(0)
+  reservedQuantity Int     @default(0)
+  lowStockThreshold Int    @default(5)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  product            EcommerceProduct             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  inventoryMovements EcommerceInventoryMovement[]
+  cartItems          EcommerceCartItem[]
+  orderItems         EcommerceOrderItem[]
+
+  @@index([productId, isActive])
+  @@map("ecommerce_product_variants")
+}
+
+model EcommerceInventoryMovement {
+  id        String                         @id @default(cuid())
+  variantId String
+  type      EcommerceInventoryMovementType
+  quantity  Int
+  note      String?
+  adminId   String?
+  createdAt DateTime                       @default(now())
+
+  variant EcommerceProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@index([variantId, createdAt])
+  @@map("ecommerce_inventory_movements")
+}
+
+model EcommerceAddress {
+  id String @id @default(cuid())
+  userId String
+  fullName String
+  phone String
+  line1 String
+  line2 String?
+  locality String?
+  city String
+  state String
+  pincode String
+  countryCode String @default("IN")
+  isDefault Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, isDefault])
+  @@map("ecommerce_addresses")
+}
+
+model EcommerceCart {
+  id String @id @default(cuid())
+  userId String @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items EcommerceCartItem[]
+  @@map("ecommerce_carts")
+}
+
+model EcommerceCartItem {
+  id String @id @default(cuid())
+  cartId String
+  variantId String
+  quantity Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  cart EcommerceCart @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  variant EcommerceProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  @@unique([cartId, variantId])
+  @@map("ecommerce_cart_items")
+}
+
+model EcommerceWishlistItem {
+  id String @id @default(cuid())
+  userId String
+  productId String
+  createdAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product EcommerceProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  @@unique([userId, productId])
+  @@index([userId, createdAt])
+  @@map("ecommerce_wishlist_items")
+}
+model EcommerceOrder {
+  id String @id @default(cuid())
+  orderNumber String @unique
+  userId String
+  status EcommerceOrderStatus @default(PAYMENT_PENDING)
+  subtotalAmountPaise Int
+  taxAmountPaise Int @default(0)
+  shippingAmountPaise Int @default(0)
+  totalAmountPaise Int
+  addressSnapshot Json
+  reservedUntil DateTime?
+  cancellationReason String?
+  returnReason String?
+  courierName String?
+  trackingNumber String?
+  trackingUrl String?
+  shippedAt DateTime?
+  deliveredAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  items EcommerceOrderItem[]
+  @@index([userId, createdAt])
+  @@index([status, reservedUntil])
+  @@map("ecommerce_orders")
+}
+model EcommerceOrderItem {
+  id String @id @default(cuid())
+  orderId String
+  variantId String
+  productSnapshot Json
+  unitAmountPaise Int
+  quantity Int
+  totalAmountPaise Int
+  createdAt DateTime @default(now())
+  order EcommerceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variant EcommerceProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  @@index([orderId])
+  @@map("ecommerce_order_items")
+}

@@ -20,6 +20,10 @@ model User {
   emailOtps       EmailOtp[]
   vendorProfile   VendorProfile?
   customerProfile CustomerProfile?
+  ecommerceAddresses EcommerceAddress[]
+  ecommerceCart EcommerceCart?
+  ecommerceWishlistItems EcommerceWishlistItem[]
+  ecommerceOrders EcommerceOrder[]
 
   @@index([role])
   @@map("users")

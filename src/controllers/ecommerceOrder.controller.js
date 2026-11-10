@@ -1,0 +1,15 @@
+import * as service from '../services/ecommerceOrder/index.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { sendSuccess } from '../utils/response.js';
+const handler=(fn,message,statusCode=200)=>asyncHandler(async(req,res)=>sendSuccess(res,{statusCode,message,data:await fn(req)}));
+export const checkout=handler(r=>service.checkout({userId:r.user.id,addressId:r.body.addressId}),'Order created. Complete payment before the reservation expires.',201);
+export const listMine=handler(r=>service.listCustomerOrders({userId:r.user.id,query:r.query}),'Orders retrieved.');
+export const getMine=handler(r=>service.getCustomerOrder({userId:r.user.id,orderId:r.params.orderId}),'Order retrieved.');
+export const cancelMine=handler(r=>service.cancelCustomerOrder({userId:r.user.id,orderId:r.params.orderId,reason:r.body.reason}),'Order cancelled and stock released.');
+export const returnMine=handler(r=>service.requestReturn({userId:r.user.id,orderId:r.params.orderId,reason:r.body.reason}),'Return request submitted.');
+export const listAdmin=handler(r=>service.listAdminOrders(r.query),'Orders retrieved.');
+export const getAdmin=handler(r=>service.getAdminOrder(r.params.orderId),'Order retrieved.');
+export const cancelAdmin=handler(r=>service.cancelAdminOrder({orderId:r.params.orderId,reason:r.body.reason}),'Order cancelled and stock released.');
+export const fulfil=handler(r=>service.fulfilOrder({orderId:r.params.orderId,body:r.body}),'Order fulfilment updated.');
+export const markPaidForTest=handler(r=>service.markPaidForTest({orderId:r.params.orderId}),'Test payment confirmed; order is ready for fulfilment.');
+export const expireReservations=handler(()=>service.expireReservations(),'Expired payment reservations released.');

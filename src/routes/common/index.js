@@ -18,5 +18,7 @@ router.use('/', cityRoutes);
 router.use('/', contactMessageRoutes);
 router.get('/subscription-plans', listPublicPlans);
 router.use('/', shopRoutes);
-router.use('/', shopCustomerRoutes);
+// Customer authentication applies only to /shop customer actions. Mounting it
+// at '/' would run the CLIENT role check for unrelated /admin and /marketplace URLs.
+router.use('/shop', shopCustomerRoutes);
 export default router;

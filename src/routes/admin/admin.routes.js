@@ -90,6 +90,7 @@ import {
   ecommerceProductIdParamsSchema,
   ecommerceImageIdParamsSchema,
   ecommerceProductListQuerySchema,
+  ecommercePublicCategoryListQuerySchema,
   ecommerceVariantIdParamsSchema,
   updateEcommerceCategorySchema,
   createEcommerceSubcategorySchema,
@@ -416,7 +417,7 @@ router.patch(
 
 // --- Admin-owned e-commerce catalogue ---
 router.post('/ecommerce/categories', validateRequest(createEcommerceCategorySchema), ecommerceController.createCategory);
-router.get('/ecommerce/categories', ecommerceController.listCategories);
+router.get('/ecommerce/categories', validateRequest(ecommercePublicCategoryListQuerySchema, 'query'), ecommerceController.listCategories);
 router.get('/ecommerce/categories/:categoryId', validateRequest(ecommerceCategoryIdParamsSchema, 'params'), ecommerceController.getCategory);
 router.patch('/ecommerce/categories/:categoryId', validateRequest(ecommerceCategoryIdParamsSchema, 'params'), validateRequest(updateEcommerceCategorySchema), ecommerceController.updateCategory);
 router.delete('/ecommerce/categories/:categoryId', validateRequest(ecommerceCategoryIdParamsSchema, 'params'), ecommerceController.deleteCategory);

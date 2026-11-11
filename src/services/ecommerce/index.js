@@ -45,7 +45,7 @@ const productPayload = (body, adminId) => ({
 });
 
 export const createCategory = async ({ body }) => repo.createCategory({ ...body, slug: slugFor(body.name), description: body.description ?? null, imageUrl: body.imageUrl ?? null, imagePublicId: body.imagePublicId ?? null });
-export const listCategories = async ({ page, limit, ...where }) => ({ categories: await repo.listCategories({ where, skip: (page - 1) * limit, take: limit }), pagination: pageInfo(await repo.countCategories(where), page, limit) });
+export const listCategories = async ({ page = 1, limit = 20, ...where } = {}) => ({ categories: await repo.listCategories({ where, skip: (page - 1) * limit, take: limit }), pagination: pageInfo(await repo.countCategories(where), page, limit) });
 export const getCategory = async (id) => { const category = await repo.findCategory(id); if (!category) throw ApiError.notFound('E-commerce category not found.'); return category; };
 export const updateCategory = async ({ id, body }) => { await getCategory(id); return repo.updateCategory(id, { ...body, ...(body.name && { slug: slugFor(body.name) }) }); };
 export const deleteCategory = async (id) => { const category = await getCategory(id); if (category._count.products) throw ApiError.conflict('Cannot delete a category that contains products. Archive or move its products first.'); return repo.deleteCategory(id); };

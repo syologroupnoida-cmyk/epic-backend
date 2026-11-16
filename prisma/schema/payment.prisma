@@ -1,0 +1,42 @@
+model Payment {
+  id                 String         @id @default(cuid())
+  userId             String
+  purpose            PaymentPurpose
+  referenceId        String
+  amountPaise        Int
+  currency           String         @default("INR")
+  status             PaymentStatus  @default(CREATED)
+  gateway            String         @default("RAZORPAY")
+  gatewayOrderId     String?        @unique
+  gatewayPaymentId   String?        @unique
+  gatewayRefundId    String?        @unique
+  refundAmountPaise  Int?
+  refundStatus       String?
+  refundRequestedAt  DateTime?
+  refundedAt         DateTime?
+  failureCode        String?
+  failureDescription String?
+  paidAt             DateTime?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId, createdAt])
+  @@index([purpose, referenceId])
+  @@index([status, createdAt])
+  @@map("payments")
+}
+
+model PaymentWebhookEvent {
+  id             String   @id @default(cuid())
+  gateway        String   @default("RAZORPAY")
+  gatewayEventId String?  @unique
+  eventType      String
+  payload        Json
+  processedAt    DateTime?
+  createdAt      DateTime @default(now())
+
+  @@index([eventType, createdAt])
+  @@map("payment_webhook_events")
+}

@@ -24,6 +24,7 @@ model User {
   ecommerceCart EcommerceCart?
   ecommerceWishlistItems EcommerceWishlistItem[]
   ecommerceOrders EcommerceOrder[]
+  payments        Payment[]
 
   @@index([role])
   @@map("users")

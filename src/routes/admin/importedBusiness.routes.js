@@ -1,0 +1,12 @@
+import { Router } from 'express';
+import * as controller from '../../controllers/importedBusiness.controller.js';
+import { uploadBusinessCsv } from '../../middlewares/csvUpload.middleware.js';
+import { validateRequest } from '../../middlewares/validation.middleware.js';
+import { adminImportedBusinessListQuerySchema, businessImportBatchListQuerySchema, importedBusinessIdParamsSchema, updateImportedBusinessSchema } from '../../validators/importedBusiness.validator.js';
+const router = Router();
+router.post('/imported-businesses/import', uploadBusinessCsv, controller.importCsv);
+router.get('/business-import-batches', validateRequest(businessImportBatchListQuerySchema, 'query'), controller.listImportBatches);
+router.get('/imported-businesses', validateRequest(adminImportedBusinessListQuerySchema, 'query'), controller.listAdmin);
+router.get('/imported-businesses/:businessId', validateRequest(importedBusinessIdParamsSchema, 'params'), controller.getAdmin);
+router.patch('/imported-businesses/:businessId', validateRequest(importedBusinessIdParamsSchema, 'params'), validateRequest(updateImportedBusinessSchema), controller.updateAdmin);
+export default router;

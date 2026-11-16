@@ -220,3 +220,18 @@ enum EcommerceOrderStatus {
   REFUNDED
   PAYMENT_EXPIRED
 }
+
+enum PaymentPurpose {
+  ECOMMERCE_ORDER
+  VENDOR_SUBSCRIPTION
+  WALLET_TOPUP
+}
+
+enum PaymentStatus {
+  CREATED
+  PENDING
+  PAID
+  REFUND_PENDING
+  FAILED
+  REFUNDED
+}

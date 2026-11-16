@@ -1,0 +1,12 @@
+import { Router } from 'express';
+import * as controller from '../../controllers/venueProperty.controller.js';
+import { validateRequest } from '../../middlewares/validation.middleware.js';
+import { adminVenuePropertyListQuerySchema, pauseVenuePropertySchema, rejectVenuePropertySchema, venuePropertyIdParamsSchema } from '../../validators/venueProperty.validator.js';
+const router = Router();
+router.get('/venue-properties', validateRequest(adminVenuePropertyListQuerySchema, 'query'), controller.listAdmin);
+router.get('/venue-properties/:venuePropertyId', validateRequest(venuePropertyIdParamsSchema, 'params'), controller.getAdmin);
+router.post('/venue-properties/:venuePropertyId/approve', validateRequest(venuePropertyIdParamsSchema, 'params'), controller.approve);
+router.post('/venue-properties/:venuePropertyId/reject', validateRequest(venuePropertyIdParamsSchema, 'params'), validateRequest(rejectVenuePropertySchema), controller.reject);
+router.post('/venue-properties/:venuePropertyId/pause', validateRequest(venuePropertyIdParamsSchema, 'params'), validateRequest(pauseVenuePropertySchema), controller.pause);
+router.post('/venue-properties/:venuePropertyId/resume', validateRequest(venuePropertyIdParamsSchema, 'params'), controller.resume);
+export default router;

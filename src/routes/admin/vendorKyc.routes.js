@@ -1,0 +1,10 @@
+import { Router } from 'express';
+import * as controller from '../../controllers/vendorKyc.controller.js';
+import { validateRequest } from '../../middlewares/validation.middleware.js';
+import { adminVendorKycParamsSchema, listKycQuerySchema, rejectKycSchema } from '../../validators/vendorKyc.validator.js';
+const router = Router();
+router.get('/vendor-kyc', validateRequest(listKycQuerySchema, 'query'), controller.listKycForAdmin);
+router.get('/vendor-kyc/:userId', validateRequest(adminVendorKycParamsSchema, 'params'), controller.getKycForAdmin);
+router.post('/vendor-kyc/:userId/approve', validateRequest(adminVendorKycParamsSchema, 'params'), controller.approveVendorKyc);
+router.post('/vendor-kyc/:userId/reject', validateRequest(adminVendorKycParamsSchema, 'params'), validateRequest(rejectKycSchema), controller.rejectVendorKyc);
+export default router;

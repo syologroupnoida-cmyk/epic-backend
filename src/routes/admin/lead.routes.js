@@ -1,0 +1,11 @@
+import { Router } from 'express';
+import * as controller from '../../controllers/adminLead.controller.js';
+import { validateRequest } from '../../middlewares/validation.middleware.js';
+import { activateSharedLeadSchema, adminLeadListQuerySchema, closeLeadSchema, leadIdParamsSchema, rejectLeadSchema } from '../../validators/lead.validator.js';
+const router = Router();
+router.get('/leads', validateRequest(adminLeadListQuerySchema, 'query'), controller.listLeads);
+router.get('/leads/:leadId', validateRequest(leadIdParamsSchema, 'params'), controller.getLead);
+router.post('/leads/:leadId/activate', validateRequest(leadIdParamsSchema, 'params'), validateRequest(activateSharedLeadSchema), controller.activateSharedLead);
+router.post('/leads/:leadId/reject', validateRequest(leadIdParamsSchema, 'params'), validateRequest(rejectLeadSchema), controller.rejectSharedLead);
+router.post('/leads/:leadId/close', validateRequest(leadIdParamsSchema, 'params'), validateRequest(closeLeadSchema), controller.closeLead);
+export default router;

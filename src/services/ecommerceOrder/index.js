@@ -51,6 +51,64 @@ export async function checkout({ userId, addressId }) {
   });
 }
 
+// Creates a one-item order directly from a product page.  Unlike checkout(),
+// this deliberately leaves the customer's existing cart untouched.
+export async function buyNow({ userId, addressId, variantId, quantity }) {
+  return prisma.$transaction(async (tx) => {
+    const address = await tx.ecommerceAddress.findFirst({ where: { id: addressId, userId } });
+    if (!address) throw ApiError.notFound('Shipping address not found.');
+
+    const variant = await tx.ecommerceProductVariant.findFirst({
+      where: {
+        id: variantId,
+        isActive: true,
+        product: { is: { status: 'ACTIVE', category: { is: { isActive: true } } } },
+      },
+      include: { product: true },
+    });
+    if (!variant) throw ApiError.notFound('This product option is not available for purchase.');
+
+    const fresh = await tx.ecommerceProductVariant.findUnique({
+      where: { id: variant.id },
+      select: { onHandQuantity: true, reservedQuantity: true },
+    });
+    if (!fresh || fresh.onHandQuantity - fresh.reservedQuantity < quantity) {
+      throw ApiError.conflict(`Insufficient stock for ${variant.sku}.`);
+    }
+
+    const subtotal = variant.saleAmountPaise * quantity;
+    const tax = Math.round((subtotal * variant.product.gstPercentage) / 100);
+    const reservedUntil = new Date(Date.now() + RESERVATION_MINUTES * 60 * 1000);
+    const order = await tx.ecommerceOrder.create({
+      data: {
+        orderNumber: orderNumber(),
+        userId,
+        status: 'PAYMENT_PENDING',
+        subtotalAmountPaise: subtotal,
+        taxAmountPaise: tax,
+        shippingAmountPaise: 0,
+        totalAmountPaise: subtotal + tax,
+        reservedUntil,
+        addressSnapshot: { fullName: address.fullName, phone: address.phone, line1: address.line1, line2: address.line2, locality: address.locality, city: address.city, state: address.state, pincode: address.pincode, countryCode: address.countryCode },
+        items: {
+          create: [{
+            variantId: variant.id,
+            quantity,
+            unitAmountPaise: variant.saleAmountPaise,
+            totalAmountPaise: subtotal,
+            productSnapshot: { productId: variant.product.id, title: variant.product.title, slug: variant.product.slug, sku: variant.sku, optionValues: variant.optionValues, imageUrl: variant.imageUrl },
+          }],
+        },
+      },
+      include: customerInclude,
+    });
+
+    await tx.ecommerceProductVariant.update({ where: { id: variant.id }, data: { reservedQuantity: { increment: quantity } } });
+    await tx.ecommerceInventoryMovement.create({ data: { variantId: variant.id, type: 'ORDER_RESERVED', quantity, note: `Reserved for ${order.orderNumber}` } });
+    return { ...order, paymentReservationExpiresAt: reservedUntil };
+  });
+}
+
 export async function listCustomerOrders({ userId, query }) {
   const { page, limit, status } = query; const where = { userId, ...(status ? { status } : {}) };
   const [items, total] = await prisma.$transaction([prisma.ecommerceOrder.findMany({ where, include: customerInclude, orderBy: { createdAt: 'desc' }, skip: (page - 1) * limit, take: limit }), prisma.ecommerceOrder.count({ where })]);

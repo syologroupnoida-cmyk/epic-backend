@@ -5,6 +5,11 @@ const reason = z.string().trim().min(3).max(500);
 
 export const orderIdParamsSchema = z.object({ orderId: id }).strict();
 export const checkoutSchema = z.object({ addressId: id }).strict();
+export const buyNowSchema = z.object({
+  addressId: id,
+  variantId: id,
+  quantity: z.coerce.number().int().min(1).max(20).default(1),
+}).strict();
 export const orderListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
@@ -14,7 +19,7 @@ export const orderListQuerySchema = z.object({
 export const cancelOrderSchema = z.object({ reason: reason.optional() }).strict();
 export const returnRequestSchema = z.object({ reason }).strict();
 export const fulfilmentSchema = z.object({
-  status: z.enum(['PROCESSING', 'PACKED', 'SHIPPED', 'DELIVERED', 'RETURNED', 'REFUNDED']),
+  status: z.enum(['PROCESSING', 'PACKED', 'SHIPPED', 'DELIVERED', 'RETURNED']),
   courierName: z.string().trim().min(1).max(120).optional(),
   trackingNumber: z.string().trim().min(1).max(150).optional(),
   trackingUrl: z.string().trim().url().max(1000).optional(),

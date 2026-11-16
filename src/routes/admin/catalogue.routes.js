@@ -1,0 +1,11 @@
+import { Router } from 'express';
+import * as controller from '../../controllers/serviceCatalog.controller.js';
+import { uploadSingleFile } from '../../middlewares/upload.middleware.js';
+import { validateRequest } from '../../middlewares/validation.middleware.js';
+import { createCategoryPayloadSchema, updateCategorySchema, createSubcategoryPayloadSchema, updateSubcategorySchema, listCatalogSchema, listSubcategoriesSchema } from '../../validators/serviceCatalog.validator.js';
+const router = Router();
+router.route('/service-categories').get(validateRequest(listCatalogSchema, 'query'), controller.listCategories).post(uploadSingleFile, validateRequest(createCategoryPayloadSchema), controller.createCategory);
+router.route('/service-categories/:id').get(controller.getCategory).patch(uploadSingleFile, validateRequest(updateCategorySchema), controller.updateCategory).put(uploadSingleFile, validateRequest(updateCategorySchema), controller.updateCategory).delete(controller.deleteCategory);
+router.route('/service-subcategories').get(validateRequest(listSubcategoriesSchema, 'query'), controller.listSubcategories).post(uploadSingleFile, validateRequest(createSubcategoryPayloadSchema), controller.createSubcategory);
+router.route('/service-subcategories/:id').get(controller.getSubcategory).patch(uploadSingleFile, validateRequest(updateSubcategorySchema), controller.updateSubcategory).put(uploadSingleFile, validateRequest(updateSubcategorySchema), controller.updateSubcategory).delete(controller.deleteSubcategory);
+export default router;

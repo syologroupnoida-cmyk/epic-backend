@@ -43,6 +43,9 @@ const envSchema = z
     CORS_ORIGIN: z.string().default("*"),
 
     PAYMENTS_MODE: z.enum(["TEST", "LIVE"]).default("TEST"),
+    RAZORPAY_KEY_ID: z.union([z.string().min(1), z.literal('')]).optional().transform((value) => value || undefined),
+    RAZORPAY_KEY_SECRET: z.union([z.string().min(1), z.literal('')]).optional().transform((value) => value || undefined),
+    RAZORPAY_WEBHOOK_SECRET: z.union([z.string().min(1), z.literal('')]).optional().transform((value) => value || undefined),
     SIGNUP_WALLET_BONUS: z.coerce.number().int().min(0).max(100000).default(100),
 
     // ---- Frontend URL ----
@@ -136,6 +139,10 @@ const envSchema = z
   .refine((data) => data.NODE_ENV !== "production" || data.PAYMENTS_MODE === "LIVE", {
     message: "PAYMENTS_MODE must be LIVE in production",
     path: ["PAYMENTS_MODE"],
+  })
+  .refine((data) => data.PAYMENTS_MODE !== "LIVE" || (data.RAZORPAY_KEY_ID && data.RAZORPAY_KEY_SECRET && data.RAZORPAY_WEBHOOK_SECRET), {
+    message: "Razorpay key ID, key secret, and webhook secret are required in LIVE payment mode",
+    path: ["RAZORPAY_KEY_ID"],
   });
 
 const parsed = envSchema.safeParse(process.env);

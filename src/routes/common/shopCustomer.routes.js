@@ -1,21 +1,127 @@
-import { Router } from 'express';
-import { authenticateUser, authorizeRoles } from '../../middlewares/auth.middleware.js';
-import * as cart from '../../controllers/ecommerceCart.controller.js';
-import * as order from '../../controllers/ecommerceOrder.controller.js';
-import { validateRequest } from '../../middlewares/validation.middleware.js';
-import { addressSchema, addressPatch, addressIdParams, addCartItem, updateCartItem, cartItemIdParams, wishlistProductParams } from '../../validators/ecommerceCart.validator.js';
-import { checkoutSchema, orderIdParamsSchema, orderListQuerySchema, cancelOrderSchema, returnRequestSchema } from '../../validators/ecommerceOrder.validator.js';
+import { Router } from "express";
+import {
+  authenticateUser,
+  authorizeRoles,
+} from "../../middlewares/auth.middleware.js";
+import * as cart from "../../controllers/ecommerceCart.controller.js";
+import * as order from "../../controllers/ecommerceOrder.controller.js";
+import * as payment from "../../controllers/payment.controller.js";
+import { validateRequest } from "../../middlewares/validation.middleware.js";
+import {
+  addressSchema,
+  addressPatch,
+  addressIdParams,
+  addCartItem,
+  updateCartItem,
+  cartItemIdParams,
+  wishlistProductParams,
+} from "../../validators/ecommerceCart.validator.js";
+import {
+  checkoutSchema,
+  buyNowSchema,
+  orderIdParamsSchema,
+  orderListQuerySchema,
+  cancelOrderSchema,
+  returnRequestSchema,
+} from "../../validators/ecommerceOrder.validator.js";
+import {
+  paymentIdParamsSchema,
+  razorpayVerifySchema,
+} from "../../validators/payment.validator.js";
+
 const router = Router();
-router.use(authenticateUser, authorizeRoles(['CLIENT']));
-router.route('/addresses').get(cart.listAddresses).post(validateRequest(addressSchema), cart.createAddress);
-router.patch('/addresses/:addressId', validateRequest(addressIdParams, 'params'), validateRequest(addressPatch), cart.updateAddress);
-router.delete('/addresses/:addressId', validateRequest(addressIdParams, 'params'), cart.deleteAddress);
-router.get('/cart', cart.getCart); router.post('/cart/items', validateRequest(addCartItem), cart.addCartItem);
-router.patch('/cart/items/:cartItemId', validateRequest(cartItemIdParams, 'params'), validateRequest(updateCartItem), cart.updateCartItem); router.delete('/cart/items/:cartItemId', validateRequest(cartItemIdParams, 'params'), cart.removeCartItem);
-router.get('/wishlist', cart.listWishlist); router.post('/wishlist/products/:productId', validateRequest(wishlistProductParams, 'params'), cart.addWishlist); router.delete('/wishlist/products/:productId', validateRequest(wishlistProductParams, 'params'), cart.removeWishlist);
-router.post('/checkout', validateRequest(checkoutSchema), order.checkout);
-router.get('/orders', validateRequest(orderListQuerySchema, 'query'), order.listMine);
-router.get('/orders/:orderId', validateRequest(orderIdParamsSchema, 'params'), order.getMine);
-router.post('/orders/:orderId/cancel', validateRequest(orderIdParamsSchema, 'params'), validateRequest(cancelOrderSchema), order.cancelMine);
-router.post('/orders/:orderId/return-request', validateRequest(orderIdParamsSchema, 'params'), validateRequest(returnRequestSchema), order.returnMine);
+
+router.use(authenticateUser, authorizeRoles(["CLIENT"]));
+
+router
+  .route("/addresses")
+  .get(cart.listAddresses)
+  .post(validateRequest(addressSchema), cart.createAddress);
+
+router.patch(
+  "/addresses/:addressId",
+  validateRequest(addressIdParams, "params"),
+  validateRequest(addressPatch),
+  cart.updateAddress,
+);
+
+router.delete(
+  "/addresses/:addressId",
+  validateRequest(addressIdParams, "params"),
+  cart.deleteAddress,
+);
+
+router.get("/cart", cart.getCart);
+
+router.post("/cart/items", validateRequest(addCartItem), cart.addCartItem);
+
+router.patch(
+  "/cart/items/:cartItemId",
+  validateRequest(cartItemIdParams, "params"),
+  validateRequest(updateCartItem),
+  cart.updateCartItem,
+);
+
+router.delete(
+  "/cart/items/:cartItemId",
+  validateRequest(cartItemIdParams, "params"),
+  cart.removeCartItem,
+);
+
+router.get("/wishlist", cart.listWishlist);
+
+router.post(
+  "/wishlist/products/:productId",
+  validateRequest(wishlistProductParams, "params"),
+  cart.addWishlist,
+);
+
+router.delete(
+  "/wishlist/products/:productId",
+  validateRequest(wishlistProductParams, "params"),
+  cart.removeWishlist,
+);
+
+router.post("/checkout", validateRequest(checkoutSchema), order.checkout);
+router.post("/buy-now/checkout", validateRequest(buyNowSchema), order.buyNow);
+
+router.post(
+  "/orders/:orderId/payment",
+  validateRequest(orderIdParamsSchema, "params"),
+  payment.createEcommercePayment,
+);
+
+router.post(
+  "/payments/:paymentId/verify",
+  validateRequest(paymentIdParamsSchema, "params"),
+  validateRequest(razorpayVerifySchema),
+  payment.verifyEcommercePayment,
+);
+
+router.get(
+  "/orders",
+  validateRequest(orderListQuerySchema, "query"),
+  order.listMine,
+);
+
+router.get(
+  "/orders/:orderId",
+  validateRequest(orderIdParamsSchema, "params"),
+  order.getMine,
+);
+
+router.post(
+  "/orders/:orderId/cancel",
+  validateRequest(orderIdParamsSchema, "params"),
+  validateRequest(cancelOrderSchema),
+  order.cancelMine,
+);
+
+router.post(
+  "/orders/:orderId/return-request",
+  validateRequest(orderIdParamsSchema, "params"),
+  validateRequest(returnRequestSchema),
+  order.returnMine,
+);
+
 export default router;

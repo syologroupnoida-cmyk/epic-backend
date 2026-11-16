@@ -1,0 +1,16 @@
+import { Router } from 'express';
+import * as controller from '../../controllers/listing.controller.js';
+import { validateRequest } from '../../middlewares/validation.middleware.js';
+import { adminListingRevisionListQuerySchema, adminListingListQuerySchema, listingIdParamsSchema, listingRevisionIdParamsSchema, pauseListingSchema, rejectListingSchema } from '../../validators/listing.validator.js';
+const router = Router();
+router.get('/listing-revisions', validateRequest(adminListingRevisionListQuerySchema, 'query'), controller.listListingRevisionsForAdmin);
+router.get('/listing-revisions/:revisionId', validateRequest(listingRevisionIdParamsSchema, 'params'), controller.getListingRevisionForAdmin);
+router.post('/listing-revisions/:revisionId/approve', validateRequest(listingRevisionIdParamsSchema, 'params'), controller.approveListingRevision);
+router.post('/listing-revisions/:revisionId/reject', validateRequest(listingRevisionIdParamsSchema, 'params'), validateRequest(rejectListingSchema), controller.rejectListingRevision);
+router.get('/listings', validateRequest(adminListingListQuerySchema, 'query'), controller.listListingsForAdmin);
+router.get('/listings/:listingId', validateRequest(listingIdParamsSchema, 'params'), controller.getListingForAdmin);
+router.post('/listings/:listingId/approve', validateRequest(listingIdParamsSchema, 'params'), controller.approveListing);
+router.post('/listings/:listingId/reject', validateRequest(listingIdParamsSchema, 'params'), validateRequest(rejectListingSchema), controller.rejectListing);
+router.post('/listings/:listingId/pause', validateRequest(listingIdParamsSchema, 'params'), validateRequest(pauseListingSchema), controller.pauseListing);
+router.post('/listings/:listingId/resume', validateRequest(listingIdParamsSchema, 'params'), controller.resumeListing);
+export default router;

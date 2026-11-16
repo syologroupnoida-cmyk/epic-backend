@@ -1,0 +1,10 @@
+import { Router } from 'express';
+import * as controller from '../../controllers/subscriptionPlan.controller.js';
+import { validateRequest } from '../../middlewares/validation.middleware.js';
+import { adminSubscriptionPlanListQuerySchema, createSubscriptionPlanSchema, subscriptionPlanIdParamsSchema, updateSubscriptionPlanSchema } from '../../validators/subscriptionPlan.validator.js';
+const router = Router();
+router.route('/subscription-plans').get(validateRequest(adminSubscriptionPlanListQuerySchema, 'query'), controller.listPlans).post(validateRequest(createSubscriptionPlanSchema), controller.createPlan);
+router.route('/subscription-plans/:planId').get(validateRequest(subscriptionPlanIdParamsSchema, 'params'), controller.getPlan).patch(validateRequest(subscriptionPlanIdParamsSchema, 'params'), validateRequest(updateSubscriptionPlanSchema), controller.updatePlan).delete(validateRequest(subscriptionPlanIdParamsSchema, 'params'), controller.deletePlan);
+router.post('/subscription-plans/:planId/activate', validateRequest(subscriptionPlanIdParamsSchema, 'params'), controller.activatePlan);
+router.post('/subscription-plans/:planId/deactivate', validateRequest(subscriptionPlanIdParamsSchema, 'params'), controller.deactivatePlan);
+export default router;

@@ -6,7 +6,7 @@ dotenv.config();
 const envSchema = z
   .object({
     NODE_ENV: z
-      .enum(["development", "production", "test"])
+      .enum(["development", "staging", "production", "test"])
       .default("development"),
 
     PORT: z.coerce.number().int().positive().default(4000),
@@ -158,6 +158,10 @@ if (!parsed.success) {
 
 export const env = Object.freeze(parsed.data);
 
-export const isProduction = env.NODE_ENV === "production";
+// Staging is publicly deployed and must use the same secure cookies, limited
+// error details, and production logging as production. The only intentional
+// difference is that it may use Razorpay TEST mode and test credentials.
+export const isStaging = env.NODE_ENV === "staging";
+export const isProduction = env.NODE_ENV === "production" || isStaging;
 export const isDevelopment = env.NODE_ENV === "development";
 export const isTest = env.NODE_ENV === "test";

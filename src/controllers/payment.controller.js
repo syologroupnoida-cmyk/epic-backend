@@ -24,6 +24,28 @@ export const verifyEcommercePayment = asyncHandler(async (req, res) =>
   }),
 );
 
+export const createVendorSubscriptionPayment = asyncHandler(async (req, res) =>
+  sendSuccess(res, {
+    statusCode: 201,
+    message: "Razorpay subscription checkout order created.",
+    data: await service.createVendorSubscriptionPayment({
+      userId: req.user.id,
+      planId: req.params.planId,
+    }),
+  }),
+);
+
+export const verifyVendorSubscriptionPayment = asyncHandler(async (req, res) =>
+  sendSuccess(res, {
+    message: "Subscription payment verification completed.",
+    data: await service.verifyVendorSubscriptionPayment({
+      userId: req.user.id,
+      localPaymentId: req.params.paymentId,
+      body: req.body,
+    }),
+  }),
+);
+
 export const refundEcommerceOrder = asyncHandler(async (req, res) =>
   sendSuccess(res, {
     statusCode: 202,

@@ -8,6 +8,7 @@ import * as venuePropertyController from '../../controllers/venueProperty.contro
 import * as vendorLeadController from '../../controllers/vendorLead.controller.js';
 import * as vendorSubscriptionController from '../../controllers/vendorSubscription.controller.js';
 import * as walletController from '../../controllers/wallet.controller.js';
+import * as paymentController from '../../controllers/payment.controller.js';
 import { requireKycApproved } from '../../middlewares/kyc.middleware.js';
 import {
   updateVendorCapabilitiesSchema,
@@ -36,8 +37,9 @@ import {
   purchasedLeadListQuerySchema,
   vendorLeadListQuerySchema,
 } from '../../validators/lead.validator.js';
-import { testPurchaseSubscriptionSchema } from '../../validators/subscriptionPlan.validator.js';
+import { subscriptionPlanIdParamsSchema, testPurchaseSubscriptionSchema } from '../../validators/subscriptionPlan.validator.js';
 import { walletTransactionListQuerySchema } from '../../validators/wallet.validator.js';
+import { paymentIdParamsSchema, razorpayVerifySchema } from '../../validators/payment.validator.js';
 import * as vendorSalesMeetingController from '../../controllers/vendorSalesMeeting.controller.js';
 import {
   createVendorSalesMeetingSchema,
@@ -91,6 +93,8 @@ router.put(
 // ---- Subscription cards and current effective plan ----
 router.get('/subscription-plans', requireKycApproved, vendorSubscriptionController.listAvailablePlans);
 router.get('/subscription', requireKycApproved, vendorSubscriptionController.getMySubscription);
+router.post('/subscription-plans/:planId/payment', requireKycApproved, validateRequest(subscriptionPlanIdParamsSchema, 'params'), paymentController.createVendorSubscriptionPayment);
+router.post('/subscription-payments/:paymentId/verify', requireKycApproved, validateRequest(paymentIdParamsSchema, 'params'), validateRequest(razorpayVerifySchema), paymentController.verifyVendorSubscriptionPayment);
 router.post('/subscriptions/test-purchase', requireKycApproved, validateRequest(testPurchaseSubscriptionSchema), vendorSubscriptionController.testPurchasePlan);
 
 // ---- Wallet balance and immutable ledger ----

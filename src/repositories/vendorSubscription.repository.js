@@ -107,3 +107,65 @@ export const activateTestSubscription = async ({ vendorUserId, plan }) => prisma
 
   return { subscription, wallet };
 });
+
+// Called only inside the payment-capture transaction. Updating the pending
+// subscription status in the same transaction makes the plan activation and
+// its wallet credit idempotent even if Razorpay retries a webhook.
+export const activatePendingSubscription = async (tx, subscriptionId) => {
+  const pending = await tx.vendorSubscription.findUnique({
+    where: { id: subscriptionId },
+    include: { plan: { select: CARD_SELECT } },
+  });
+  if (!pending) throw new Error('SUBSCRIPTION_NOT_FOUND');
+  if (pending.status === 'ACTIVE') {
+    return {
+      subscription: await tx.vendorSubscription.findUnique({
+        where: { id: pending.id },
+        select: ACTIVE_SUBSCRIPTION_SELECT,
+      }),
+      wallet: await tx.vendorWallet.findUnique({
+        where: { vendorUserId: pending.vendorUserId },
+        select: { balance: true },
+      }),
+    };
+  }
+  if (pending.status !== 'PENDING_PAYMENT') throw new Error('SUBSCRIPTION_NOT_PENDING');
+
+  const now = new Date();
+  const endsAt = new Date(now);
+  endsAt.setDate(endsAt.getDate() + 30);
+
+  await tx.vendorSubscription.updateMany({
+    where: { vendorUserId: pending.vendorUserId, status: 'ACTIVE' },
+    data: { status: 'CANCELLED', endsAt: now },
+  });
+
+  const subscription = await tx.vendorSubscription.update({
+    where: { id: pending.id },
+    data: { status: 'ACTIVE', startedAt: now, endsAt },
+    select: ACTIVE_SUBSCRIPTION_SELECT,
+  });
+
+  const wallet = await tx.vendorWallet.upsert({
+    where: { vendorUserId: pending.vendorUserId },
+    create: { vendorUserId: pending.vendorUserId, balance: pending.plan.walletCreditPerBillingCycle },
+    update: { balance: { increment: pending.plan.walletCreditPerBillingCycle } },
+    select: { balance: true },
+  });
+
+  if (pending.plan.walletCreditPerBillingCycle > 0) {
+    await tx.walletTransaction.create({
+      data: {
+        vendorUserId: pending.vendorUserId,
+        amount: pending.plan.walletCreditPerBillingCycle,
+        balanceAfter: wallet.balance,
+        type: 'SUBSCRIPTION_CREDIT',
+        description: `${pending.plan.displayName} subscription wallet credit.`,
+        referenceType: 'VENDOR_SUBSCRIPTION',
+        referenceId: subscription.id,
+      },
+    });
+  }
+
+  return { subscription, wallet };
+};

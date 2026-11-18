@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import prisma from '../../config/db.js';
 import { env } from '../../config/env.js';
 import { ApiError } from '../../utils/ApiError.js';
+import { activatePendingSubscription } from '../../repositories/vendorSubscription.repository.js';
 
 const BASE_URL = 'https://api.razorpay.com/v1';
 
@@ -37,13 +38,24 @@ export async function completeCapturedPayment({ gatewayOrderId, gatewayPaymentId
     if (!payment) throw ApiError.notFound('Payment record not found.');
     if (payment.amountPaise !== amountPaise) throw ApiError.badRequest('Gateway payment amount does not match the expected amount.');
     if (payment.status === 'PAID') return payment;
-    if (payment.purpose !== 'ECOMMERCE_ORDER') throw ApiError.badRequest('Payment purpose is not implemented yet.');
     const claimed = await tx.payment.updateMany({ where: { id: payment.id, status: { in: ['CREATED', 'PENDING'] } }, data: { status: 'PAID', gatewayPaymentId, paidAt: new Date(), failureCode: null, failureDescription: null } });
     if (!claimed.count) return tx.payment.findUnique({ where: { id: payment.id } });
-    const order = await tx.ecommerceOrder.findUnique({ where: { id: payment.referenceId }, include: { items: true } });
-    if (!order || order.status !== 'PAYMENT_PENDING') throw ApiError.conflict('This e-commerce order cannot be paid.');
-    if (order.reservedUntil && order.reservedUntil < new Date()) throw ApiError.conflict('This payment reservation has expired.');
-    await markOrderPaid(tx, order);
+    if (payment.purpose === 'ECOMMERCE_ORDER') {
+      const order = await tx.ecommerceOrder.findUnique({ where: { id: payment.referenceId }, include: { items: true } });
+      if (!order || order.status !== 'PAYMENT_PENDING') throw ApiError.conflict('This e-commerce order cannot be paid.');
+      if (order.reservedUntil && order.reservedUntil < new Date()) throw ApiError.conflict('This payment reservation has expired.');
+      await markOrderPaid(tx, order);
+    } else if (payment.purpose === 'VENDOR_SUBSCRIPTION') {
+      try {
+        await activatePendingSubscription(tx, payment.referenceId);
+      } catch (error) {
+        if (error.message === 'SUBSCRIPTION_NOT_FOUND') throw ApiError.notFound('Subscription purchase not found.');
+        if (error.message === 'SUBSCRIPTION_NOT_PENDING') throw ApiError.conflict('This subscription purchase cannot be activated.');
+        throw error;
+      }
+    } else {
+      throw ApiError.badRequest('Payment purpose is not implemented yet.');
+    }
     return tx.payment.findUnique({ where: { id: payment.id } });
   });
 }
@@ -73,6 +85,103 @@ export async function verifyEcommercePayment({ userId, localPaymentId, body }) {
   if (rpPayment.status === 'captured') return { payment: await completeCapturedPayment({ gatewayOrderId: payment.gatewayOrderId, gatewayPaymentId: rpPayment.id, amountPaise: rpPayment.amount }), orderStatus: 'PAID' };
   await prisma.payment.update({ where: { id: payment.id }, data: { status: 'PENDING', gatewayPaymentId: rpPayment.id } });
   return { payment: await prisma.payment.findUnique({ where: { id: payment.id } }), orderStatus: 'PAYMENT_PENDING', message: 'Payment is awaiting Razorpay capture confirmation.' };
+}
+
+function paymentCheckoutResponse(payment) {
+  return {
+    paymentId: payment.id,
+    razorpayOrderId: payment.gatewayOrderId,
+    amountPaise: payment.amountPaise,
+    currency: payment.currency,
+    keyId: env.RAZORPAY_KEY_ID,
+  };
+}
+
+async function createRazorpayOrderForPayment(payment, notes) {
+  try {
+    const rpOrder = await gateway('/orders', {
+      method: 'POST',
+      body: JSON.stringify({
+        amount: payment.amountPaise,
+        currency: payment.currency,
+        receipt: `pay_${payment.id}`,
+        notes,
+      }),
+    });
+    return prisma.payment.update({
+      where: { id: payment.id },
+      data: { status: 'PENDING', gatewayOrderId: rpOrder.id },
+    });
+  } catch (error) {
+    await prisma.payment.update({
+      where: { id: payment.id },
+      data: { status: 'FAILED', failureDescription: error.message },
+    });
+    throw error;
+  }
+}
+
+export async function createVendorSubscriptionPayment({ userId, planId }) {
+  const plan = await prisma.subscriptionPlan.findFirst({
+    where: { id: planId, isActive: true, kind: 'PAID', isPurchasable: true },
+  });
+  if (!plan) throw ApiError.notFound('Active purchasable paid subscription plan not found.');
+
+  const activeSamePlan = await prisma.vendorSubscription.findFirst({
+    where: { vendorUserId: userId, planId, status: 'ACTIVE', OR: [{ endsAt: null }, { endsAt: { gt: new Date() } }] },
+  });
+  if (activeSamePlan) throw ApiError.conflict('This subscription plan is already active.');
+
+  let subscription = await prisma.vendorSubscription.findFirst({
+    where: { vendorUserId: userId, planId, status: 'PENDING_PAYMENT' },
+    orderBy: { createdAt: 'desc' },
+  });
+  if (!subscription) {
+    await prisma.vendorSubscription.updateMany({
+      where: { vendorUserId: userId, status: 'PENDING_PAYMENT' },
+      data: { status: 'CANCELLED' },
+    });
+    subscription = await prisma.vendorSubscription.create({
+      data: { vendorUserId: userId, planId: plan.id, status: 'PENDING_PAYMENT', amount: plan.monthlyPrice },
+    });
+  }
+
+  const existing = await prisma.payment.findFirst({
+    where: { userId, purpose: 'VENDOR_SUBSCRIPTION', referenceId: subscription.id, status: 'PENDING', gatewayOrderId: { not: null } },
+    orderBy: { createdAt: 'desc' },
+  });
+  if (existing) return paymentCheckoutResponse(existing);
+
+  // SubscriptionPlan.monthlyPrice and VendorSubscription.amount are stored in
+  // whole INR, unlike e-commerce prices which are explicitly stored in paise.
+  const payment = await prisma.payment.create({
+    data: { userId, purpose: 'VENDOR_SUBSCRIPTION', referenceId: subscription.id, amountPaise: subscription.amount * 100 },
+  });
+  const updated = await createRazorpayOrderForPayment(payment, {
+    paymentId: payment.id,
+    purpose: payment.purpose,
+    subscriptionId: subscription.id,
+    planId: plan.id,
+  });
+  return paymentCheckoutResponse(updated);
+}
+
+export async function verifyVendorSubscriptionPayment({ userId, localPaymentId, body }) {
+  const payment = await prisma.payment.findFirst({
+    where: { id: localPaymentId, userId, purpose: 'VENDOR_SUBSCRIPTION' },
+  });
+  if (!payment) throw ApiError.notFound('Subscription payment not found.');
+  if (payment.gatewayOrderId !== body.razorpay_order_id) throw ApiError.badRequest('Razorpay order does not match this subscription payment.');
+  if (!signatureValid(body.razorpay_order_id, body.razorpay_payment_id, body.razorpay_signature)) throw ApiError.badRequest('Invalid Razorpay payment signature.');
+  const rpPayment = await gateway(`/payments/${body.razorpay_payment_id}`);
+  if (rpPayment.order_id !== payment.gatewayOrderId || rpPayment.amount !== payment.amountPaise) throw ApiError.badRequest('Razorpay payment details do not match this subscription payment.');
+  if (rpPayment.status === 'captured') {
+    const completed = await completeCapturedPayment({ gatewayOrderId: payment.gatewayOrderId, gatewayPaymentId: rpPayment.id, amountPaise: rpPayment.amount });
+    const subscription = await prisma.vendorSubscription.findUnique({ where: { id: completed.referenceId }, include: { plan: true } });
+    return { payment: completed, subscription };
+  }
+  await prisma.payment.update({ where: { id: payment.id }, data: { status: 'PENDING', gatewayPaymentId: rpPayment.id } });
+  return { payment: await prisma.payment.findUnique({ where: { id: payment.id } }), subscriptionStatus: 'PENDING_PAYMENT', message: 'Payment is awaiting Razorpay capture confirmation.' };
 }
 
 async function completeRefund({ gatewayRefundId, gatewayPaymentId, amountPaise }) {
